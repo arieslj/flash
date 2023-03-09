@@ -486,3 +486,7 @@ where 1=1
     and tt.rk = 1
     and tt.rkf = 1
     AND tt.rkj=1;
+;-- -. . -..- - / . -. - .-. -.--
+select *
+from ph_staging.customer_group cg
+where cg.id = 1;
