@@ -14,17 +14,14 @@ where wo.store_id = 22
   and ss.id is not null
 ;
 
-select *
+select
+    *
 from ( -- 当月产生
-         select month(date_add(wo.created_at, interval 6 hour))                                      month_d
-              , count(distinct wo.id)                                                                should_deal
-              , count(distinct if(wo.status in (1, 2) or wo.status in (3, 4) and wo.latest_reply_at >=
-                                                                                 adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) +
-                                                                                 interval 18 hour, wo.id,
-                                  null))                                                             should_not_deal
-              , count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <=
-                                                          adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) +
-                                                          interval 18 hour)) / count(distinct wo.id) deal_rate
+         select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+            , count(distinct wo.id) should_deal
+            , count(distinct if(wo.status in (1, 2) or wo.status in (3, 4) and wo.latest_reply_at >= adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) +interval 18 hour, wo.id,  null)) already_deal                                                          should_not_deal
+            , count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) + interval 18 hour)) / count(distinct wo.id) deal_rate
          from bi_pro.work_order wo
                   left join fle_staging.sys_store ss on ss.id = wo.created_store_id
          where wo.created_at > '2022-11-30 18:00:00'
@@ -43,4 +40,5 @@ from ( -- 当月产生
            and wo.latest_reply_at < '2023-03-01 00:00:00'
            and wo.store_id = 22
            and ss.id is not null
-           and wo.status in (3, 4)) t2
+           and wo.status in (3, 4)
+    ) t2
