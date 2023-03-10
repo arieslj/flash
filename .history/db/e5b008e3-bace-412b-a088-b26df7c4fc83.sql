@@ -281,26 +281,24 @@ where
     and ce.created_at < '2023-03-09 00:00:00'
     and ce.staff_info_id in ('146865','143836');
 ;-- -. . -..- - / . -. - .-. -.--
-select
-    ce.*
+select ce.*
 from ph_drds.courier_equipment ce
-where
-    ce.created_at >= '2023-01-01 00:00:00'
-    and ce.created_at < '2023-03-09 00:00:00'
-    and ce.staff_info_id in ('146865','143836');
+where ce.created_at >= '2023-01-01 00:00:00'
+  and ce.created_at < '2023-03-09 00:00:00'
+  and ce.staff_info_id in ('146865', '143836');
 ;-- -. . -..- - / . -. - .-. -.--
-select
-    *
-from
-(
-     select
-         pr.pno
-         ,pr.dst_name
-         ,CONCAT('`', pr.dst_phone)
-         ,pr.client_id
-         ,date(pr.标记时间) 标记日期
-         ,pr.标记时间
-         ,case when hour(pr.标记时间)>= 8 and hour(pr.标记时间)<10 then '8点-10点前'
+select *
+from ph_staging.customer_group cg
+where cg.id = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select *
+from (select pr.pno
+           , pr.dst_name
+           , CONCAT('`', pr.dst_phone)
+           , pr.client_id
+           , date (pr.标记时间) 标记日期
+   , pr.标记时间
+   , case when hour(pr.标记时间)>= 8 and hour(pr.标记时间)<10 then '8点-10点前'
           when hour(pr.标记时间)>= 10 and hour(pr.标记时间)<12 then '10点-12点前'
           when hour(pr.标记时间)>= 12 and hour(pr.标记时间)<14 then '12点-14点前'
           when hour(pr.标记时间)>= 14 and hour(pr.标记时间)<16 then '14点-16点前'
@@ -486,7 +484,3 @@ where 1=1
     and tt.rk = 1
     and tt.rkf = 1
     AND tt.rkj=1;
-;-- -. . -..- - / . -. - .-. -.--
-select *
-from ph_staging.customer_group cg
-where cg.id = 1;
