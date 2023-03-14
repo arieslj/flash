@@ -5,6 +5,8 @@ with t1 as
         ,plt.id
         ,plt.client_id
         ,plt.created_at
+        ,plt.last_valid_store_id
+        ,plt.last_valid_staff_info_id
     from bi_pro.parcel_lose_task plt
     where
         plt.state < 5
@@ -21,9 +23,18 @@ with t1 as
         ,row_number() over (partition by wo.loseparcel_task_id order by wo.created_at) r1
         ,row_number() over (partition by wo.id order by wor.created_at desc ) r2
     from bi_pro.work_order wo
+    join t1 on t1.id = wo.loseparcel_task_id
     left join bi_pro.work_order_reply wor on wor.order_id = wo.id
     left join bi_pro.work_order_img woi on woi.origin_id = wor.id
-    join t1 on t1.id = wo.loseparcel_task_id
+)
+,t2 as
+(
+    select
+        wo.pnos
+        ,wo.created_at
+        ,row_number() over (partition by wo.pnos order by wo.created_at ) rn
+    from bi_pro.work_order wo
+    join t1 on t1.pno = wo.pnos
 )
 select
     t1.created_at 任务生成时间
@@ -122,8 +133,8 @@ select
         end as 最后一条路由
     ,las2.remark 最后一条路由备注
     ,mark.remark 最后一条包裹备注
-    ,las.staff_info_id 最后有效路由操作人
-    ,las_ss.name 最后有效路由网点
+    ,t1.last_valid_staff_info_id 最后有效路由操作人
+    ,ss_valid.name 最后有效路由网点
     ,case pi.state
         when 1 then '已揽收'
         when 2 then '运输中'
@@ -145,39 +156,20 @@ select
     ,num.num 创建工单次数
     ,1st.order_creat_at 第一次创建工单时间
     ,fir.created_at 第一次全组织发工单时间
+    ,lst.content 最后一次全组织工单回复内容
     ,1st.wor_content 第一次回复内容
-    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',1st.object_key) 第一次回复附件
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',1st.object_key) 第一次回复附件
     ,2nd.wor_content 第二次回复内容
-    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',2nd.object_key) 第二次回复附件
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',2nd.object_key) 第二次回复附件
     ,3rd.wor_content 第三次回复内容
-    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',3rd.object_key) 第三次回复附件
-    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key) 签收凭证
-    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',3rd.object_key) 第三次回复附件
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key) 签收凭证
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
 from t1
 left join fle_staging.parcel_info pi on pi.pno = t1.pno
 left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
 left join fle_staging.sys_store del_ss on del_ss.id = pi.ticket_delivery_store_id
-left join
-    (
-        select
-            *
-        from
-            (
-                select
-                    pr.route_action
-                    ,pr.pno
-                    ,pr.staff_info_id
-                    ,pr.routed_at
-                    ,pr.store_id
-                    ,pr.remark
-                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-                 from rot_pro.parcel_route pr
-                 join t1 on t1.pno = pr.pno
-                where  pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
-                    and pr.routed_at > curdate() - interval 30 day
-            ) pr
-        where pr.rn = 1
-    ) las on las.pno = t1.pno
+left join fle_staging.sys_store ss_valid on ss_valid.id = t1.last_valid_store_id
 left join
     (
         select
@@ -202,7 +194,6 @@ left join
             ) pr
         where pr.rn = 1
     ) las2 on las2.pno = t1.pno
-left join fle_staging.sys_store las_ss on las_ss.id = las.store_id
 left join
     (
         select
@@ -264,14 +255,18 @@ left join
             t.r2 = 1
             and t.r1 = 3
     ) 3rd on 3rd.loseparcel_task_id = t1.id
+left join t2 fir on fir.pnos = t1.pno and fir.rn = 1
 left join
     (
         select
-            wo.pnos
-            ,wo.created_at
-            ,row_number() over (partition by wo.pnos order by wo.created_at ) rn
-        from bi_pro.work_order wo
-        join t1 on t1.pno = wo.pnos
-    ) fir on fir.pnos = t1.pno and fir.rn = 1
+            wo2.pnos
+            ,wor.content
+            ,row_number() over (partition by wo2.pnos order by wor.created_at desc) rn
+        from bi_pro.work_order wo2
+        join t1 on t1.pno = wo2.pnos
+        left join bi_pro.work_order_reply wor on wor.order_id = wo2.id
+        where
+            wor.staff_info_id != wo2.created_staff_info_id
+    ) lst on lst.pnos = t1.pno and lst.rn = 1
 left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
 left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER'

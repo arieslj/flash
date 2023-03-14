@@ -209,4 +209,4 @@ where
     and am.abnormal_time < '2023-03-01'
     and am.state = 1
     and (am.isdel = 0 or (am.isdel = 1 and am.isappeal != 1))
-    and dt.region_name in ('Area14','Area3','Area6','Bulky Area 1','Bulky Area 2','Bulky Area 3','Bulky Area 4','Bulky Area 5','Bulky Area 6','Bulky Area 7','Bulky Area 8','Bulky Area 9','CDC Area 1','CDC Area 2')
+    and dt.region_name in  ('Area14','Area3','Area6','Bulky Area 1','Bulky Area 2','Bulky Area 3','Bulky Area 4','Bulky Area 5','Bulky Area 6','Bulky Area 7','Bulky Area 8','Bulky Area 9','CDC Area 1','CDC Area 2')

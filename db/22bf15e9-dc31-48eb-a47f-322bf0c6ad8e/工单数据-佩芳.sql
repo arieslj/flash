@@ -9,7 +9,7 @@ with rep as
     left join bi_pro.work_order_reply wor on wo.id = wor.order_id
     where
         wo.created_store_id = 3
-        and wo.created_at >= '2023-03-13'
+        and wo.created_at >= '2023-03-14'
 )
 , pho as
 (
@@ -101,6 +101,7 @@ select
         when 0 then '不需要'
         when 1 then '需要'
     end 致电客户
+    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, '否', '是') 是否超时
     ,case wo.up_report
         when 0 then '否'
         when 1 then '是'
@@ -119,8 +120,10 @@ select
         when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
         else '其他网点'
     end 受理部门
+    ,ss.name 网点名称
     ,ss.sorting_no 区域
     ,smr.name Area
+    ,smp.name 片区
     ,case pi.state
         when 1 then '已揽收'
         when 2 then '运输中'
@@ -143,11 +146,12 @@ join fle_staging.customer_issue ci on wo.customer_issue_id = ci.id
 left join rep on rep.order_no = wo.order_no and rep.rn = 1
 left join fle_staging.sys_store ss on ss.id = wo.store_id
 left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_manage_piece smp on smp.id = ss.manage_piece
 left join fle_staging.parcel_info pi on wo.pnos = pi.pno
 left join pho p1 on p1.pno = wo.pnos and p1.rk = 1
 left join pho p2 on p2.pno = wo.pnos and p2.rk = 1
 
 where
     wo.created_store_id = 3 -- 总部客服中心
-    and wo.created_at >= '2023-03-13'
+    and wo.created_at >= '2023-03-14'
     and wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707','AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601','AA0660','AA0661','AA0703')
