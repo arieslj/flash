@@ -16,7 +16,8 @@ where wo.store_id = 22
 
 select
     *
-from ( -- 当月产生
+from
+    ( -- 当月产生
          select
              month(date_add(wo.created_at, interval 6 hour))  month_d
              ,count(distinct wo.id) should_deal
@@ -27,9 +28,11 @@ from ( -- 当月产生
          where wo.created_at > '2022-11-30 18:00:00'
            and wo.created_at < '2023-02-28 18:00:00'
            and wo.store_id = 22
-           and ss.id is not null) t1
-         left join
-     ( -- 当月完结，已回复和已关闭的工单按照最后一次回复时间认定为结束时间
+           and ss.id is not null
+    ) t1
+left join
+     (
+         -- 当月完结，已回复和已关闭的工单按照最后一次回复时间认定为结束时间
          select month(wo.latest_reply_at) month_d
               , count(distinct wo.id)     already_deal
               , sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /
@@ -41,4 +44,4 @@ from ( -- 当月产生
            and wo.store_id = 22
            and ss.id is not null
            and wo.status in (3, 4)
-    ) t2
+    ) t2 on t2.month_d = t1.month_d
