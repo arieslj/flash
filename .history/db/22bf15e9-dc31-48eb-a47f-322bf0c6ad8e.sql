@@ -5208,3 +5208,11 @@ left join
     ) lst on lst.pnos = t1.pno and lst.rn = 1
 left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
 left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,pi.returned
+    ,pi2.cod_amount/100 cod金额
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_2023_03_14 t on t.pno = pi.pno
+left join fle_staging.parcel_info pi2 on if(pi.returned = 1, pi.customary_pno, pi.pno) = pi2.pno;

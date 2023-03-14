@@ -127,7 +127,7 @@ from
                     and pi.created_at >= '2022-10-31 17:00:00'
                     and pi.created_at < '2022-11-30 17:00:00'
             ) di
-        where di.rn =1
+        where di.rn = 1
     ) di
 left join
     (
