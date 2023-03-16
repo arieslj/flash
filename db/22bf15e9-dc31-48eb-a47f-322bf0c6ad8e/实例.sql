@@ -258,3 +258,7 @@ end as 投诉大类
     when 69 then '不当场扫描揽收'
     when 70 then '揽派件速度慢'
 end as '投诉原因'
+
+    ;
+
+    select * from bi_pro.parcel_lose_task plt where  plt.pno = 'TH02023V2GZB0H'

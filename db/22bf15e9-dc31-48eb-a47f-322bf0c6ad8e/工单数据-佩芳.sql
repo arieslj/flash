@@ -9,7 +9,8 @@ with rep as
     left join bi_pro.work_order_reply wor on wo.id = wor.order_id
     where
         wo.created_store_id = 3
-        and wo.created_at >= '2023-03-14'
+        and wo.created_at >= date_sub(curdate(), interval 1 day)
+        and wo.created_at < curdate()
 )
 , pho as
 (
@@ -32,9 +33,9 @@ select
     ,wo.pnos 运单号
     ,wo.client_id 客户ID
     ,case
-        when wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707') then 'Shopee'
-        when wo.client_id in ('AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601') then 'Lazada'
-        when wo.client_id in ('AA0660','AA0661','AA0703') then 'Tiktok'
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
     end 平台客户
     ,case ci.requester_category
         when 0 then '托运人员'
@@ -150,8 +151,9 @@ left join fle_staging.sys_manage_piece smp on smp.id = ss.manage_piece
 left join fle_staging.parcel_info pi on wo.pnos = pi.pno
 left join pho p1 on p1.pno = wo.pnos and p1.rk = 1
 left join pho p2 on p2.pno = wo.pnos and p2.rk = 1
-
+left join fle_staging.ka_profile kp on kp.id = wo.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = wo.client_id
 where
     wo.created_store_id = 3 -- 总部客服中心
-    and wo.created_at >= '2023-03-14'
-    and wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707','AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601','AA0660','AA0661','AA0703')
+    and wo.created_at >= date_sub(curdate(), interval 1 day)
+    and wo.created_at < curdate()

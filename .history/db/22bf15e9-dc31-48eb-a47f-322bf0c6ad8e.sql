@@ -4936,6 +4936,1675 @@ left join
 left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
 left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
 ;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,pi.returned
+    ,pi2.cod_amount/100 cod金额
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_2023_03_14 t on t.pno = pi.pno
+left join fle_staging.parcel_info pi2 on if(pi.returned = 1, pi.customary_pno, pi.pno) = pi2.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with rep as
+(
+    select
+        wo.order_no
+        ,wo.pnos
+        ,wor.created_at
+        ,row_number() over (partition by wo.order_no order by wor.created_at ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wo.id = wor.order_id
+    where
+        wo.created_store_id = 3
+        and wo.created_at >= '2023-03-13'
+)
+, pho as
+(
+    select
+        pr.pno
+        ,pr.routed_at
+        ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+        ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk2
+    from rot_pro.parcel_route pr
+    join
+        (
+            select rep.pnos from rep group by 1
+        ) r on pr.pno = r.pnos
+    where
+        pr.route_action = 'PHONE'
+)
+select
+    date(wo.created_at) Date
+    ,wo.order_no 'Ticket ID'
+    ,wo.pnos 运单号
+    ,wo.client_id 客户ID
+    ,case
+        when wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707') then 'Shopee'
+        when wo.client_id in ('AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601') then 'Lazada'
+        when wo.client_id in ('AA0660','AA0661','AA0703') then 'Tiktok'
+    end 平台客户
+    ,case ci.requester_category
+        when 0 then '托运人员'
+        when 1 then '收货人员'
+        when 2 then '操作人员'
+        when 3 then '销售人员'
+        when 4 then '客服人员'
+    end 请求者角色
+    ,case ci.channel_category # 渠道
+         when 0 then '电话'
+         when 1 then '电子邮件'
+         when 2 then '网页'
+         when 3 then '网点'
+         when 4 then '自主投诉页面'
+         when 5 then '网页（facebook）'
+         when 6 then 'APPSTORE'
+         when 7 then 'Lazada系统'
+         when 8 then 'Shopee系统'
+         when 9 then 'TikTok'
+    end 请求渠道
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+    ,wo.title 工单主题
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.created_at 工单创建时间
+    ,rep.created_at 工单回复时间
+    ,case wo.is_call
+        when 0 then '不需要'
+        when 1 then '需要'
+    end 致电客户
+    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, '否', '是') 是否超时
+    ,case wo.up_report
+        when 0 then '否'
+        when 1 then '是'
+    end 是否上报虚假工单
+    ,datediff(wo.updated_at, wo.created_at) 工单处理天数
+    ,wo.store_id '受理网点ID/部门'
+    ,case
+        when ss.`category` in (1,2,10,13) then 'sp'
+        when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,ss.name 网点名称
+    ,ss.sorting_no 区域
+    ,smr.name Area
+    ,smp.name 片区
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 运单状态
+    ,if(pi.state = 5, date(convert_tz(pi.finished_at, '+00:00', '+07:00')), null) 妥投日期
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+07:00'), null ) 妥投时间
+    ,convert_tz(p1.routed_at, '+00:00', '+07:00') 第一次联系客户
+    ,convert_tz(p2.routed_at, '+00:00', '+07:00') 最后联系客户
+    ,if(pi.state = 5, datediff(date(convert_tz(pi.finished_at, '+00:00', '+07:00')), date(convert_tz(pi.created_at, '+00:00', '+07:00'))), null) 揽收至妥投
+    ,datediff(curdate(), date(convert_tz(pi.created_at, '+00:00', '+07:00'))) 揽收至今
+from bi_pro.work_order wo
+join fle_staging.customer_issue ci on wo.customer_issue_id = ci.id
+left join rep on rep.order_no = wo.order_no and rep.rn = 1
+left join fle_staging.sys_store ss on ss.id = wo.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_manage_piece smp on smp.id = ss.manage_piece
+left join fle_staging.parcel_info pi on wo.pnos = pi.pno
+left join pho p1 on p1.pno = wo.pnos and p1.rk = 1
+left join pho p2 on p2.pno = wo.pnos and p2.rk = 1
+
+where
+    wo.created_store_id = 3 -- 总部客服中心
+    and wo.created_at >= '2023-03-13'
+    and wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707','AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601','AA0660','AA0661','AA0703');
+;-- -. . -..- - / . -. - .-. -.--
+with rep as
+(
+    select
+        wo.order_no
+        ,wo.pnos
+        ,wor.created_at
+        ,row_number() over (partition by wo.order_no order by wor.created_at ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wo.id = wor.order_id
+    where
+        wo.created_store_id = 3
+        and wo.created_at >= curdate()
+        and wo.created_at < date_add(curdate(), interval 1 day)
+)
+, pho as
+(
+    select
+        pr.pno
+        ,pr.routed_at
+        ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+        ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk2
+    from rot_pro.parcel_route pr
+    join
+        (
+            select rep.pnos from rep group by 1
+        ) r on pr.pno = r.pnos
+    where
+        pr.route_action = 'PHONE'
+)
+select
+    date(wo.created_at) Date
+    ,wo.order_no 'Ticket ID'
+    ,wo.pnos 运单号
+    ,wo.client_id 客户ID
+    ,case
+        when wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707') then 'Shopee'
+        when wo.client_id in ('AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601') then 'Lazada'
+        when wo.client_id in ('AA0660','AA0661','AA0703') then 'Tiktok'
+    end 平台客户
+    ,case ci.requester_category
+        when 0 then '托运人员'
+        when 1 then '收货人员'
+        when 2 then '操作人员'
+        when 3 then '销售人员'
+        when 4 then '客服人员'
+    end 请求者角色
+    ,case ci.channel_category # 渠道
+         when 0 then '电话'
+         when 1 then '电子邮件'
+         when 2 then '网页'
+         when 3 then '网点'
+         when 4 then '自主投诉页面'
+         when 5 then '网页（facebook）'
+         when 6 then 'APPSTORE'
+         when 7 then 'Lazada系统'
+         when 8 then 'Shopee系统'
+         when 9 then 'TikTok'
+    end 请求渠道
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+    ,wo.title 工单主题
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.created_at 工单创建时间
+    ,rep.created_at 工单回复时间
+    ,case wo.is_call
+        when 0 then '不需要'
+        when 1 then '需要'
+    end 致电客户
+    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, '否', '是') 是否超时
+    ,case wo.up_report
+        when 0 then '否'
+        when 1 then '是'
+    end 是否上报虚假工单
+    ,datediff(wo.updated_at, wo.created_at) 工单处理天数
+    ,wo.store_id '受理网点ID/部门'
+    ,case
+        when ss.`category` in (1,2,10,13) then 'sp'
+        when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,ss.name 网点名称
+    ,ss.sorting_no 区域
+    ,smr.name Area
+    ,smp.name 片区
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 运单状态
+    ,if(pi.state = 5, date(convert_tz(pi.finished_at, '+00:00', '+07:00')), null) 妥投日期
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+07:00'), null ) 妥投时间
+    ,convert_tz(p1.routed_at, '+00:00', '+07:00') 第一次联系客户
+    ,convert_tz(p2.routed_at, '+00:00', '+07:00') 最后联系客户
+    ,if(pi.state = 5, datediff(date(convert_tz(pi.finished_at, '+00:00', '+07:00')), date(convert_tz(pi.created_at, '+00:00', '+07:00'))), null) 揽收至妥投
+    ,datediff(curdate(), date(convert_tz(pi.created_at, '+00:00', '+07:00'))) 揽收至今
+from bi_pro.work_order wo
+join fle_staging.customer_issue ci on wo.customer_issue_id = ci.id
+left join rep on rep.order_no = wo.order_no and rep.rn = 1
+left join fle_staging.sys_store ss on ss.id = wo.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_manage_piece smp on smp.id = ss.manage_piece
+left join fle_staging.parcel_info pi on wo.pnos = pi.pno
+left join pho p1 on p1.pno = wo.pnos and p1.rk = 1
+left join pho p2 on p2.pno = wo.pnos and p2.rk = 1
+
+where
+    wo.created_store_id = 3 -- 总部客服中心
+    and wo.created_at >= curdate()
+    and wo.created_at < date_add(curdate(), interval 1 day)
+    and wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707','AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601','AA0660','AA0661','AA0703');
+;-- -. . -..- - / . -. - .-. -.--
+with rep as
+(
+    select
+        wo.order_no
+        ,wo.pnos
+        ,wor.created_at
+        ,row_number() over (partition by wo.order_no order by wor.created_at ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wo.id = wor.order_id
+    where
+        wo.created_store_id = 3
+        and wo.created_at >= date_sub(curdate(), interval 1 day)
+        and wo.created_at < curdate()
+)
+, pho as
+(
+    select
+        pr.pno
+        ,pr.routed_at
+        ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+        ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk2
+    from rot_pro.parcel_route pr
+    join
+        (
+            select rep.pnos from rep group by 1
+        ) r on pr.pno = r.pnos
+    where
+        pr.route_action = 'PHONE'
+)
+select
+    date(wo.created_at) Date
+    ,wo.order_no 'Ticket ID'
+    ,wo.pnos 运单号
+    ,wo.client_id 客户ID
+    ,case
+        when wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707') then 'Shopee'
+        when wo.client_id in ('AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601') then 'Lazada'
+        when wo.client_id in ('AA0660','AA0661','AA0703') then 'Tiktok'
+    end 平台客户
+    ,case ci.requester_category
+        when 0 then '托运人员'
+        when 1 then '收货人员'
+        when 2 then '操作人员'
+        when 3 then '销售人员'
+        when 4 then '客服人员'
+    end 请求者角色
+    ,case ci.channel_category # 渠道
+         when 0 then '电话'
+         when 1 then '电子邮件'
+         when 2 then '网页'
+         when 3 then '网点'
+         when 4 then '自主投诉页面'
+         when 5 then '网页（facebook）'
+         when 6 then 'APPSTORE'
+         when 7 then 'Lazada系统'
+         when 8 then 'Shopee系统'
+         when 9 then 'TikTok'
+    end 请求渠道
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+    ,wo.title 工单主题
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.created_at 工单创建时间
+    ,rep.created_at 工单回复时间
+    ,case wo.is_call
+        when 0 then '不需要'
+        when 1 then '需要'
+    end 致电客户
+    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, '否', '是') 是否超时
+    ,case wo.up_report
+        when 0 then '否'
+        when 1 then '是'
+    end 是否上报虚假工单
+    ,datediff(wo.updated_at, wo.created_at) 工单处理天数
+    ,wo.store_id '受理网点ID/部门'
+    ,case
+        when ss.`category` in (1,2,10,13) then 'sp'
+        when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,ss.name 网点名称
+    ,ss.sorting_no 区域
+    ,smr.name Area
+    ,smp.name 片区
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 运单状态
+    ,if(pi.state = 5, date(convert_tz(pi.finished_at, '+00:00', '+07:00')), null) 妥投日期
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+07:00'), null ) 妥投时间
+    ,convert_tz(p1.routed_at, '+00:00', '+07:00') 第一次联系客户
+    ,convert_tz(p2.routed_at, '+00:00', '+07:00') 最后联系客户
+    ,if(pi.state = 5, datediff(date(convert_tz(pi.finished_at, '+00:00', '+07:00')), date(convert_tz(pi.created_at, '+00:00', '+07:00'))), null) 揽收至妥投
+    ,datediff(curdate(), date(convert_tz(pi.created_at, '+00:00', '+07:00'))) 揽收至今
+from bi_pro.work_order wo
+join fle_staging.customer_issue ci on wo.customer_issue_id = ci.id
+left join rep on rep.order_no = wo.order_no and rep.rn = 1
+left join fle_staging.sys_store ss on ss.id = wo.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_manage_piece smp on smp.id = ss.manage_piece
+left join fle_staging.parcel_info pi on wo.pnos = pi.pno
+left join pho p1 on p1.pno = wo.pnos and p1.rk = 1
+left join pho p2 on p2.pno = wo.pnos and p2.rk = 1
+
+where
+    wo.created_store_id = 3 -- 总部客服中心
+    and wo.created_at >= date_sub(curdate(), interval 1 day)
+    and wo.created_at < curdate()
+    and wo.client_id in ('AA0386','AA0425','AA0427','AA0569','AA0572','AA0574','AA0606','AA0612','AA0657','AA0707','AA0330','AA0415','AA0428','AA0442','AA0461','AA0477','AA0538','AA0601','AA0660','AA0661','AA0703');
+;-- -. . -..- - / . -. - .-. -.--
+select
+            wo.id
+            ,cg.name cg_name
+            ,count(wo.id) over (partition by wo.pnos) pno_count
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2022-12-01 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            wo.id
+            ,cg.name cg_name
+            ,wo.pnos
+            ,count(wo.id) over (partition by wo.pnos) pno_count
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2022-12-01 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            wo.id
+            ,cg.name cg_name
+            ,wo.pnos
+            ,count(wo.id) over (partition by wo.pnos) pno_count
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2022-12-01 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select * from bi_pro.parcel_lose_task plt where  plt.pno = 'TH07012YKWYK9F-2';
+;-- -. . -..- - / . -. - .-. -.--
+select * from bi_pro.parcel_lose_task plt where  plt.pno = 'TH07012YKWYK9F';
+;-- -. . -..- - / . -. - .-. -.--
+select * from bi_pro.parcel_lose_task plt where  plt.pno = 'TH02023V2GZB0H';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal 应处理工单数
+    ,t2.already_deal 完结工单数
+    ,t1.not_already_deal 应处理工单当月未完成单数
+    ,t1.deal_rate 当月工单完结率
+    ,zl.zl_num 滞留工单单数
+    ,t2.deal_avg_time 完结工单单均处理时长
+    ,cf.repeat_num 工单重复包裹数
+from
+    ( -- 当月产生
+         select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) +interval 18 hour), wo.id,  null)) not_already_deal                                                          should_not_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) + interval 18 hour)) / count(distinct wo.id) deal_rate
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2
+    ) t1
+left join
+     (-- 当月完结，已回复和已关闭的工单按照最后一次回复时间认定为结束时间
+         select
+             month(wo.latest_reply_at) month_d
+            ,,cg.name cg_name
+            ,count(distinct wo.id)  already_deal
+            ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where wo.latest_reply_at >= '2022-12-01 00:00:00'
+            and wo.latest_reply_at < '2023-03-01 00:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+            and wo.status in (3, 4)
+         group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    (
+        select
+            '12' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-01-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2022-12-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-02-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-01-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-03-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-02-28 18:00:00')
+                )
+        group by 1,2
+    ) zl on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.month_d
+            ,t.cg_name
+            ,count(distinct t.pnos) repeat_num
+        from
+            (
+                select
+                    wo.id
+                    ,cg.name cg_name
+                    ,wo.pnos
+                    ,month(date_add(wo.created_at, interval 6 hour))  month_d
+                    ,count(wo.id) over (partition by month(date_add(wo.created_at, interval 6 hour)),wo.pnos) pno_count
+                from bi_pro.work_order wo
+                left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+                left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+                join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+                where
+                    wo.created_at > '2022-11-30 18:00:00'
+                    and wo.created_at < '2023-02-28 18:00:00'
+                    and wo.store_id = 22
+                    and ss.id is not null
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal 应处理工单数
+    ,t2.already_deal 完结工单数
+    ,t1.not_already_deal 应处理工单当月未完成单数
+    ,t1.deal_rate 当月工单完结率
+    ,zl.zl_num 滞留工单单数
+    ,t2.deal_avg_time 完结工单单均处理时长
+    ,cf.repeat_num 工单重复包裹数
+from
+    ( -- 当月产生
+         select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) +interval 18 hour), wo.id,  null)) not_already_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1) + interval 18 hour)) / count(distinct wo.id) deal_rate
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2
+    ) t1
+left join
+     (-- 当月完结，已回复和已关闭的工单按照最后一次回复时间认定为结束时间
+         select
+             month(wo.latest_reply_at) month_d
+            ,,cg.name cg_name
+            ,count(distinct wo.id)  already_deal
+            ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where wo.latest_reply_at >= '2022-12-01 00:00:00'
+            and wo.latest_reply_at < '2023-03-01 00:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+            and wo.status in (3, 4)
+         group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    (
+        select
+            '12' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-01-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2022-12-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-02-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-01-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-03-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-02-28 18:00:00')
+                )
+        group by 1,2
+    ) zl on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.month_d
+            ,t.cg_name
+            ,count(distinct t.pnos) repeat_num
+        from
+            (
+                select
+                    wo.id
+                    ,cg.name cg_name
+                    ,wo.pnos
+                    ,month(date_add(wo.created_at, interval 6 hour))  month_d
+                    ,count(wo.id) over (partition by month(date_add(wo.created_at, interval 6 hour)),wo.pnos) pno_count
+                from bi_pro.work_order wo
+                left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+                left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+                join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+                where
+                    wo.created_at > '2022-11-30 18:00:00'
+                    and wo.created_at < '2023-02-28 18:00:00'
+                    and wo.store_id = 22
+                    and ss.id is not null
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal 应处理工单数
+    ,t2.already_deal 完结工单数
+    ,t1.not_already_deal 应处理工单当月未完成单数
+    ,t1.deal_rate 当月工单完结率
+    ,zl.zl_num 滞留工单单数
+    ,t2.deal_avg_time 完结工单单均处理时长
+    ,cf.repeat_num 工单重复包裹数
+from
+    ( -- 当月产生
+         select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2
+    ) t1
+left join
+     (-- 当月完结，已回复和已关闭的工单按照最后一次回复时间认定为结束时间
+         select
+             month(wo.latest_reply_at) month_d
+            ,,cg.name cg_name
+            ,count(distinct wo.id)  already_deal
+            ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where wo.latest_reply_at >= '2022-12-01 00:00:00'
+            and wo.latest_reply_at < '2023-03-01 00:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+            and wo.status in (3, 4)
+         group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    (
+        select
+            '12' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-01-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2022-12-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-02-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-01-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-03-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-02-28 18:00:00')
+                )
+        group by 1,2
+    ) zl on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.month_d
+            ,t.cg_name
+            ,count(distinct t.pnos) repeat_num
+        from
+            (
+                select
+                    wo.id
+                    ,cg.name cg_name
+                    ,wo.pnos
+                    ,month(date_add(wo.created_at, interval 6 hour))  month_d
+                    ,count(wo.id) over (partition by month(date_add(wo.created_at, interval 6 hour)),wo.pnos) pno_count
+                from bi_pro.work_order wo
+                left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+                left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+                join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+                where
+                    wo.created_at > '2022-11-30 18:00:00'
+                    and wo.created_at < '2023-02-28 18:00:00'
+                    and wo.store_id = 22
+                    and ss.id is not null
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+             month(wo.latest_reply_at) month_d
+            ,,cg.name cg_name
+            ,count(distinct wo.id)  already_deal
+            ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where wo.latest_reply_at >= '2022-12-01 00:00:00'
+            and wo.latest_reply_at < '2023-03-01 00:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+            and wo.status in (3, 4)
+         group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+             month(wo.latest_reply_at) month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id)  already_deal
+            ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where wo.latest_reply_at >= '2022-12-01 00:00:00'
+            and wo.latest_reply_at < '2023-03-01 00:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+            and wo.status in (3, 4)
+         group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            t.month_d
+            ,t.cg_name
+            ,count(distinct t.pnos) repeat_num
+        from
+            (
+                select
+                    wo.id
+                    ,cg.name cg_name
+                    ,wo.pnos
+                    ,month(date_add(wo.created_at, interval 6 hour))  month_d
+                    ,count(wo.id) over (partition by month(date_add(wo.created_at, interval 6 hour)),wo.pnos) pno_count
+                from bi_pro.work_order wo
+                left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+                left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+                join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+                where
+                    wo.created_at > '2022-11-30 18:00:00'
+                    and wo.created_at < '2023-02-28 18:00:00'
+                    and wo.store_id = 22
+                    and ss.id is not null
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal 应处理工单数
+    ,t2.already_deal 完结工单数
+    ,t1.not_already_deal 应处理工单当月未完成单数
+    ,t1.deal_rate 当月工单完结率
+    ,zl.zl_num 滞留工单单数
+    ,t2.deal_avg_time 完结工单单均处理时长
+    ,cf.repeat_num 工单重复包裹数
+from
+    ( -- 当月产生
+         select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2
+    ) t1
+left join
+     (-- 当月完结，已回复和已关闭的工单按照最后一次回复时间认定为结束时间
+         select
+             month(wo.latest_reply_at) month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id)  already_deal
+            ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+         where wo.latest_reply_at >= '2022-12-01 00:00:00'
+            and wo.latest_reply_at < '2023-03-01 00:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+            and wo.status in (3, 4)
+         group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    (
+        select
+            '12' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-01-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2022-12-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-02-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-01-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-03-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-02-28 18:00:00')
+                )
+        group by 1,2
+    ) zl on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.month_d
+            ,t.cg_name
+            ,count(distinct t.pnos) repeat_num
+        from
+            (
+                select
+                    wo.id
+                    ,cg.name cg_name
+                    ,wo.pnos
+                    ,month(date_add(wo.created_at, interval 6 hour))  month_d
+                    ,count(wo.id) over (partition by month(date_add(wo.created_at, interval 6 hour)),wo.pnos) pno_count
+                from bi_pro.work_order wo
+                left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+                left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+                join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','KAM TH','KAM CN')
+                where
+                    wo.created_at > '2022-11-30 18:00:00'
+                    and wo.created_at < '2023-02-28 18:00:00'
+                    and wo.store_id = 22
+                    and ss.id is not null
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal 应处理工单数
+    ,t2.already_deal 完结工单数
+    ,t1.not_already_deal 应处理工单当月未完成单数
+    ,t1.deal_rate 当月工单完结率
+    ,zl.zl_num 滞留工单单数
+    ,t2.deal_avg_time 完结工单单均处理时长
+    ,cf.repeat_num 工单重复包裹数
+from
+    ( -- 当月产生
+         select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2
+    ) t1
+left join
+     (-- 当月完结，已回复和已关闭的工单按照最后一次回复时间认定为结束时间
+         select
+             month(wo.latest_reply_at) month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id)  already_deal
+            ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+         where wo.latest_reply_at >= '2022-12-01 00:00:00'
+            and wo.latest_reply_at < '2023-03-01 00:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+            and wo.status in (3, 4)
+         group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    (
+        select
+            '12' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-01-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2022-12-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-02-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-01-31 18:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,cg.name cg_name
+            ,count(distinct wo.id) zl_num
+        from bi_pro.work_order wo
+        left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+        left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+        join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            ss.id is not null
+            and wo.created_at >= '2022-01-01'
+            and wo.created_at < '2023-03-01'
+            and wo.store_id = 22
+            and
+                (
+                    wo.status in (1,2)
+                    or (wo.status in (3,4) and wo.latest_reply_at >= '2023-02-28 18:00:00')
+                )
+        group by 1,2
+    ) zl on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.month_d
+            ,t.cg_name
+            ,count(distinct t.pnos) repeat_num
+        from
+            (
+                select
+                    wo.id
+                    ,cg.name cg_name
+                    ,wo.pnos
+                    ,month(date_add(wo.created_at, interval 6 hour))  month_d
+                    ,count(wo.id) over (partition by month(date_add(wo.created_at, interval 6 hour)),wo.pnos) pno_count
+                from bi_pro.work_order wo
+                left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+                left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+                join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+                where
+                    wo.created_at > '2022-11-30 18:00:00'
+                    and wo.created_at < '2023-02-28 18:00:00'
+                    and wo.store_id = 22
+                    and ss.id is not null
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     month(date_add(wo.created_at, interval 6 hour))  所属月份
+     ,cg.name 项目组
+#      ,count(distinct wo.id) should_deal
+#      ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at <= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+    ,wo.order_no 工单号
+    ,wo.created_at 工单创建时间
+    ,wo.latest_reply_at 最后回复时间
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+ from bi_pro.work_order wo
+ left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+ left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+ join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+ where
+    wo.created_at > '2022-11-28 18:00:00'
+    and wo.created_at < '2023-03-01 18:00:00'
+    and wo.store_id = 22
+    and ss.id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     month(wo.latest_reply_at) 月份
+    ,cg.name 项目组
+#     ,count(distinct wo.id)  already_deal
+#     ,sum(timestampdiff(second, wo.created_at, wo.latest_reply_at) / 3600) /count(distinct wo.id) deal_avg_time
+    ,wo.created_at 工单创建时间
+    ,wo.latest_reply_at 工单最后回复时间
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+from bi_pro.work_order wo
+left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+where wo.latest_reply_at >= '2022-11-01 00:00:00'
+and wo.latest_reply_at < '2023-03-11 00:00:00'
+and wo.store_id = 22
+and ss.id is not null
+and wo.status in (3, 4);
+;-- -. . -..- - / . -. - .-. -.--
+select
+#     cg.name cg_name
+#     ,wo.created_at 工单创建时间
+#     ,wo.latest_reply_at 工单最后回复时间
+#     ,case wo.status
+#         when 1 then '未阅读'
+#         when 2 then '已经阅读'
+#         when 3 then '已回复'
+#         when 4 then '已关闭'
+#     end 工单状态
+count(*)
+from bi_pro.work_order wo
+left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+where
+    ss.id is not null
+    and wo.created_at >= '2022-01-01'
+    and wo.created_at < '2023-03-01'
+    and wo.store_id = 22;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cg.name cg_name
+    ,wo.created_at 工单创建时间
+    ,wo.latest_reply_at 工单最后回复时间
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+from bi_pro.work_order wo
+left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+where
+    ss.id is not null
+    and wo.created_at >= '2022-01-01'
+    and wo.created_at < '2023-03-01'
+    and wo.store_id = 22;
+;-- -. . -..- - / . -. - .-. -.--
+elect
+    cg.name cg_name
+    ,wo.order_no
+    ,wo.client_id
+    ,wo.created_at 工单创建时间
+    ,wo.latest_reply_at 工单最后回复时间
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+from bi_pro.work_order wo
+left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+where
+    ss.id is not null
+    and wo.created_at >= '2022-01-01'
+    and wo.created_at < '2023-03-01'
+    and wo.store_id = 22;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cg.name cg_name
+    ,wo.order_no
+    ,wo.client_id
+    ,wo.created_at 工单创建时间
+    ,wo.latest_reply_at 工单最后回复时间
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+from bi_pro.work_order wo
+left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+where
+    ss.id is not null
+    and wo.created_at >= '2022-01-01'
+    and wo.created_at < '2023-03-01'
+    and wo.store_id = 22;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cg.name cg_name
+    ,wo.order_no
+    ,wo.client_id
+    ,wo.pnos
+    ,wo.created_at 工单创建时间
+    ,wo.latest_reply_at 工单最后回复时间
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+from bi_pro.work_order wo
+left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+where
+    ss.id is not null
+    and wo.created_at >= '2022-01-01'
+    and wo.created_at < '2023-03-01'
+    and wo.store_id = 22;
+;-- -. . -..- - / . -. - .-. -.--
+select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+             month(date_add(wo.created_at, interval 6 hour))  month_d
+             ,cg.name cg_name
+             ,count(distinct wo.id) should_deal
+             ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+             ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) dealnum
+         from bi_pro.work_order wo
+         left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+         left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+         join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+         where
+            wo.created_at > '2022-11-30 18:00:00'
+            and wo.created_at < '2023-02-28 18:00:00'
+            and wo.store_id = 22
+            and ss.id is not null
+         group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     month(date_add(wo.created_at, interval 6 hour))  month_d
+     ,cg.name cg_name
+#      ,count(distinct wo.id) should_deal
+#      ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) dealnum
+    ,wo.id
+    ,if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), 1,  null) not_already_deal
+    ,if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), 1, null) dealnum
+ from bi_pro.work_order wo
+ left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+ left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+ join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+ where
+    wo.created_at > '2022-11-30 18:00:00'
+    and wo.created_at < '2023-02-28 18:00:00'
+    and wo.store_id = 22
+    and ss.id is not null
+    and cg.name = 'Shopee'
+    and month(date_add(wo.created_at, interval 6 hour)) = 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     month(date_add(wo.created_at, interval 6 hour))  month_d
+     ,cg.name cg_name
+#      ,count(distinct wo.id) should_deal
+#      ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) dealnum
+    ,wo.id
+    ,wo.status
+    ,wo.created_at
+    ,wo.latest_reply_at
+    ,if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), 1,  null) not_already_deal
+    ,if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), 1, null) dealnum
+ from bi_pro.work_order wo
+ left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+ left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+ join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+ where
+    wo.created_at > '2022-11-30 18:00:00'
+    and wo.created_at < '2023-02-28 18:00:00'
+    and wo.store_id = 22
+    and ss.id is not null
+    and cg.name = 'Shopee'
+    and month(date_add(wo.created_at, interval 6 hour)) = 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     month(date_add(wo.created_at, interval 6 hour))  month_d
+     ,cg.name cg_name
+#      ,count(distinct wo.id) should_deal
+#      ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) dealnum
+    ,wo.id
+    ,wo.status
+    ,wo.created_at
+    ,wo.order_no
+    ,wo.latest_reply_at
+    ,if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), 1,  null) not_already_deal
+    ,if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), 1, null) dealnum
+ from bi_pro.work_order wo
+ left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+ left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+ join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+ where
+    wo.created_at > '2022-11-30 18:00:00'
+    and wo.created_at < '2023-02-28 18:00:00'
+    and wo.store_id = 22
+    and ss.id is not null
+    and cg.name = 'Shopee'
+    and month(date_add(wo.created_at, interval 6 hour)) = 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     month(date_add(wo.created_at, interval 6 hour))  month_d
+     ,cg.name cg_name
+#      ,count(distinct wo.id) should_deal
+#      ,count(distinct if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), wo.id,  null)) not_already_deal
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) / count(distinct wo.id) deal_rate
+#      ,count(distinct if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), wo.id, null)) dealnum
+    ,wo.id
+    ,wo.status
+    ,wo.created_at
+    ,wo.order_no
+    ,wo.pnos
+    ,wo.latest_reply_at
+    ,if(wo.status in (1, 2) or (wo.status in (3, 4) and wo.latest_reply_at >= date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour)), 1,  null) not_already_deal
+    ,if(wo.status in (3, 4) and wo.latest_reply_at < date_add(adddate(last_day(date_add(wo.created_at, interval 6 hour)), 1), interval 18 hour), 1, null) dealnum
+ from bi_pro.work_order wo
+ left join fle_staging.sys_store ss on ss.id = wo.created_store_id
+ left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = wo.client_id and cgkr.deleted = 0  -- 已经删除的关联关系不要，要不然会造成数据重复
+ join fle_staging.customer_group cg on  cgkr.customer_group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+ where
+    wo.created_at > '2022-11-30 18:00:00'
+    and wo.created_at < '2023-02-28 18:00:00'
+    and wo.store_id = 22
+    and ss.id is not null
+    and cg.name = 'Shopee'
+    and month(date_add(wo.created_at, interval 6 hour)) = 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end 项目组
+            ,di.id
+            ,pi.cod_enabled
+#             ,count(distinct cdt.id ) should_deal
+#             ,count(distinct if(di.state = 0 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+#             ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00';
+;-- -. . -..- - / . -. - .-. -.--
+select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end 项目组
+            ,di.id
+            ,pi.cod_enabled
+#             ,count(distinct cdt.id ) should_deal
+#             ,count(distinct if(di.state = 0 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+#             ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+            and pi.cod_enabled is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        plt.pno
+        ,plt.id
+        ,plt.client_id
+        ,plt.created_at
+        ,plt.last_valid_store_id
+        ,plt.last_valid_staff_info_id
+    from bi_pro.parcel_lose_task plt
+    where
+        plt.state < 5
+        and plt.source = 2;
+;-- -. . -..- - / . -. - .-. -.--
 with t1 as
 (
     select
@@ -5210,9 +6879,1244 @@ left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.
 left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
 ;-- -. . -..- - / . -. - .-. -.--
 select
-    t.pno
-    ,pi.returned
-    ,pi2.cod_amount/100 cod金额
-from fle_staging.parcel_info pi
-join tmpale.tmp_th_pno_2023_03_14 t on t.pno = pi.pno
-left join fle_staging.parcel_info pi2 on if(pi.returned = 1, pi.customary_pno, pi.pno) = pi2.pno;
+    dr.route_action
+    ,count(dr.id) num
+from fle_staging.diff_route dr
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    dr.route_action
+    ,count(dr.id) num
+from fle_staging.diff_route dr
+left join fle_staging.diff_info di on di.id = dr.diff_info_id
+where
+    di.state = 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.state
+    ,count(cdt.id)
+from fle_staging.customer_diff_ticket cdt
+where
+    cdt.first_operated_at is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal '应处理问题件数(剔除lost)'
+    ,t2.deal_num 完结问题件数
+    ,t1.should_not 应处理问题件数当月未完成
+    ,t1.month_deal_ratio 当月问题件完结率
+    ,zl.zl_num 滞留问题件单数
+    ,t1.dam_short_ratio 破损短少问题件占比
+    ,t1.cod_ratio COD金额问题件占比
+    ,t1.other_ratio 其他问题件占比
+    ,t2.avg_deal_time 完结问题件单均处理时长
+    ,t2.dam_short_avg_time 破损短少问题件单均完结时长
+    ,t2.cod_avg_time COD金额问题件单均完结时长
+    ,t2.other_avg_time 其他问题件单均完结时长
+    ,t1.jiedan_avg_time '问题件单均接单时长'
+    ,t1.fin_avg_time '问题件单均接单-结单时长'
+    ,cf.repeat_num 问题件重复包裹数
+from
+    ( -- 应处理
+        select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) should_deal
+            ,count(distinct if(di.state != 1 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+            ,count(distinct if(di.state = 1 and date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour), cdt.id, null))/count(distinct cdt.id ) month_deal_ratio
+            ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+            ,count(distinct if(pi.cod_enabled = 1, cdt.id, null))/count(distinct cdt.id) cod_ratio
+            ,count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) other_ratio
+            ,sum(if(cdt.state != 0, timestampdiff(second , cdt.created_at, cdt.first_operated_at)/3600, 0 ))/count(distinct if(cdt.state != 0 ,cdt.id, null)) jiedan_avg_time
+            ,sum(if(cdt.state = 1, timestampdiff(second ,cdt.first_operated_at, cdt.updated_at)/3600, 0 )) fin_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+        group by 1,2
+    ) t1
+left join
+    ( -- 已完结
+        select
+            month(date_add(cdt.created_at, interval 7 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) deal_num
+            ,sum(timestampdiff(second, cdt.created_at, cdt.updated_at)/3600)/count(distinct cdt.id) avg_deal_time
+            ,sum(if(di.diff_marker_category in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null)) dam_short_avg_time
+            ,sum(if(pi.cod_enabled = 1, timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 1, cdt.id, null)) cod_avg_time
+            ,sum(if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))  other_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.updated_at >= '2022-12-31 17:00:00'
+            and cdt.updated_at < '2023-02-28 17:00:00'
+            and di.state = 1 -- 已处理
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    ( -- 滞留
+        select
+            '12' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2022-12-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2022-12-31 17:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-01-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-01-31 11:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00' -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-02-28 17:00:00')
+                )
+        group by 1,2
+    ) zl  on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.cg_name
+            ,t.month_d
+            ,count(distinct t.pno) repeat_num
+        from
+            (
+                select
+                    cdt.id
+                    ,month(date_add(cdt.created_at, interval 13 hour)) month_d
+                    ,case
+                        when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                        when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                        when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                        else cg.name
+                    end cg_name
+                    ,di.pno
+                    ,count(cdt.id) over (partition by month(date_add(cdt.created_at, interval 13 hour)), di.pno) pno_count
+                from fle_staging.customer_diff_ticket cdt
+                left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+                join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+                where
+                    di.diff_marker_category not in (7,22)
+                    and cdt.created_at >= '2022-11-30 11:00:00'
+                    and cdt.created_at < '2023-02-28 11:00:00'
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) should_deal
+            ,count(distinct if(di.state != 1 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+            ,count(distinct if(di.state = 1 and date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour), cdt.id, null))/count(distinct cdt.id ) month_deal_ratio
+            ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+            ,count(distinct if(pi.cod_enabled = 1, cdt.id, null))/count(distinct cdt.id) cod_ratio
+            ,count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) other_ratio
+            ,sum(if(cdt.state != 0, timestampdiff(second , cdt.created_at, cdt.first_operated_at)/3600, 0 ))/count(distinct if(cdt.state != 0 ,cdt.id, null)) jiedan_avg_time
+            ,sum(if(cdt.state = 1, timestampdiff(second ,cdt.first_operated_at, cdt.updated_at)/3600, 0 )) fin_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) should_deal
+            ,count(distinct if(di.state != 1 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+            ,count(distinct if(di.state = 1 and di.updated_at < date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour), cdt.id, null))/count(distinct cdt.id ) month_deal_ratio
+            ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+            ,count(distinct if(pi.cod_enabled = 1, cdt.id, null))/count(distinct cdt.id) cod_ratio
+            ,count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) other_ratio
+            ,sum(if(cdt.state != 0, timestampdiff(second , cdt.created_at, cdt.first_operated_at)/3600, 0 ))/count(distinct if(cdt.state != 0 ,cdt.id, null)) jiedan_avg_time
+            ,sum(if(cdt.state = 1, timestampdiff(second ,cdt.first_operated_at, cdt.updated_at)/3600, 0 )) fin_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal '应处理问题件数(剔除lost)'
+    ,t2.deal_num 完结问题件数
+    ,t1.should_not 应处理问题件数当月未完成
+    ,t1.month_deal_ratio 当月问题件完结率
+    ,zl.zl_num 滞留问题件单数
+    ,t1.dam_short_ratio 破损短少问题件占比
+    ,t1.cod_ratio COD金额问题件占比
+    ,t1.other_ratio 其他问题件占比
+    ,t2.avg_deal_time 完结问题件单均处理时长
+    ,t2.dam_short_avg_time 破损短少问题件单均完结时长
+    ,t2.cod_avg_time COD金额问题件单均完结时长
+    ,t2.other_avg_time 其他问题件单均完结时长
+    ,t1.jiedan_avg_time '问题件单均接单时长'
+    ,t1.fin_avg_time '问题件单均接单-结单时长'
+    ,cf.repeat_num 问题件重复包裹数
+from
+    ( -- 应处理
+        select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) should_deal
+            ,count(distinct if(di.state != 1 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+            ,count(distinct if(di.state = 1 and di.updated_at < date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour), cdt.id, null))/count(distinct cdt.id ) month_deal_ratio
+            ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+            ,count(distinct if(pi.cod_enabled = 1, cdt.id, null))/count(distinct cdt.id) cod_ratio
+            ,count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) other_ratio
+            ,sum(if(cdt.state != 0, timestampdiff(second , cdt.created_at, cdt.first_operated_at)/3600, 0 ))/count(distinct if(cdt.state != 0 ,cdt.id, null)) jiedan_avg_time
+            ,sum(if(cdt.state = 1, timestampdiff(second ,cdt.first_operated_at, cdt.updated_at)/3600, 0 )) fin_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+        group by 1,2
+    ) t1
+left join
+    ( -- 已完结
+        select
+            month(date_add(cdt.created_at, interval 7 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) deal_num
+            ,sum(timestampdiff(second, cdt.created_at, cdt.updated_at)/3600)/count(distinct cdt.id) avg_deal_time
+            ,sum(if(di.diff_marker_category in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null)) dam_short_avg_time
+            ,sum(if(pi.cod_enabled = 1, timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 1, cdt.id, null)) cod_avg_time
+            ,sum(if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))  other_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.updated_at >= '2022-12-31 17:00:00'
+            and cdt.updated_at < '2023-02-28 17:00:00'
+            and di.state = 1 -- 已处理
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    ( -- 滞留
+        select
+            '12' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2022-12-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2022-12-31 17:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-01-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-01-31 11:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00' -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-02-28 17:00:00')
+                )
+        group by 1,2
+    ) zl  on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.cg_name
+            ,t.month_d
+            ,count(distinct t.pno) repeat_num
+        from
+            (
+                select
+                    cdt.id
+                    ,month(date_add(cdt.created_at, interval 13 hour)) month_d
+                    ,case
+                        when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                        when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                        when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                        else cg.name
+                    end cg_name
+                    ,di.pno
+                    ,count(cdt.id) over (partition by month(date_add(cdt.created_at, interval 13 hour)), di.pno) pno_count
+                from fle_staging.customer_diff_ticket cdt
+                left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+                join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+                where
+                    di.diff_marker_category not in (7,22)
+                    and cdt.created_at >= '2022-11-30 11:00:00'
+                    and cdt.created_at < '2023-02-28 11:00:00'
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            month(date_add(cdt.created_at, interval 7 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) deal_num
+            ,sum(timestampdiff(second, cdt.created_at, cdt.updated_at)/3600)/count(distinct cdt.id) avg_deal_time
+            ,sum(if(di.diff_marker_category in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null)) dam_short_avg_time
+            ,sum(if(pi.cod_enabled = 1, timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 1, cdt.id, null)) cod_avg_time
+            ,sum(if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))  other_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.updated_at >= '2022-11-30 17:00:00'
+            and cdt.updated_at < '2023-02-28 17:00:00'
+            and di.state = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal '应处理问题件数(剔除lost)'
+    ,t2.deal_num 完结问题件数
+    ,t1.should_not 应处理问题件数当月未完成
+    ,t1.month_deal_ratio 当月问题件完结率
+    ,zl.zl_num 滞留问题件单数
+    ,t1.dam_short_ratio 破损短少问题件占比
+    ,t1.cod_ratio COD金额问题件占比
+    ,t1.other_ratio 其他问题件占比
+    ,t2.avg_deal_time 完结问题件单均处理时长
+    ,t2.dam_short_avg_time 破损短少问题件单均完结时长
+    ,t2.cod_avg_time COD金额问题件单均完结时长
+    ,t2.other_avg_time 其他问题件单均完结时长
+    ,t1.jiedan_avg_time '问题件单均接单时长'
+    ,t1.fin_avg_time '问题件单均接单-结单时长'
+    ,cf.repeat_num 问题件重复包裹数
+from
+    ( -- 应处理
+        select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) should_deal
+            ,count(distinct if(di.state != 1 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+            ,count(distinct if(di.state = 1 and di.updated_at < date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour), cdt.id, null))/count(distinct cdt.id ) month_deal_ratio
+            ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+            ,count(distinct if(pi.cod_enabled = 1, cdt.id, null))/count(distinct cdt.id) cod_ratio
+            ,count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) other_ratio
+            ,sum(if(cdt.state != 0, timestampdiff(second , cdt.created_at, cdt.first_operated_at)/3600, 0 ))/count(distinct if(cdt.state != 0 ,cdt.id, null)) jiedan_avg_time
+            ,sum(if(cdt.state = 1, timestampdiff(second ,cdt.first_operated_at, cdt.updated_at)/3600, 0 )) fin_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+        group by 1,2
+    ) t1
+left join
+    ( -- 已完结
+        select
+            month(date_add(cdt.created_at, interval 7 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) deal_num
+            ,sum(timestampdiff(second, cdt.created_at, cdt.updated_at)/3600)/count(distinct cdt.id) avg_deal_time
+            ,sum(if(di.diff_marker_category in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null)) dam_short_avg_time
+            ,sum(if(pi.cod_enabled = 1, timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 1, cdt.id, null)) cod_avg_time
+            ,sum(if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))  other_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.updated_at >= '2022-11-30 17:00:00'
+            and cdt.updated_at < '2023-02-28 17:00:00'
+            and di.state = 1 -- 已处理
+        group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    ( -- 滞留
+        select
+            '12' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2022-12-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2022-12-31 17:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-01-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-01-31 11:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00' -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-02-28 17:00:00')
+                )
+        group by 1,2
+    ) zl  on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.cg_name
+            ,t.month_d
+            ,count(distinct t.pno) repeat_num
+        from
+            (
+                select
+                    cdt.id
+                    ,month(date_add(cdt.created_at, interval 13 hour)) month_d
+                    ,case
+                        when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                        when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                        when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                        else cg.name
+                    end cg_name
+                    ,di.pno
+                    ,count(cdt.id) over (partition by month(date_add(cdt.created_at, interval 13 hour)), di.pno) pno_count
+                from fle_staging.customer_diff_ticket cdt
+                left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+                join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+                where
+                    di.diff_marker_category not in (7,22)
+                    and cdt.created_at >= '2022-11-30 11:00:00'
+                    and cdt.created_at < '2023-02-28 11:00:00'
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on plt.pno = pi.pno
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收时间
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on plt.pno = pi.pno
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal '应处理问题件数(剔除lost)'
+    ,t2.deal_num 完结问题件数
+    ,t1.should_not 应处理问题件数当月未完成
+    ,t1.month_deal_ratio 当月问题件完结率
+    ,zl.zl_num 滞留问题件单数
+    ,t1.dam_short_ratio 破损短少问题件占比
+    ,t1.cod_ratio COD金额问题件占比
+    ,t1.other_ratio 其他问题件占比
+    ,t2.avg_deal_time 完结问题件单均处理时长
+    ,t2.dam_short_avg_time 破损短少问题件单均完结时长
+    ,t2.cod_avg_time COD金额问题件单均完结时长
+    ,t2.other_avg_time 其他问题件单均完结时长
+    ,t1.jiedan_avg_time '问题件单均接单时长'
+    ,t1.fin_avg_time '问题件单均接单-结单时长'
+    ,cf.repeat_num 问题件重复包裹数
+from
+    ( -- 应处理
+        select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) should_deal
+            ,count(distinct if(di.state != 1 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+            ,count(distinct if(di.state = 1 and di.updated_at < date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour), cdt.id, null))/count(distinct cdt.id ) month_deal_ratio
+            ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+            ,count(distinct if(pi.cod_enabled = 1, cdt.id, null))/count(distinct cdt.id) cod_ratio
+            ,count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) other_ratio
+            ,sum(if(cdt.state != 0, timestampdiff(second , cdt.created_at, cdt.first_operated_at)/3600, 0 ))/count(distinct if(cdt.state != 0 ,cdt.id, null)) jiedan_avg_time
+            ,sum(if(cdt.state = 1, timestampdiff(second ,cdt.first_operated_at, cdt.updated_at)/3600, 0 ))/count(distinct if(cdt.state = 1,cdt.id, null)) fin_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+        group by 1,2
+    ) t1
+left join
+    ( -- 已完结
+        select
+            month(date_add(cdt.created_at, interval 7 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) deal_num
+            ,sum(timestampdiff(second, cdt.created_at, cdt.updated_at)/3600)/count(distinct cdt.id) avg_deal_time
+            ,sum(if(di.diff_marker_category in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null)) dam_short_avg_time
+            ,sum(if(pi.cod_enabled = 1, timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 1, cdt.id, null)) cod_avg_time
+            ,sum(if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))  other_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.updated_at >= '2022-11-30 17:00:00'
+            and cdt.updated_at < '2023-02-28 17:00:00'
+            and di.state = 1 -- 已处理
+        group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    ( -- 滞留
+        select
+            '12' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2022-12-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2022-12-31 17:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-01-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-01-31 11:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00' -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-02-28 17:00:00')
+                )
+        group by 1,2
+    ) zl  on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.cg_name
+            ,t.month_d
+            ,count(distinct t.pno) repeat_num
+        from
+            (
+                select
+                    cdt.id
+                    ,month(date_add(cdt.created_at, interval 13 hour)) month_d
+                    ,case
+                        when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                        when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                        when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                        else cg.name
+                    end cg_name
+                    ,di.pno
+                    ,count(cdt.id) over (partition by month(date_add(cdt.created_at, interval 13 hour)), di.pno) pno_count
+                from fle_staging.customer_diff_ticket cdt
+                left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+                join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+                where
+                    di.diff_marker_category not in (7,22)
+                    and cdt.created_at >= '2022-11-30 11:00:00'
+                    and cdt.created_at < '2023-02-28 11:00:00'
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select DATE_ADD(DATE_ADD(CURDATE(), INTERVAL 1 MONTH), INTERVAL 10 DAY);
+;-- -. . -..- - / . -. - .-. -.--
+SELECT DATE_FORMAT(DATE_ADD(NOW(), INTERVAL 1 MONTH), '%Y-%m-10');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.month_d 月份
+    ,t1.cg_name 项目组
+    ,t1.should_deal '应处理问题件数(剔除lost)'
+    ,t2.deal_num 完结问题件数
+    ,t1.should_not 应处理问题件数当月未完成
+    ,t1.month_deal_ratio 当月问题件完结率
+    ,zl.zl_num 滞留问题件单数
+    ,t1.dam_short_ratio 破损短少问题件占比
+    ,t1.cod_ratio COD金额问题件占比
+    ,t1.other_ratio 其他问题件占比
+    ,t2.avg_deal_time 完结问题件单均处理时长
+    ,t2.dam_short_avg_time 破损短少问题件单均完结时长
+    ,t2.cod_avg_time COD金额问题件单均完结时长
+    ,t2.other_avg_time 其他问题件单均完结时长
+    ,t1.jiedan_avg_time '问题件单均接单时长'
+    ,t1.fin_avg_time '问题件单均接单-结单时长'
+    ,cf.repeat_num 问题件重复包裹数
+from
+    ( -- 应处理
+        select
+            month(date_add(cdt.created_at, interval 13 hour)) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) should_deal
+            ,count(distinct if(di.state != 1 or ( di.state = 1 and di.updated_at > date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour)), cdt.id, null))  should_not
+            ,count(distinct if(di.state = 1 and di.updated_at < date_add(adddate(last_day(date_add(cdt.created_at, interval 6 hour)), 1),interval 11 hour), cdt.id, null))/count(distinct cdt.id ) month_deal_ratio
+            ,count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) dam_short_ratio
+            ,count(distinct if(pi.cod_enabled = 1, cdt.id, null))/count(distinct cdt.id) cod_ratio
+            ,count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))/count(distinct cdt.id ) other_ratio
+            ,sum(if(cdt.state != 0, timestampdiff(second , cdt.created_at, cdt.first_operated_at)/3600, 0 ))/count(distinct if(cdt.state != 0 ,cdt.id, null)) jiedan_avg_time
+            ,sum(if(cdt.state = 1, timestampdiff(second ,cdt.first_operated_at, cdt.updated_at)/3600, 0 ))/count(distinct if(cdt.state = 1,cdt.id, null)) fin_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2022-11-30 11:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00'
+        group by 1,2
+    ) t1
+left join
+    ( -- 已完结
+        select
+            month(cdt.updated_at) month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id ) deal_num
+            ,sum(timestampdiff(second, cdt.created_at, cdt.updated_at)/3600)/count(distinct cdt.id) avg_deal_time
+            ,sum(if(di.diff_marker_category in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(di.diff_marker_category in (5,6,20,21), cdt.id, null)) dam_short_avg_time
+            ,sum(if(pi.cod_enabled = 1, timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 1, cdt.id, null)) cod_avg_time
+            ,sum(if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), timestampdiff(second, cdt.created_at, cdt.updated_at)/3600, 0))/count(distinct if(pi.cod_enabled = 0 and di.diff_marker_category not in (5,6,20,21), cdt.id, null))  other_avg_time
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        left join fle_staging.parcel_info pi on pi.pno = di.pno
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.updated_at >= '2022-11-30 17:00:00'
+            and cdt.updated_at < '2023-02-28 17:00:00'
+            and di.state = 1 -- 已处理
+        group by 1,2
+    ) t2 on t2.month_d = t1.month_d and t2.cg_name = t1.cg_name
+left join
+    ( -- 滞留
+        select
+            '12' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2022-12-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2022-12-31 17:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '1' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-01-31 11:00:00'  -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-01-31 11:00:00')
+                )
+        group by 1,2
+
+        union all
+
+        select
+            '2' month_d
+            ,case
+                when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                else cg.name
+            end cg_name
+            ,count(distinct cdt.id) zl_num
+        from fle_staging.customer_diff_ticket cdt
+        left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+        join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+        where
+            di.diff_marker_category not in (7,22)
+            and cdt.created_at >= '2021-12-31 17:00:00'
+            and cdt.created_at < '2023-02-28 11:00:00' -- 18点之前产生
+            and
+                (
+                    di.state != 1 or
+                    (di.state = 1 and di.updated_at > '2023-02-28 17:00:00')
+                )
+        group by 1,2
+    ) zl  on zl.month_d = t1.month_d and zl.cg_name = t1.cg_name
+left join
+    (
+        select
+            t.cg_name
+            ,t.month_d
+            ,count(distinct t.pno) repeat_num
+        from
+            (
+                select
+                    cdt.id
+                    ,month(date_add(cdt.created_at, interval 13 hour)) month_d
+                    ,case
+                        when cdt.client_id = 'AA0416' then 'Lazada Buyer Return'
+                        when cdt.client_id in ('AA0707','AA0657','AA0606') then 'Shopee Buyer Return'
+                        when cdt.client_id in ('AA0649','AA0650') then 'Shein Buyer Return'
+                        else cg.name
+                    end cg_name
+                    ,di.pno
+                    ,count(cdt.id) over (partition by month(date_add(cdt.created_at, interval 13 hour)), di.pno) pno_count
+                from fle_staging.customer_diff_ticket cdt
+                left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+                join fle_staging.customer_group cg on cdt.group_id = cg.id and cg.name in ('Shopee','LAZADA','TikTok','THAI KAM','KAM CN')
+                where
+                    di.diff_marker_category not in (7,22)
+                    and cdt.created_at >= '2022-11-30 11:00:00'
+                    and cdt.created_at < '2023-02-28 11:00:00'
+            ) t
+        where
+            t.pno_count >= 2
+        group by 1,2
+    ) cf on cf.month_d = t1.month_d and cf.cg_name = t1.cg_name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收时间
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on plt.pno = pi.pno
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and pi.state not in (5,7,8,9)
+    and pi.interrupt_category = 3
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收时间
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on plt.pno = pi.pno
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and pi.state not in (5,7,8,9)
+    and pi.discard_enabled = 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with rep as
+(
+    select
+        wo.order_no
+        ,wo.pnos
+        ,wor.created_at
+        ,row_number() over (partition by wo.order_no order by wor.created_at ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wo.id = wor.order_id
+    where
+        wo.created_store_id = 3
+        and wo.created_at >= date_sub(curdate(), interval 1 day)
+        and wo.created_at < curdate()
+)
+, pho as
+(
+    select
+        pr.pno
+        ,pr.routed_at
+        ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+        ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk2
+    from rot_pro.parcel_route pr
+    join
+        (
+            select rep.pnos from rep group by 1
+        ) r on pr.pno = r.pnos
+    where
+        pr.route_action = 'PHONE'
+)
+select
+    date(wo.created_at) Date
+    ,wo.order_no 'Ticket ID'
+    ,wo.pnos 运单号
+    ,wo.client_id 客户ID
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 平台客户
+    ,case ci.requester_category
+        when 0 then '托运人员'
+        when 1 then '收货人员'
+        when 2 then '操作人员'
+        when 3 then '销售人员'
+        when 4 then '客服人员'
+    end 请求者角色
+    ,case ci.channel_category # 渠道
+         when 0 then '电话'
+         when 1 then '电子邮件'
+         when 2 then '网页'
+         when 3 then '网点'
+         when 4 then '自主投诉页面'
+         when 5 then '网页（facebook）'
+         when 6 then 'APPSTORE'
+         when 7 then 'Lazada系统'
+         when 8 then 'Shopee系统'
+         when 9 then 'TikTok'
+    end 请求渠道
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 工单状态
+    ,wo.title 工单主题
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.created_at 工单创建时间
+    ,rep.created_at 工单回复时间
+    ,case wo.is_call
+        when 0 then '不需要'
+        when 1 then '需要'
+    end 致电客户
+    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, '否', '是') 是否超时
+    ,case wo.up_report
+        when 0 then '否'
+        when 1 then '是'
+    end 是否上报虚假工单
+    ,datediff(wo.updated_at, wo.created_at) 工单处理天数
+    ,wo.store_id '受理网点ID/部门'
+    ,case
+        when ss.`category` in (1,2,10,13) then 'sp'
+        when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,ss.name 网点名称
+    ,ss.sorting_no 区域
+    ,smr.name Area
+    ,smp.name 片区
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 运单状态
+    ,if(pi.state = 5, date(convert_tz(pi.finished_at, '+00:00', '+07:00')), null) 妥投日期
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+07:00'), null ) 妥投时间
+    ,convert_tz(p1.routed_at, '+00:00', '+07:00') 第一次联系客户
+    ,convert_tz(p2.routed_at, '+00:00', '+07:00') 最后联系客户
+    ,if(pi.state = 5, datediff(date(convert_tz(pi.finished_at, '+00:00', '+07:00')), date(convert_tz(pi.created_at, '+00:00', '+07:00'))), null) 揽收至妥投
+    ,datediff(curdate(), date(convert_tz(pi.created_at, '+00:00', '+07:00'))) 揽收至今
+from bi_pro.work_order wo
+join fle_staging.customer_issue ci on wo.customer_issue_id = ci.id
+left join rep on rep.order_no = wo.order_no and rep.rn = 1
+left join fle_staging.sys_store ss on ss.id = wo.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_manage_piece smp on smp.id = ss.manage_piece
+left join fle_staging.parcel_info pi on wo.pnos = pi.pno
+left join pho p1 on p1.pno = wo.pnos and p1.rk = 1
+left join pho p2 on p2.pno = wo.pnos and p2.rk = 1
+left join fle_staging.ka_profile kp on kp.id = wo.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = wo.client_id
+where
+    wo.created_store_id = 3 -- 总部客服中心
+    and wo.created_at >= date_sub(curdate(), interval 1 day)
+    and wo.created_at < curdate();
