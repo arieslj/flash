@@ -484,3 +484,1883 @@ where 1=1
     and tt.rk = 1
     and tt.rkf = 1
     AND tt.rkj=1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+                    pcd.pno
+                    ,ss.name
+                    ,ss1.name name1
+                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
+                from ph_staging.parcel_change_detail pcd
+                left join ph_bi.sys_store ss on ss.id=pcd.old_value
+                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
+                where
+                    pcd.created_at>=CURRENT_DATE()-interval 30 day
+                    and pcd.field_name = 'dst_store_id';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        di.pno
+    from ph_staging.diff_info di
+    where
+        di.created_at < date_sub(curdate(), interval 8 hour)
+        and di.created_at >= date_sub(curdate(), interval 32 hour)
+        and di.diff_marker_category in (30,31)
+    group by 1
+)
+
+select
+    a.pno
+    ,di.num '上报错分次数'
+    ,ss.name '妥投网点'
+    ,pcd. '初始目的地网点/修改信息网点1'
+    ,pcd.'修改后目的地网点1'
+    ,pcd.'修改信息网点2'
+    ,pcd.'修改后目的地网点2'
+    ,pcd.'修改信息网点3'
+    ,pcd.'修改后目的地网点3'
+    ,pcd.'修改信息网点4'
+    ,pcd.'修改后目的地网点4'
+    ,pcd.'修改信息网点5'
+    ,pcd.'修改后目的地网点5'
+    ,pcd.'修改信息网点6'
+    ,pcd.'修改后目的地网点6'
+    ,pcd.'修改信息网点7'
+    ,pcd.'修改后目的地网点7'
+    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
+    ,a.dst_postal_code '最终邮编'
+    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
+    ,case
+        when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
+        when pcd1.old_value is null then 'HUB错分'
+        when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
+    end '责任归属'
+    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
+    ,a.dst_detail_address '最终详细地址'
+from ph_staging.parcel_info a
+join t on a.pno = t.pno
+left join ph_bi.sys_store ss on a.ticket_delivery_store_id=ss.id
+left join
+    (
+        select
+            pcd.pno
+            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
+            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
+            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
+            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
+            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
+            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
+            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
+            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
+            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
+            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
+            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
+            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
+            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
+            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
+        from
+            (
+                select
+                    pcd.pno
+                    ,ss.name
+                    ,ss1.name name1
+                    ,row_number()over(partition by pcd.pno order by pcd.created_at) rank
+                from ph_staging.parcel_change_detail pcd
+                left join ph_bi.sys_store ss on ss.id=pcd.old_value
+                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
+                where
+                    pcd.created_at>=CURRENT_DATE()-interval 30 day
+                    and pcd.field_name = 'dst_store_id'
+            )pcd
+        group by 1
+    )pcd on pcd.pno = a.pno
+left join
+    (
+        select
+            di.pno
+            ,count(di.pno) num
+        from ph_staging.diff_info di
+        where
+            di.created_at>=CURRENT_DATE()-interval 30 day
+            and di.diff_marker_category in (30,31)
+        group by 1
+    )di on di.pno=a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at >= CURRENT_DATE()-interval 30 day
+            and pcd.field_name = 'dst_postal_code'
+    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
+left join
+    (
+        select
+            pi.pno
+            ,pi.dst_postal_code
+            ,pi.dst_detail_address
+        from ph_staging.parcel_info pi
+        where
+            pi.created_at >= CURRENT_DATE()-interval 40 day
+    )pi1 on pi1.pno=a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at )rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name = 'dst_detail_address'
+    )pcd2 on a.pno=pcd2.pno and pcd2.rank=  1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,di.num '上报错分次数'
+    ,ss.name '妥投网点'
+    ,pcd. '初始目的地网点/修改信息网点1'
+    ,pcd.'修改后目的地网点1'
+    ,pcd.'修改信息网点2'
+    ,pcd.'修改后目的地网点2'
+    ,pcd.'修改信息网点3'
+    ,pcd.'修改后目的地网点3'
+    ,pcd.'修改信息网点4'
+    ,pcd.'修改后目的地网点4'
+    ,pcd.'修改信息网点5'
+    ,pcd.'修改后目的地网点5'
+    ,pcd.'修改信息网点6'
+    ,pcd.'修改后目的地网点6'
+    ,pcd.'修改信息网点7'
+    ,pcd.'修改后目的地网点7'
+    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
+    ,a.dst_postal_code '最终邮编'
+    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
+    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
+    when pcd1.old_value is null then 'HUB错分'
+    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
+    end '责任归属'
+    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
+    ,a.dst_detail_address '最终详细地址'
+from
+    (
+        select
+            distinct
+            dd.pno
+        from ph_staging.diff_info dd
+        where
+            dd.created_at>='2023-03-01'
+            and dd.diff_marker_category='31'
+    )dd
+join ph_staging.parcel_info a on dd.pno = a.pno
+left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
+left join
+    (
+        select
+            pcd.pno
+            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
+            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
+            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
+            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
+            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
+            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
+            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
+            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
+            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
+            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
+            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
+            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
+            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
+            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
+        from
+            (
+                select
+                    pcd.pno
+                    ,ss.name
+                    ,ss1.name name1
+                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
+                from ph_staging.parcel_change_detail pcd
+                left join ph_bi.sys_store ss on ss.id=pcd.old_value
+                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
+                where
+                    pcd.created_at>=CURRENT_DATE()-interval 30 day
+                    and pcd.field_name='dst_store_id'
+            )pcd
+        group by 1
+    )pcd on pcd.pno = a.pno
+left join
+    (
+        select
+            di.pno
+            ,count(di.pno) num
+        from ph_staging.diff_info di
+        where
+            di.created_at>=CURRENT_DATE()-interval 30 day
+            and di.diff_marker_category in (30,31)
+        group by 1
+    )di on di.pno=a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_postal_code'
+    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
+left join
+    (
+        select
+            pi.pno
+            ,pi.dst_postal_code
+            ,pi.dst_detail_address
+        from ph_staging.parcel_info pi
+        where
+            pi.created_at>=CURRENT_DATE()-interval 40 day
+    )pi1 on pi1.pno = a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_detail_address'
+    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
+where
+    pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,di.num '上报错分次数'
+    ,ss.name '妥投网点'
+    ,pcd. '初始目的地网点/修改信息网点1'
+    ,pcd.'修改后目的地网点1'
+    ,pcd.'修改信息网点2'
+    ,pcd.'修改后目的地网点2'
+    ,pcd.'修改信息网点3'
+    ,pcd.'修改后目的地网点3'
+    ,pcd.'修改信息网点4'
+    ,pcd.'修改后目的地网点4'
+    ,pcd.'修改信息网点5'
+    ,pcd.'修改后目的地网点5'
+    ,pcd.'修改信息网点6'
+    ,pcd.'修改后目的地网点6'
+    ,pcd.'修改信息网点7'
+    ,pcd.'修改后目的地网点7'
+    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
+    ,a.dst_postal_code '最终邮编'
+    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
+    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
+    when pcd1.old_value is null then 'HUB错分'
+    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
+    end '责任归属'
+    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
+    ,a.dst_detail_address '最终详细地址'
+from
+    (
+        select
+            distinct
+            dd.pno
+        from ph_staging.diff_info dd
+        where
+            dd.created_at>='2023-03-01'
+            and dd.diff_marker_category='31'
+    )dd
+join ph_staging.parcel_info a on dd.pno = a.pno
+left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
+left join
+    (
+        select
+            pcd.pno
+            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
+            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
+            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
+            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
+            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
+            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
+            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
+            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
+            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
+            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
+            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
+            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
+            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
+            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
+        from
+            (
+                select
+                    pcd.pno
+                    ,ss.name
+                    ,ss1.name name1
+                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
+                from ph_staging.parcel_change_detail pcd
+                left join ph_bi.sys_store ss on ss.id=pcd.old_value
+                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
+                where
+                    pcd.created_at>=CURRENT_DATE()-interval 30 day
+                    and pcd.field_name='dst_store_id'
+            )pcd
+        group by 1
+    )pcd on pcd.pno = a.pno
+left join
+    (
+        select
+            di.pno
+            ,count(di.pno) num
+        from ph_staging.diff_info di
+        where
+            di.created_at>=CURRENT_DATE()-interval 30 day
+            and di.diff_marker_category in (30,31)
+        group by 1
+    )di on di.pno=a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_postal_code'
+    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
+left join
+    (
+        select
+            pi.pno
+            ,pi.dst_postal_code
+            ,pi.dst_detail_address
+        from ph_staging.parcel_info pi
+        where
+            pi.created_at>=CURRENT_DATE()-interval 40 day
+    )pi1 on pi1.pno = a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_detail_address'
+    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
+where
+    a.ticket_delivery_store_id =pcd.`初始目的地网点/修改信息网点1`;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,di.num '上报错分次数'
+    ,ss.name '妥投网点'
+    ,pcd. '初始目的地网点/修改信息网点1'
+    ,pcd.'修改后目的地网点1'
+    ,pcd.'修改信息网点2'
+    ,pcd.'修改后目的地网点2'
+    ,pcd.'修改信息网点3'
+    ,pcd.'修改后目的地网点3'
+    ,pcd.'修改信息网点4'
+    ,pcd.'修改后目的地网点4'
+    ,pcd.'修改信息网点5'
+    ,pcd.'修改后目的地网点5'
+    ,pcd.'修改信息网点6'
+    ,pcd.'修改后目的地网点6'
+    ,pcd.'修改信息网点7'
+    ,pcd.'修改后目的地网点7'
+    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
+    ,a.dst_postal_code '最终邮编'
+    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
+    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
+    when pcd1.old_value is null then 'HUB错分'
+    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
+    end '责任归属'
+    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
+    ,a.dst_detail_address '最终详细地址'
+from
+    (
+        select
+            distinct
+            dd.pno
+        from ph_staging.diff_info dd
+        where
+            dd.created_at>='2023-03-01'
+            and dd.diff_marker_category='31'
+    )dd
+join ph_staging.parcel_info a on dd.pno = a.pno
+left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
+left join
+    (
+        select
+            pcd.pno
+            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
+            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
+            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
+            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
+            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
+            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
+            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
+            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
+            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
+            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
+            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
+            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
+            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
+            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
+        from
+            (
+                select
+                    pcd.pno
+                    ,ss.name
+                    ,ss1.name name1
+                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
+                from ph_staging.parcel_change_detail pcd
+                left join ph_bi.sys_store ss on ss.id=pcd.old_value
+                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
+                where
+                    pcd.created_at>=CURRENT_DATE()-interval 30 day
+                    and pcd.field_name='dst_store_id'
+            )pcd
+        group by 1
+    )pcd on pcd.pno = a.pno
+left join
+    (
+        select
+            di.pno
+            ,count(di.pno) num
+        from ph_staging.diff_info di
+        where
+            di.created_at>=CURRENT_DATE()-interval 30 day
+            and di.diff_marker_category in (30,31)
+        group by 1
+    )di on di.pno=a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_postal_code'
+    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
+left join
+    (
+        select
+            pi.pno
+            ,pi.dst_postal_code
+            ,pi.dst_detail_address
+        from ph_staging.parcel_info pi
+        where
+            pi.created_at>=CURRENT_DATE()-interval 40 day
+    )pi1 on pi1.pno = a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_detail_address'
+    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
+where
+    ss.name =pcd.`初始目的地网点/修改信息网点1`;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,di.num '上报错分次数'
+    ,ss.name '妥投网点'
+    ,pcd. '初始目的地网点/修改信息网点1'
+    ,pcd.'修改后目的地网点1' 第一次修改后网点
+    ,pcd.'修改信息网点2' 第2次修改前网点
+    ,pcd.'修改后目的地网点2' 第2次修改后网点
+    ,pcd.'修改信息网点3' 第3次修改前网点
+    ,pcd.'修改后目的地网点3' 第3次修改后网点
+    ,pcd.'修改信息网点4' 第4次修改前网点
+    ,pcd.'修改后目的地网点4' 第4次修改后网点
+    ,pcd.'修改信息网点5' 第5次修改前网点
+    ,pcd.'修改后目的地网点5' 第5次修改后网点
+    ,pcd.'修改信息网点6' 第6次修改前网点
+    ,pcd.'修改后目的地网点6' 第6次修改后网点
+    ,pcd.'修改信息网点7' 第7次修改前网点
+    ,pcd.'修改后目的地网点7' 第7次修改后网点
+    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
+    ,a.dst_postal_code '最终邮编'
+    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
+    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
+    when pcd1.old_value is null then 'HUB错分'
+    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
+    end '责任归属'
+    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
+    ,a.dst_detail_address '最终详细地址'
+from
+    (
+        select
+            distinct
+            dd.pno
+        from ph_staging.diff_info dd
+        where
+            dd.created_at>='2023-03-01'
+            and dd.diff_marker_category='31'
+    )dd
+join ph_staging.parcel_info a on dd.pno = a.pno
+left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
+left join
+    (
+        select
+            pcd.pno
+            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
+            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
+            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
+            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
+            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
+            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
+            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
+            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
+            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
+            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
+            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
+            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
+            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
+            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
+        from
+            (
+                select
+                    pcd.pno
+                    ,ss.name
+                    ,ss1.name name1
+                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
+                from ph_staging.parcel_change_detail pcd
+                left join ph_bi.sys_store ss on ss.id=pcd.old_value
+                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
+                where
+                    pcd.created_at>=CURRENT_DATE()-interval 30 day
+                    and pcd.field_name='dst_store_id'
+            )pcd
+        group by 1
+    )pcd on pcd.pno = a.pno
+left join
+    (
+        select
+            di.pno
+            ,count(di.pno) num
+        from ph_staging.diff_info di
+        where
+            di.created_at>=CURRENT_DATE()-interval 30 day
+            and di.diff_marker_category in (30,31)
+        group by 1
+    )di on di.pno=a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_postal_code'
+    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
+left join
+    (
+        select
+            pi.pno
+            ,pi.dst_postal_code
+            ,pi.dst_detail_address
+        from ph_staging.parcel_info pi
+        where
+            pi.created_at>=CURRENT_DATE()-interval 40 day
+    )pi1 on pi1.pno = a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_detail_address'
+    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
+where
+    ss.name =pcd.`初始目的地网点/修改信息网点1`;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,di.num '上报错分次数'
+    ,ss.name '妥投网点'
+    ,pcd. '初始目的地网点/修改信息网点1'
+    ,pcd.'修改后目的地网点1' 第一次修改后网点
+    ,pcd.'修改信息网点2' 第2次修改前网点
+    ,pcd.'修改后目的地网点2' 第2次修改后网点
+    ,pcd.'修改信息网点3' 第3次修改前网点
+    ,pcd.'修改后目的地网点3' 第3次修改后网点
+    ,pcd.'修改信息网点4' 第4次修改前网点
+    ,pcd.'修改后目的地网点4' 第4次修改后网点
+    ,pcd.'修改信息网点5' 第5次修改前网点
+    ,pcd.'修改后目的地网点5' 第5次修改后网点
+    ,pcd.'修改信息网点6' 第6次修改前网点
+    ,pcd.'修改后目的地网点6' 第6次修改后网点
+    ,pcd.'修改信息网点7' 第7次修改前网点
+    ,pcd.'修改后目的地网点7' 第7次修改后网点
+    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
+    ,a.dst_postal_code '最终邮编'
+#     ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
+#     ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
+#     when pcd1.old_value is null then 'HUB错分'
+#     when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
+#     end '责任归属'
+    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
+    ,a.dst_detail_address '最终详细地址'
+from
+    (
+        select
+            distinct
+            dd.pno
+        from ph_staging.diff_info dd
+        where
+            dd.created_at>='2023-03-01'
+            and dd.diff_marker_category='31'
+    )dd
+join ph_staging.parcel_info a on dd.pno = a.pno
+left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
+left join
+    (
+        select
+            pcd.pno
+            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
+            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
+            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
+            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
+            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
+            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
+            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
+            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
+            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
+            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
+            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
+            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
+            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
+            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
+        from
+            (
+                select
+                    pcd.pno
+                    ,ss.name
+                    ,ss1.name name1
+                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
+                from ph_staging.parcel_change_detail pcd
+                left join ph_bi.sys_store ss on ss.id=pcd.old_value
+                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
+                where
+                    pcd.created_at>=CURRENT_DATE()-interval 30 day
+                    and pcd.field_name='dst_store_id'
+            )pcd
+        group by 1
+    )pcd on pcd.pno = a.pno
+left join
+    (
+        select
+            di.pno
+            ,count(di.pno) num
+        from ph_staging.diff_info di
+        where
+            di.created_at>=CURRENT_DATE()-interval 30 day
+            and di.diff_marker_category in (30,31)
+        group by 1
+    )di on di.pno=a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_postal_code'
+    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
+left join
+    (
+        select
+            pi.pno
+            ,pi.dst_postal_code
+            ,pi.dst_detail_address
+        from ph_staging.parcel_info pi
+        where
+            pi.created_at>=CURRENT_DATE()-interval 40 day
+    )pi1 on pi1.pno = a.pno
+left join
+    (
+        select
+            pcd.pno
+            ,pcd.old_value
+            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
+        from ph_staging.parcel_change_detail pcd
+        where
+            pcd.created_at>=CURRENT_DATE()-interval 30 day
+            and pcd.field_name='dst_detail_address'
+    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
+where
+    ss.name =pcd.`初始目的地网点/修改信息网点1`;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+from t
+left join
+    ( -- 交接数
+        select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+        group by 1,2
+    ) scan on scan.staff_info_id = t.staff_info_id
+left join
+    (
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+        group by 1,2
+    ) fin on fin.staff_info_id = t.staff_info_id
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+            and pr.staff_info_id = '136400'
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+#         join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+            and pr.staff_info_id = '136400'
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+        and hsi.staff_info_id = '136400'
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+from t
+left join
+    ( -- 交接数
+        select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2
+    ) scan on scan.staff_info_id = t.staff_info_id
+left join
+    (
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+        group by 1,2
+    ) fin on fin.staff_info_id = t.staff_info_id
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+        and hsi.staff_info_id = '136400'
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,count(distinct scan.date_d)
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+from t
+left join
+    ( -- 交接数
+        select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2
+    ) scan on scan.staff_info_id = t.staff_info_id
+left join
+    (
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+        group by 1,2
+    ) fin on fin.staff_info_id = t.staff_info_id
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+        and hsi.staff_info_id = '136400'
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,count(distinct scan.date_d)
+    ,sum(scan.num)
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+from t
+left join
+    ( -- 交接数
+        select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2
+    ) scan on scan.staff_info_id = t.staff_info_id
+left join
+    (
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+        group by 1,2
+    ) fin on fin.staff_info_id = t.staff_info_id
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+        and hsi.staff_info_id = '136400'
+);
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+        and hsi.staff_info_id = '136400';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+        and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+        group by 1,2
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+from
+    (
+        select
+            total.staff_info_id
+            ,total.date_d
+        from total
+        group by 1,2
+    ) t
+left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
+left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+        and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,t.ss_name
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2,3,4
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.ss_name
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+        group by 1,2,3,4
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+from
+    (
+        select
+            total.staff_info_id
+            ,total.date_d
+            ,total.ss_name
+        from total
+        group by 1,2,3
+    ) t
+left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
+left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+#         and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,t.ss_name
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2,3,4
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.ss_name
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
+        group by 1,2,3,4
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+from
+    (
+        select
+            total.staff_info_id
+            ,total.date_d
+            ,total.ss_name
+        from total
+        group by 1,2,3
+    ) t
+left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
+left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+#         and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,t.ss_name
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pr.route_at < date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2,3,4
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.ss_name
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pi.finished_at <
+        group by 1,2,3,4
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,count(distinct scan.date_d) 近30天交接天数
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+    ,count(distinct fin.date_d) 近30天妥投天数
+from
+    (
+        select
+            total.staff_info_id
+            ,total.date_d
+            ,total.ss_name
+        from total
+        group by 1,2,3
+    ) t
+left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
+left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+#         and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,t.ss_name
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pr.route_at < date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2,3,4
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.ss_name
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pi.finished_at < date_sub(curdate(), interval 8 hour)
+        group by 1,2,3,4
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,count(distinct scan.date_d) 近30天交接天数
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+    ,count(distinct fin.date_d) 近30天妥投天数
+from
+    (
+        select
+            total.staff_info_id
+            ,total.date_d
+            ,total.ss_name
+        from total
+        group by 1,2,3
+    ) t
+left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
+left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+#         and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,t.ss_name
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pr.routed_at < date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2,3,4
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.ss_name
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pi.finished_at < date_sub(curdate(), interval 8 hour)
+        group by 1,2,3,4
+)
+select
+    t.ss_name 网点
+    ,t.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,count(distinct scan.date_d) 近30天交接天数
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+    ,count(distinct fin.date_d) 近30天妥投天数
+from
+    (
+        select
+            total.staff_info_id
+            ,total.date_d
+            ,total.ss_name
+        from total
+        group by 1,2,3
+    ) t
+left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
+left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+#         and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,t.ss_name
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pr.routed_at < date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2,3,4
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.ss_name
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pi.finished_at < date_sub(curdate(), interval 8 hour)
+        group by 1,2,3,4
+)
+select
+    a.ss_name 网点
+    ,a.staff_info_id 员工ID
+    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
+    ,count(distinct scan.date_d) 近30天交接天数
+    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
+    ,count(distinct fin.date_d) 近30天妥投天数
+from t a
+left join
+    (
+        select
+            total.staff_info_id
+            ,total.date_d
+            ,total.ss_name
+        from total
+        group by 1,2,3
+    ) t on t.staff_info_id = a.staff_info_id and t.ss_name = a.ss_name
+left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
+left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,ss.name ss_name
+        ,ss.id ss_id
+    from ph_bi.hr_staff_info hsi
+    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+    where
+        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
+        and hsi.state = 1
+        and hsi.job_title in (13,110,1000)  -- 快递员
+#         and hsi.staff_info_id = '136400'
+)
+, total as
+(
+    select
+            date(date_add(pr.routed_at , interval 8 hour)) date_d
+            ,'scan' type
+            ,t.ss_name
+            ,pr.staff_info_id
+            ,count(distinct pr.pno) num
+        from ph_staging.parcel_route pr
+        join t on pr.staff_info_id = t.staff_info_id
+        where
+            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pr.routed_at < date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
+#             and pr.staff_info_id = '136400'
+        group by 1,2,3,4
+
+        union all
+
+        select
+            date(date_add(pi.finished_at , interval 8 hour)) date_d
+            ,'fin' type
+            ,t.ss_name
+            ,t.staff_info_id
+            ,count(distinct pi.pno) num
+        from ph_staging.parcel_info pi
+        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
+            and pi.finished_at < date_sub(curdate(), interval 8 hour)
+        group by 1,2,3,4
+)
+select
+    *
+from total;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hsi.hire_date
+from ph_bi.hr_staff_info hsi
+where
+    hsi.staff_info_id in ('119999', '121776', '125595', '127320', '144914', '126471', '129577', '143552', '128544', '130629', '139340', '142684', '121517', '124245', '122849', '147026', '129478', '139564', '138995', '132638', '142468', '142398', '121959', '147204', '140513', '141731', '119363', '143365', '146200', '131902', '146662', '136717', '141425', '147700', '123315', '143644', '146887', '146301', '146973', '147313', '132704', '119263', '129450', '143836', '138168', '126277', '126820', '132318', '127738', '143159', '142878', '120650', '142461', '145659', '137498', '137552', '138000', '123831', '138684', '146078', '147338', '136411', '138850', '148502', '147271', '121614', '137223', '141200', '144392', '146816', '147626', '146985', '147117', '145885', '147910', '126985', '138674', '145092', '147716', '141582', '143109', '144085', '146844', '120671', '132576', '131210', '141791', '145706', '146910', '148060', '148693', '143813', '144606', '144713', '147202', '121549', '136363', '141386', '141151', '143837', '145412', '146858', '135396', '136414', '136979', '146185', '141935', '146629', '135674', '124103', '137645', '141549', '146865', '133938', '139445', '142106', '142674', '145900', '137230', '145800', '146031', '147246', '121500', '124751', '139759', '144557', '145803', '146810', '146970', '147001', '144886', '146472', '123868', '143519', '146076', '146737', '147083', '148413', '133321', '138572', '139911', '143055', '143674', '147333', '147929', '120718', '128919', '147316', '147780', '147828', '148073');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from ph_staging.parcel_headless ph
+where
+    ph.created_at >= '2021-12-31 16:00:00:00';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from ph_staging.parcel_headless ph
+where
+    ph.created_at >= '2021-12-31 16:00:00';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.*
+    ,ss.name
+from tmpale.tmpale.tmp_th_1_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.*
+    ,ss.name
+from tmpale.tmp_ph_1_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+    ,ss.name
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    t.count_num > 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.*
+    ,ss.name
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    t.count_num > 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.name 网点
+    ,t.month_d 月份
+    ,sum(t.count_num)/count(distinct t.staff_info) 网点平均访问次数
+    ,count(distinct t.staff_info) 访问员工数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    t.count_num > 2
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.name 网点
+    ,t.month_d 月份
+    ,sum(t.count_num) 总访问次数
+    ,sum(if(ss.category in (1,10), t.count_num, 0 ))/sum(t.count_num) SP_BDC占比
+    ,sum(if(ss.category in (8,12), t.count_num, 0 ))/sum(t.count_num) hub占比
+#     ,sum(t.count_num)/count(distinct t.staff_info) 网点平均访问次数
+#     ,count(distinct t.staff_info) 访问员工数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    t.count_num > 2
+    and ss.category in (8,12)
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.name 网点
+    ,t.month_d 月份
+    ,sum(t.count_num) 总访问次数
+    ,sum(if(ss.category in (1,10), t.count_num, 0 ))/sum(t.count_num) SP_BDC占比
+    ,sum(if(ss.category in (8,12), t.count_num, 0 ))/sum(t.count_num) hub占比
+#     ,sum(t.count_num)/count(distinct t.staff_info) 网点平均访问次数
+#     ,count(distinct t.staff_info) 访问员工数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    t.count_num > 2
+#     and ss.category in (8,12)
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.month_d 月份
+    ,sum(t.count_num) 总访问次数
+    ,sum(if(ss.category in (1,10), t.count_num, 0 ))/sum(t.count_num) SP_BDC占比
+    ,sum(if(ss.category in (8,12), t.count_num, 0 ))/sum(t.count_num) hub占比
+#     ,sum(t.count_num)/count(distinct t.staff_info) 网点平均访问次数
+#     ,count(distinct t.staff_info) 访问员工数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    t.count_num > 2
+#     and ss.category in (8,12)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.month_d 月份
+#     ,sum(t.count_num) 总访问次数
+#     ,sum(if(ss.category in (1,10), t.count_num, 0 ))/sum(t.count_num) SP_BDC占比
+#     ,sum(if(ss.category in (8,12), t.count_num, 0 ))/sum(t.count_num) hub占比
+     ,ss.name
+    ,sum(t.count_num)/count(distinct t.staff_info) 网点每人平均访问次数
+    ,count(distinct t.staff_info) 访问员工数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    t.count_num > 2
+    and ss.category in (8,12)
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.*
+    ,ss.name
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    t.count_num > 2
+    and ss.category in (8,12)
+    and ss.name = '11 PN5-HUB_Santa Rosa'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.*
+    ,ss.name
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    ss.category in (8,12)
+    and ss.name = '11 PN5-HUB_Santa Rosa'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.*
+    ,ss.name
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    ss.category in (8,12)
+    and ss.name = '11 PN5-HUB_Santa Rosa';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.staff_info
+    ,t.month_d
+    ,ss.name
+    ,sum(t.count_num)
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    ss.category in (8,12)
+    and ss.name = '11 PN5-HUB_Santa Rosa'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.staff_info
+    ,t.month_d
+    ,ss.name
+    ,sum(t.count_num)
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    ss.category in (8,12)
+    and ss.name = '11 PN5-HUB_Santa Rosa'
+    and t.count_num > 2
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.month_d 月份
+#     ,sum(t.count_num) 总访问次数
+#     ,sum(if(ss.category in (1,10), t.count_num, 0 ))/sum(t.count_num) SP_BDC占比
+#     ,sum(if(ss.category in (8,12), t.count_num, 0 ))/sum(t.count_num) hub占比
+     ,ss.name
+    ,sum(t.count_num)/count(distinct t.staff_info) 网点每人平均访问次数
+    ,sum(t.count_num) 总访问
+    ,count(distinct t.staff_info) 访问员工数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    t.count_num > 2
+    and ss.category in (8,12)
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.staff_info
+    ,t.month_d
+    ,ss.name
+    ,sum(t.count_num)
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+where
+    ss.category in (8,12)
+    and ss.name = '11 PN5-HUB_Santa Rosa'
+    and t.count_num > 2
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.总访问_认领
+    ,b.网点每人平均访问次数_认领
+    ,b.访问员工数_认领
+from
+    (
+        select
+            t.month_d
+            ,ss.name
+            ,sum(t.count_num)/count(distinct t.staff_info) 网点每人平均访问次数_hub
+            ,sum(t.count_num) 总访问_hub
+            ,count(distinct t.staff_info) 访问员工数_hub
+        from tmpale.tmp_ph_hub_0318 t
+        left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+        left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+            and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t.count_num > 2
+        group by 1,2
+    ) a
+left join
+    (
+         select
+            t.month_d
+            ,ss.name
+            ,sum(t._col1)/count(distinct t._col1) 网点每人平均访问次数_认领
+            ,sum(t._col1) 总访问_认领
+            ,count(distinct t.c_sid_ms) 访问员工数_认领
+        from tmpale.tmp_ph_renlin_0318  t
+        left join ph_bi.hr_staff_info hsi on t.c_sid_ms = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+        left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+            and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t._col1 > 2
+        group by 1,2
+    )  b on a.month_d = b.month_d and a.name = b.name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.month_d 月份
+    ,ss.name 网点
+    ,t.staff_info
+    ,t.count_num 次数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    t.count_num > 10;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.month_d 月份
+    ,ss.name 网点
+    ,t.staff_info
+    ,t.count_num 次数
+from tmpale.tmp_ph_hub_0318 t
+left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    t.count_num > 10
+    and ss.id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.month_d 月份
+    ,ss.name 网点
+    ,t.c_sid_ms
+    ,t._col1 次数
+from tmpale.tmp_ph_renlin_0318 t
+left join ph_bi.hr_staff_info hsi on t.c_sid_ms = hsi.staff_info_id
+left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    t._col1 > 10
+    and ss.id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.总访问_认领
+    ,b.网点每人平均访问次数_认领
+    ,b.访问员工数_认领
+from
+    (
+        select
+            t.month_d
+            ,ss.name
+            ,sum(t.count_num)/count(distinct t.staff_info) 网点每人平均访问次数_hub
+            ,sum(t.count_num) 总访问_hub
+            ,count(distinct t.staff_info) 访问员工数_hub
+        from tmpale.tmp_ph_hub_0318 t
+        left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+#             and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t.count_num > 2
+        group by 1,2
+    ) a
+left join
+    (
+         select
+            t.month_d
+            ,ss.name
+            ,sum(t._col1)/count(distinct t._col1) 网点每人平均访问次数_认领
+            ,sum(t._col1) 总访问_认领
+            ,count(distinct t.c_sid_ms) 访问员工数_认领
+        from tmpale.tmp_ph_renlin_0318  t
+        left join ph_bi.hr_staff_info hsi on t.c_sid_ms = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+#             and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t._col1 > 2
+        group by 1,2
+    )  b on a.month_d = b.month_d and a.name = b.name;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.总访问_认领
+    ,b.网点每人平均访问次数_认领
+    ,b.访问员工数_认领
+from
+    (
+        select
+            t.month_d
+            ,ss.name
+            ,sum(t.count_num)/count(distinct t.staff_info) 网点每人平均访问次数_hub
+            ,sum(t.count_num) 总访问_hub
+            ,count(distinct t.staff_info) 访问员工数_hub
+        from tmpale.tmp_ph_hub_0318 t
+        left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+#             and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t.count_num > 2
+        group by 1,2
+    ) a
+left join
+    (
+         select
+            t.month_d
+            ,ss.name
+            ,sum(t._col1)/count(distinct t. c_sid_ms) 网点每人平均访问次数_认领
+            ,sum(t._col1) 总访问_认领
+            ,count(distinct t. c_sid_ms) 访问员工数_认领
+        from tmpale.tmp_ph_renlin_0318  t
+        left join ph_bi.hr_staff_info hsi on t.c_sid_ms = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+#             and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t._col1 > 2
+        group by 1,2
+    )  b on a.month_d = b.month_d and a.name = b.name;

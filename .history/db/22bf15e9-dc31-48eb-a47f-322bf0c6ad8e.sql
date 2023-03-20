@@ -6594,291 +6594,6 @@ select
             and pi.cod_enabled is null;
 ;-- -. . -..- - / . -. - .-. -.--
 select
-        plt.pno
-        ,plt.id
-        ,plt.client_id
-        ,plt.created_at
-        ,plt.last_valid_store_id
-        ,plt.last_valid_staff_info_id
-    from bi_pro.parcel_lose_task plt
-    where
-        plt.state < 5
-        and plt.source = 2;
-;-- -. . -..- - / . -. - .-. -.--
-with t1 as
-(
-    select
-        plt.pno
-        ,plt.id
-        ,plt.client_id
-        ,plt.created_at
-        ,plt.last_valid_store_id
-        ,plt.last_valid_staff_info_id
-    from bi_pro.parcel_lose_task plt
-    where
-        plt.state < 5
-        and plt.source = 2
-)
-,t as
-(
-    select
-        wo.id
-        ,wo.loseparcel_task_id
-        ,wo.created_at order_creat_at
-        ,wor.content wor_content
-        ,woi.object_key
-        ,row_number() over (partition by wo.loseparcel_task_id order by wo.created_at) r1
-        ,row_number() over (partition by wo.id order by wor.created_at desc ) r2
-    from bi_pro.work_order wo
-    join t1 on t1.id = wo.loseparcel_task_id
-    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
-    left join bi_pro.work_order_img woi on woi.origin_id = wor.id
-)
-,t2 as
-(
-    select
-        wo.pnos
-        ,wo.created_at
-        ,row_number() over (partition by wo.pnos order by wo.created_at ) rn
-    from bi_pro.work_order wo
-    join t1 on t1.pno = wo.pnos
-)
-select
-    t1.created_at 任务生成时间
-    ,t1.id 任务ID
-    ,t1.pno 运单号
-    ,t1.client_id 客户ID
-    ,las2.route_action
-    ,case las2.route_action # 路由动作
-         when 'ACCEPT_PARCEL' then '接件扫描'
-         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
-         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
-         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
-         when 'CANCEL_PARCEL' then '撤销包裹'
-         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
-         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
-         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
-         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
-         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
-         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
-         when 'CLAIMS_CLOSE' then '理赔关闭'
-         when 'CLAIMS_COMPLETE' then '理赔完成'
-         when 'CLAIMS_CONTACT' then '已联系客户'
-         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
-         when 'CLOSE_ORDER' then '关闭订单'
-         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
-         when 'CREATE_WORK_ORDER' then '创建工单'
-         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
-         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
-         when 'DELIVERY_CONFIRM' then '确认妥投'
-         when 'DELIVERY_MARKER' then '派件标记'
-         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
-         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
-         when 'DELIVERY_TRANSFER' then '派件转单'
-         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
-         when 'DETAIN_WAREHOUSE' then '货件留仓'
-         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
-         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
-         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
-         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
-         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
-         when 'DIFFICULTY_SEAL' then '集包异常'
-         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
-         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
-         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
-         when 'EXCHANGE_PARCEL' then '换货'
-         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
-         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
-         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
-         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
-         when 'HURRY_PARCEL' then '催单'
-         when 'INCOMING_CALL' then '来电接听'
-         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
-         when 'INVENTORY' then '盘库'
-         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
-         when 'MANUAL_REMARK' then '添加备注'
-         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
-         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
-         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
-         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
-         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
-         when 'PENDING_RETURN' then '待退件'
-         when 'PHONE' then '电话联系'
-         when 'PICK_UP_STORE' then '待自提取件'
-         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
-         when 'PRINTING' then '打印面单'
-         when 'QAQC_OPERATION' then 'QAQC判责'
-         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
-         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
-         when 'REFUND_CONFIRM' then '退件妥投'
-         when 'REPAIRED' then '上报问题修复路由'
-         when 'REPLACE_PNO' then '换单'
-         when 'REPLY_WORK_ORDER' then '回复工单'
-         when 'REVISION_TIME' then '改约时间'
-         when 'SEAL' then '集包'
-         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
-         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
-         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
-         when 'SORTING_SCAN' then '分拣扫描'
-         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
-         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
-         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
-         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
-         when 'TAKE_PHOTO' then '异常打单拍照'
-         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
-         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
-         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
-         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
-         when 'TRANSFER_QAQC' then '转交QAQC处理'
-         when 'UNSEAL' then '拆包'
-         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
-         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
-         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
-         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
-         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
-         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
-        end as 最后一条路由
-    ,las2.remark 最后一条路由备注
-    ,mark.remark 最后一条包裹备注
-    ,t1.last_valid_staff_info_id 最后有效路由操作人
-    ,ss_valid.name 最后有效路由网点
-    ,case pi.state
-        when 1 then '已揽收'
-        when 2 then '运输中'
-        when 3 then '派送中'
-        when 4 then '已滞留'
-        when 5 then '已签收'
-        when 6 then '疑难件处理中'
-        when 7 then '已退件'
-        when 8 then '异常关闭'
-        when 9 then '已撤销'
-    end as 包裹状态
-    ,dst_ss.name 目的地网点
-    ,del_ss.name 妥投网点
-    ,pi.ticket_delivery_staff_info_id 妥投快递员ID
-    ,if(pi.state = 5 ,convert_tz(pi.finished_at, '+00:00', '+07:00'), null) 包裹妥投时间
-    ,if(st_distance_sphere(point(pi.`ticket_delivery_staff_lng`, pi.`ticket_delivery_staff_lat`), point(del_ss.`lng`, del_ss.`lat`)) <= 100, '是', '否') 是否在网点妥投
-    ,if(pi.state = 5 and pho.routed_at < pi.finished_at , '是', '否') 妥投前是否给客户打电话
-    ,pi.dst_phone  收件人电话
-    ,num.num 创建工单次数
-    ,1st.order_creat_at 第一次创建工单时间
-    ,fir.created_at 第一次全组织发工单时间
-    ,lst.content 最后一次全组织工单回复内容
-    ,1st.wor_content 第一次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',1st.object_key) 第一次回复附件
-    ,2nd.wor_content 第二次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',2nd.object_key) 第二次回复附件
-    ,3rd.wor_content 第三次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',3rd.object_key) 第三次回复附件
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key) 签收凭证
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
-from t1
-left join fle_staging.parcel_info pi on pi.pno = t1.pno
-left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
-left join fle_staging.sys_store del_ss on del_ss.id = pi.ticket_delivery_store_id
-left join fle_staging.sys_store ss_valid on ss_valid.id = t1.last_valid_store_id
-left join
-    (
-        select
-            *
-        from
-            (
-                select
-                    pr.route_action
-                    ,pr.pno
-                    ,pr.staff_info_id
-                    ,pr.routed_at
-                    ,pr.store_id
-                    ,pr.remark
-                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-                 from rot_pro.parcel_route pr
-                 join
-                     (
-                        select t1.pno from t1 group by 1
-                    )t1 on t1.pno = pr.pno
-                where
-                    pr.routed_at > curdate() - interval 30 day
-            ) pr
-        where pr.rn = 1
-    ) las2 on las2.pno = t1.pno
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at) rn
-        from rot_pro.parcel_route pr
-        where pr.route_action = 'PHONE'
-            and json_extract(pr.extra_value, '$.callDuration') > 7
-            and pr.routed_at > curdate() - interval 30 day
-    ) pho on pho.pno = t1.pno and pho.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-            ,pr.remark
-        from rot_pro.parcel_route pr
-        join
-            (
-                select t1.pno from t1 group by 1
-            ) t on pr.pno = t.pno
-        where pr.route_action = 'MANUAL_REMARK'
-            and pr.routed_at > curdate() - interval 30 day
-    ) mark on mark.pno = t1.pno and mark.rn = 1
-left join
-    (
-        select
-            t.loseparcel_task_id
-            ,count(distinct t.id) num
-        from t
-        group by 1
-    ) num on num.loseparcel_task_id = t1.id
-left join
-    (
-        select
-            *
-        from t
-        where
-            t.r1 = 1
-            and t.r2 = 1
-    ) 1st on 1st.loseparcel_task_id = t1.id
-left join
-    (
-        select
-            *
-        from t
-        where
-            t.r2 = 1
-            and t.r1 = 2
-    ) 2nd on 2nd.loseparcel_task_id = t1.id
-left join
-    (
-        select
-            *
-        from t
-        where
-            t.r2 = 1
-            and t.r1 = 3
-    ) 3rd on 3rd.loseparcel_task_id = t1.id
-left join t2 fir on fir.pnos = t1.pno and fir.rn = 1
-left join
-    (
-        select
-            wo2.pnos
-            ,wor.content
-            ,row_number() over (partition by wo2.pnos order by wor.created_at desc) rn
-        from bi_pro.work_order wo2
-        join t1 on t1.pno = wo2.pnos
-        left join bi_pro.work_order_reply wor on wor.order_id = wo2.id
-        where
-            wor.staff_info_id != wo2.created_staff_info_id
-    ) lst on lst.pnos = t1.pno and lst.rn = 1
-left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
-left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
-;-- -. . -..- - / . -. - .-. -.--
-select
     dr.route_action
     ,count(dr.id) num
 from fle_staging.diff_route dr
@@ -7961,6 +7676,2378 @@ where
     and pi.discard_enabled = 1
 group by 1;
 ;-- -. . -..- - / . -. - .-. -.--
+select
+    t.t1
+    ,t.t2
+    ,t.t3
+    ,t.t4
+    ,t.t5
+from tmpale.tmp_th_test_0316 t
+where
+    t.id = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.t1
+    ,t.t2
+    ,t.t3
+    ,t.t4
+    ,t.t5
+    ,avg(t1,t2,t3,t4,t5)
+from tmpale.tmp_th_test_0316 t
+where
+    t.id = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#     t.t1
+#     ,t.t2
+#     ,t.t3
+#     ,t.t4
+#     ,t.t5
+    ,avg(t1,t2,t3,t4,t5)
+from tmpale.tmp_th_test_0316 t
+where
+    t.id = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#     t.t1
+#     ,t.t2
+#     ,t.t3
+#     ,t.t4
+#     ,t.t5
+    avg(t1,t2,t3,t4,t5)
+from tmpale.tmp_th_test_0316 t
+where
+    t.id = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#     t.t1
+#     ,t.t2
+#     ,t.t3
+#     ,t.t4
+#     ,t.t5
+    t0,
+    avg(t1,t2,t3,t4,t5)
+from tmpale.tmp_th_test_0316 t
+where
+    t.id = 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#     t.t1
+#     ,t.t2
+#     ,t.t3
+#     ,t.t4
+#     ,t.t5
+    t.id,
+    avg(t1,t2,t3,t4,t5)
+from tmpale.tmp_th_test_0316 t
+where
+    t.id = 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at desc ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + timestampdiff(second, wor.created_at, t2.created_at) + timestampdiff(second, t2.created_at, t3.created_at))/(1 + ifnull(t2.created_at,0) + ifnull(t3.created_at,0)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+order by 7;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at desc ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + timestampdiff(second, wor.created_at, t2.created_at) + timestampdiff(second, t2.created_at, t3.created_at))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+order by 7;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at desc ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+        and wo.id = '0916763113890239';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at desc ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+        and wo.order_no = '0916763113890239';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+        and wo.order_no = '0916763113890239'
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + timestampdiff(second, wor.created_at, t2.created_at) + timestampdiff(second, t2.created_at, t3.created_at))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+order by 7;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+        and wo.order_no = '0916763113890239'
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+order by 7;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,pd.last_route_action
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_0316 t on t.pno = pi.pno
+left join bi_pro.parcel_detail pd on pd.pno = pi.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+#     ,pd.last_route_action
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_0316 t on t.pno = pi.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+#     ,pd.last_route_action
+from fle_staging.parcel_info pi
+# join tmpale.tmp_th_pno_0316 t on t.pno = pi.pno
+# left join bi_pro.parcel_detail pd on pd.pno = pi.pno
+where
+    pi.pno in ('TH01043PNDWZ1B', 'TH01273UK0EU8D', 'TH04033PW36Y7A1', 'TH04033RZ7668A1', 'TH10033SAVRJ7K', 'TH10033SUC0X2K', 'TH10033TXAD56K', 'TH10033U71897B', 'TH10033UFG3N5K', 'TH20083HC5138B', 'TH24103N8JDW1B', 'TH67023QZ3T32C', 'THT01052B5HB8Z', 'THT01052CNZY9Z', 'THT013413GF97Z', 'THT04032CC0K2Z', 'THT05062FRFC5Z', 'THT67012B7QC9Z', 'THT67012BSNV5Z', 'THT67012D6ZS7Z', 'TH10033U4XZ40A', 'TH20083UK3EZ5C', 'TH20073VC6FB0B', 'TH04033QUZ5V4A1', 'TH04073PWE6P8K', 'TH20073RSMND0D', 'TH04013GY3C64I', 'TH20043V98EG4B', 'TH20073JYJBK0B', 'THT650120NF71Z', 'TH68043RH64Y2F', 'THT56107V97H3Z', 'TH10033U2S8P9P', 'TH67013QENWT9G', 'THT24011NRU87Z', 'TH33023BBP1E3C', 'TH27013TZ6TA5K', 'TH75103W3HT99C', 'TH01213Q1MTZ4A', 'TH21013VDNK97F', 'TH67013R9Y5R7H', 'TH20073EDGWN5B', 'TH01392WH3Y51B', 'THT15011KGTN6Z', 'TH01403RBZ4R0B0', 'THT20047PEQV5Z', 'TH04073PGWAK2A', 'TH04073KDUAG8K', 'TH10113V8QYG1A', 'TH68043RC3SC6F', 'TH19033UZXT74E', 'TH67013SBFDW1E', 'TH24033B29S10A', 'TH10113VE2B37B', 'TH01053VJQJW6B', 'TH04033JM5CD0A1', 'THT71057SC549Z', 'TH16013MVTPU0L', 'TH04073RKWXH4K-3', 'TH67013S01764H', 'TH21063UYU0U8A', 'TH67013RTA7W9G', 'TH68043S5REX1F', 'THT66021EQRK7Z', 'TH01373V58QS1C', 'TH63083SYPJ90B', 'TH10043VBWR22C', 'TH04073MWHYG9J', 'TH20083S5PKJ5A', 'TH20043VEAQT1E', 'TH67033V05572F', 'THT05062HBHQ8Z', 'TH70043V92E25K', 'TH66023HTTY82C', 'TH04033RDGXM9A1', 'THT0131BVKG9Z', 'THT670126BE69Z', 'TH20083UZXEQ8B', 'TH15013QRRZQ1O', 'TH20073K2ZRE7A', 'TH01403UU4SC8B0', 'TH01293BGQRC4A', 'THT04037PNHT5Z', 'THT1501148ZE3Z', 'THT24021P92A8Z', 'TH44113TG15V3B', 'TH01303VBEWY7A', 'TH04033QHGVW9A1', 'TH01283S8VQT3B1', 'TH67023H02DF9C', 'TH48013VEKGV1I', 'TH67013RJVPA6G', 'TH01203T5GA33B', 'TH67013R20E90G', 'TH24113MFMC47E', 'TH04063T1FT27C', 'TH24113MKGAC4C', 'TH20013NXYCJ2F', 'TH01403TSSVG6B0', 'TH67013S6V0Q7H', 'TH01373TXWYE9B', 'TH68043RPYAK0F', 'TH67033V9BEA2D', 'TH20073PG9TU9C', 'TH67013N36E68G', 'TH66023TKXTG3C', 'TH01203N984F1C', 'TH47133SX04K8I', 'TH70083PYRGK4B', 'TH20053TS9VJ3B', 'TH22043B4DTK7D', 'THT20047XU831Z', 'TH10033VEZ3P2E', 'TH20043V84MX7A', 'TH01393V87RF4E', 'TH67013RSN591H', 'TH01393HRZWK9F', 'TH26073U6VA98D', 'TH67013RVEBQ8G', 'TH04033TF7D09A1', 'TH20043HCS5Z3B1', 'TH01153NH7921A', 'THT24011M7TK4Z', 'TH61023TVVA45C', 'TH67013RMVS53G', 'TH670132JD7Q7E', 'TH67013RF6KH8G', 'TH05033TPS9X9C', 'TH37013VZ99E1A', 'TH68043RB4GT6F', 'TH32013CAU8M7A', 'TH61083B18GD8H', 'TH68043RTRX38F', 'TH71033UVTUJ9M', 'TH68043REJAX8F', 'TH67033R54H76F', 'TH67033EPWJ62A', 'TH11013R98463A', 'TH01053VA3JN1B', 'TH01303VESAU3C', 'TH02063J4EF95A0', 'TH01233S2KZ84E', 'LEXDO0057480603', 'TH01473TB4BH5B', 'TH67023R47AN0A', 'TH20073J9STN5E0', 'TH01053J3CGZ0C', 'TH01413VJ2J70B', 'TH70033UTT9C4D', 'TH20043DJX794A', 'TH20043RYW746H', 'SSLT730005611450', 'TH20043DN7JD3C', 'TH20043UU8DM1A', 'TH67013RNH7U2H', 'TH03043VCWQZ9H', 'TH01403RME2H7B0', 'TH01473UYWWS3A', 'TH20043UG13X3D', 'TH04033SA8UM9A1', 'TH01413VCJ0B1B', 'TH01403RCG2Z8B0', 'TH01273TEMWW7D', 'TH01503RY1FM6B0', 'TH64013HS07V7L', 'THT20047RMPP8Z', 'TH26073UFH341D', 'THT05032JPU55Z', 'TH20073JUV2C1B', 'TH67013RVCHB5G', 'TH24023VBEX45H', 'TH67013TBU433G', 'TH67013SWKQ56G', 'TH02023TETZ56D', 'THT21017R76C8Z', 'TH67013RTBG03G', 'TH20073RWG952E', 'THT54111Y05S5Z', 'TH01373V3N4T2B', 'TH67013RWV669H', 'TH01203RGB9T4B', 'THT20047RFJA9Z', 'TH64013E35UV5N', 'TH05063UAA8V7D', 'TH03043VDRPD3H', 'TH67013RH96T3G', 'TH04033TQE5B2A0', 'TH68043REV5B2F', 'TH15013QS6KP7O', 'TH67023RN22C5B', 'TH20083VF0UN0B', 'TH09013RNABW5D', 'TH02063UA32D7A', 'TH01213TPZH03A', 'TH68043RMVUJ0F', 'TH33053UWG5Q1C', 'THT0403KYNR5Z', 'TH02063T0QV55A', 'TH20043VEBBY8A', 'TH67013QXE7A7H', 'THT030122HJK2Z', 'TH10113V4QZ57B', 'TH63053KMKF75J', 'THT21012462Z5Z', 'TH67013SK64G8E', 'TH65013TY1KY1H', 'TH01073TUT8A9A', 'TH70083R9YWY5C', 'FLACB02017460937', 'TH01473UFV758B', 'TH10113UVYV98B', 'TH56023BQBZM8H', 'TH67013RH7VC8H', 'TH01213SJDJG6A', 'TH66023KG2X04C', 'TH21013V23S27C', 'TH01373JKRJ54B', 'THT56027XXEN0Z', 'TH66023J06CX6C', 'TH24023N0S583F', 'TH68043R62UJ9F', 'TH24043V2QUQ7D', 'TH67013SU38Q9G', 'TH67013RWBXK7G', 'TH68043RFPHE5F', 'TH65013MKY0M5G', 'TH10033VEA2Z4I', 'TH04033S62PK5A0', 'TH10033VDZBU2E', 'TH67013QQUSD5G', 'TH10033UAHNR6P', 'TH013932659B4G', 'TH01163UWSH23A0', 'TH01183VDZTS6A0', 'THT03022HC7C4Z', 'TH21013UUG723F', 'TH05033VB0VS9C', 'TH68043RMT4M6F', 'TH01373V3NEC0B', 'TH67013RVGR36G', 'TH55033K9VAG8B', 'TH01423UPVN92A', 'THT01407R38E5Z', 'TH10033V3HKC0Q', 'TH01473VBCC06C', 'TH65013SKH3W4H', 'TH67013Q87KT5H', 'TH01183RVDKX7A1', 'TH66023KJ79Z8C', 'TH67023HRZHJ8C', 'TH02043T5RW63O', 'TH10113VASDZ8B', 'TH05033U23QE7B', 'TH21063Q8GYK3A', 'TH05033USZTC8I', 'TH67013RPBH03G', 'TH20073JSVJK6B', 'LEXPU0180148516', 'TH67013RSGT12H', 'TH01393VJFQZ4B', 'TH47013U4XUC1C', 'THT67022AU899Z', 'TH67013RV5G61G', 'THT21062BHSV7Z', 'TH05033UH8NQ3G', 'SSLT730006233687', 'TH26073UZ34E7A', 'THT01407QXC36Z', 'TH74043V9FJX5C', 'TH10043VGDEP0E', 'TH12033VA3MD1B', 'TH20073HW5T27B', 'TH01273GJFNC3D', 'TH67013K54Q24B', 'TH05033UQWPU5J', 'TH02063FA2E71A-1', 'TH04033RMX396A1', 'TH20043CPU6J9B0', 'TH20083U2QAV3B', 'TH13133TYY7Q9D', 'TH20043V95CS6G', 'THT21017U94Y0Z', 'TH40053NCX632D', 'TH02063CAA6C8A', 'TH13023RM3PV2A-1', 'THT21062BDX08Z', 'THT01407RXMJ4Z', 'TH20073JJQWU7B', 'TH01373VNA8B8B', 'TH20083W61SP1D', 'TH01423U1JGS6A', 'TH24013NB1705L', 'TH20043V3D3C0D', 'TH24023VBBN50H', 'TH10113UXGYB2D', 'TH68043U88W11E', 'TH67013P6RCW6E', 'TH10033R2TZE6E', 'TH15063SJVGM1H', 'TH68043R5JS62F', 'TH10033V87PV6A', 'THT20047RDFW5Z', 'TH62013TA49W5A', 'TH10033UUGHX4B', 'THT21017R6VD6Z', 'TH20043DWPDU5C', 'TH01373V3R8A4C', 'TH15063HW76U7J', 'TH66013U1W973H', 'THT66021EHQ63Z', 'TH20043U2DVU4C', 'TH01473U1G967B', 'TH65023Q1S356B', 'TH20073HTQW31A', 'TH67013RTBKY5G', 'TH70083TSXUF4B', 'TH01473UWFFM3B', 'TH20073RWG991E', 'TH01143S2H0A2E', 'TH65053Q78UG5E', 'TH04073S5UH49C', 'TH01303VE0S29A', 'TH01373UB3D82C', 'TH60033PV8G64B', 'TH04063MQU3G4A1', 'THT20087P7NW5Z', 'TH01303SDDTP2C', 'TH10033UHG168B', 'TH26073UY1ZM1A', 'SSLT730006651767', 'TH01303EJW0H8A', 'TH66023M0BQ69C', 'THT20042G8989Z', 'TH20043UQCNT9D', 'TH67033SWMKH7C', '7110015818354', 'TH01373E7VJ83A', 'TH01403UUJGZ3B0', 'TH67023U39PJ7C', 'TH01473VJW806A', 'TH10113V5SA56B', 'THT20042HTNU4Z', 'TH38013CVWVA6A0', 'TH16033BJJFT0C', 'TH67033QAHVX6F', 'TH68043RGX702F', 'TH10113UQSBM7B', 'TH01423TNP7F6A', 'TH26063BFXQ89A', 'TH05063VDKN39F', 'TH04063V87RJ2E', 'TH04033V8HM87A1');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,pd.last_route_action
+from fle_staging.parcel_info pi
+# join tmpale.tmp_th_pno_0316 t on t.pno = pi.pno
+left join bi_pro.parcel_detail pd on pd.pno = pi.pno
+where
+    pi.pno in ('TH01043PNDWZ1B', 'TH01273UK0EU8D', 'TH04033PW36Y7A1', 'TH04033RZ7668A1', 'TH10033SAVRJ7K', 'TH10033SUC0X2K', 'TH10033TXAD56K', 'TH10033U71897B', 'TH10033UFG3N5K', 'TH20083HC5138B', 'TH24103N8JDW1B', 'TH67023QZ3T32C', 'THT01052B5HB8Z', 'THT01052CNZY9Z', 'THT013413GF97Z', 'THT04032CC0K2Z', 'THT05062FRFC5Z', 'THT67012B7QC9Z', 'THT67012BSNV5Z', 'THT67012D6ZS7Z', 'TH10033U4XZ40A', 'TH20083UK3EZ5C', 'TH20073VC6FB0B', 'TH04033QUZ5V4A1', 'TH04073PWE6P8K', 'TH20073RSMND0D', 'TH04013GY3C64I', 'TH20043V98EG4B', 'TH20073JYJBK0B', 'THT650120NF71Z', 'TH68043RH64Y2F', 'THT56107V97H3Z', 'TH10033U2S8P9P', 'TH67013QENWT9G', 'THT24011NRU87Z', 'TH33023BBP1E3C', 'TH27013TZ6TA5K', 'TH75103W3HT99C', 'TH01213Q1MTZ4A', 'TH21013VDNK97F', 'TH67013R9Y5R7H', 'TH20073EDGWN5B', 'TH01392WH3Y51B', 'THT15011KGTN6Z', 'TH01403RBZ4R0B0', 'THT20047PEQV5Z', 'TH04073PGWAK2A', 'TH04073KDUAG8K', 'TH10113V8QYG1A', 'TH68043RC3SC6F', 'TH19033UZXT74E', 'TH67013SBFDW1E', 'TH24033B29S10A', 'TH10113VE2B37B', 'TH01053VJQJW6B', 'TH04033JM5CD0A1', 'THT71057SC549Z', 'TH16013MVTPU0L', 'TH04073RKWXH4K-3', 'TH67013S01764H', 'TH21063UYU0U8A', 'TH67013RTA7W9G', 'TH68043S5REX1F', 'THT66021EQRK7Z', 'TH01373V58QS1C', 'TH63083SYPJ90B', 'TH10043VBWR22C', 'TH04073MWHYG9J', 'TH20083S5PKJ5A', 'TH20043VEAQT1E', 'TH67033V05572F', 'THT05062HBHQ8Z', 'TH70043V92E25K', 'TH66023HTTY82C', 'TH04033RDGXM9A1', 'THT0131BVKG9Z', 'THT670126BE69Z', 'TH20083UZXEQ8B', 'TH15013QRRZQ1O', 'TH20073K2ZRE7A', 'TH01403UU4SC8B0', 'TH01293BGQRC4A', 'THT04037PNHT5Z', 'THT1501148ZE3Z', 'THT24021P92A8Z', 'TH44113TG15V3B', 'TH01303VBEWY7A', 'TH04033QHGVW9A1', 'TH01283S8VQT3B1', 'TH67023H02DF9C', 'TH48013VEKGV1I', 'TH67013RJVPA6G', 'TH01203T5GA33B', 'TH67013R20E90G', 'TH24113MFMC47E', 'TH04063T1FT27C', 'TH24113MKGAC4C', 'TH20013NXYCJ2F', 'TH01403TSSVG6B0', 'TH67013S6V0Q7H', 'TH01373TXWYE9B', 'TH68043RPYAK0F', 'TH67033V9BEA2D', 'TH20073PG9TU9C', 'TH67013N36E68G', 'TH66023TKXTG3C', 'TH01203N984F1C', 'TH47133SX04K8I', 'TH70083PYRGK4B', 'TH20053TS9VJ3B', 'TH22043B4DTK7D', 'THT20047XU831Z', 'TH10033VEZ3P2E', 'TH20043V84MX7A', 'TH01393V87RF4E', 'TH67013RSN591H', 'TH01393HRZWK9F', 'TH26073U6VA98D', 'TH67013RVEBQ8G', 'TH04033TF7D09A1', 'TH20043HCS5Z3B1', 'TH01153NH7921A', 'THT24011M7TK4Z', 'TH61023TVVA45C', 'TH67013RMVS53G', 'TH670132JD7Q7E', 'TH67013RF6KH8G', 'TH05033TPS9X9C', 'TH37013VZ99E1A', 'TH68043RB4GT6F', 'TH32013CAU8M7A', 'TH61083B18GD8H', 'TH68043RTRX38F', 'TH71033UVTUJ9M', 'TH68043REJAX8F', 'TH67033R54H76F', 'TH67033EPWJ62A', 'TH11013R98463A', 'TH01053VA3JN1B', 'TH01303VESAU3C', 'TH02063J4EF95A0', 'TH01233S2KZ84E', 'LEXDO0057480603', 'TH01473TB4BH5B', 'TH67023R47AN0A', 'TH20073J9STN5E0', 'TH01053J3CGZ0C', 'TH01413VJ2J70B', 'TH70033UTT9C4D', 'TH20043DJX794A', 'TH20043RYW746H', 'SSLT730005611450', 'TH20043DN7JD3C', 'TH20043UU8DM1A', 'TH67013RNH7U2H', 'TH03043VCWQZ9H', 'TH01403RME2H7B0', 'TH01473UYWWS3A', 'TH20043UG13X3D', 'TH04033SA8UM9A1', 'TH01413VCJ0B1B', 'TH01403RCG2Z8B0', 'TH01273TEMWW7D', 'TH01503RY1FM6B0', 'TH64013HS07V7L', 'THT20047RMPP8Z', 'TH26073UFH341D', 'THT05032JPU55Z', 'TH20073JUV2C1B', 'TH67013RVCHB5G', 'TH24023VBEX45H', 'TH67013TBU433G', 'TH67013SWKQ56G', 'TH02023TETZ56D', 'THT21017R76C8Z', 'TH67013RTBG03G', 'TH20073RWG952E', 'THT54111Y05S5Z', 'TH01373V3N4T2B', 'TH67013RWV669H', 'TH01203RGB9T4B', 'THT20047RFJA9Z', 'TH64013E35UV5N', 'TH05063UAA8V7D', 'TH03043VDRPD3H', 'TH67013RH96T3G', 'TH04033TQE5B2A0', 'TH68043REV5B2F', 'TH15013QS6KP7O', 'TH67023RN22C5B', 'TH20083VF0UN0B', 'TH09013RNABW5D', 'TH02063UA32D7A', 'TH01213TPZH03A', 'TH68043RMVUJ0F', 'TH33053UWG5Q1C', 'THT0403KYNR5Z', 'TH02063T0QV55A', 'TH20043VEBBY8A', 'TH67013QXE7A7H', 'THT030122HJK2Z', 'TH10113V4QZ57B', 'TH63053KMKF75J', 'THT21012462Z5Z', 'TH67013SK64G8E', 'TH65013TY1KY1H', 'TH01073TUT8A9A', 'TH70083R9YWY5C', 'FLACB02017460937', 'TH01473UFV758B', 'TH10113UVYV98B', 'TH56023BQBZM8H', 'TH67013RH7VC8H', 'TH01213SJDJG6A', 'TH66023KG2X04C', 'TH21013V23S27C', 'TH01373JKRJ54B', 'THT56027XXEN0Z', 'TH66023J06CX6C', 'TH24023N0S583F', 'TH68043R62UJ9F', 'TH24043V2QUQ7D', 'TH67013SU38Q9G', 'TH67013RWBXK7G', 'TH68043RFPHE5F', 'TH65013MKY0M5G', 'TH10033VEA2Z4I', 'TH04033S62PK5A0', 'TH10033VDZBU2E', 'TH67013QQUSD5G', 'TH10033UAHNR6P', 'TH013932659B4G', 'TH01163UWSH23A0', 'TH01183VDZTS6A0', 'THT03022HC7C4Z', 'TH21013UUG723F', 'TH05033VB0VS9C', 'TH68043RMT4M6F', 'TH01373V3NEC0B', 'TH67013RVGR36G', 'TH55033K9VAG8B', 'TH01423UPVN92A', 'THT01407R38E5Z', 'TH10033V3HKC0Q', 'TH01473VBCC06C', 'TH65013SKH3W4H', 'TH67013Q87KT5H', 'TH01183RVDKX7A1', 'TH66023KJ79Z8C', 'TH67023HRZHJ8C', 'TH02043T5RW63O', 'TH10113VASDZ8B', 'TH05033U23QE7B', 'TH21063Q8GYK3A', 'TH05033USZTC8I', 'TH67013RPBH03G', 'TH20073JSVJK6B', 'LEXPU0180148516', 'TH67013RSGT12H', 'TH01393VJFQZ4B', 'TH47013U4XUC1C', 'THT67022AU899Z', 'TH67013RV5G61G', 'THT21062BHSV7Z', 'TH05033UH8NQ3G', 'SSLT730006233687', 'TH26073UZ34E7A', 'THT01407QXC36Z', 'TH74043V9FJX5C', 'TH10043VGDEP0E', 'TH12033VA3MD1B', 'TH20073HW5T27B', 'TH01273GJFNC3D', 'TH67013K54Q24B', 'TH05033UQWPU5J', 'TH02063FA2E71A-1', 'TH04033RMX396A1', 'TH20043CPU6J9B0', 'TH20083U2QAV3B', 'TH13133TYY7Q9D', 'TH20043V95CS6G', 'THT21017U94Y0Z', 'TH40053NCX632D', 'TH02063CAA6C8A', 'TH13023RM3PV2A-1', 'THT21062BDX08Z', 'THT01407RXMJ4Z', 'TH20073JJQWU7B', 'TH01373VNA8B8B', 'TH20083W61SP1D', 'TH01423U1JGS6A', 'TH24013NB1705L', 'TH20043V3D3C0D', 'TH24023VBBN50H', 'TH10113UXGYB2D', 'TH68043U88W11E', 'TH67013P6RCW6E', 'TH10033R2TZE6E', 'TH15063SJVGM1H', 'TH68043R5JS62F', 'TH10033V87PV6A', 'THT20047RDFW5Z', 'TH62013TA49W5A', 'TH10033UUGHX4B', 'THT21017R6VD6Z', 'TH20043DWPDU5C', 'TH01373V3R8A4C', 'TH15063HW76U7J', 'TH66013U1W973H', 'THT66021EHQ63Z', 'TH20043U2DVU4C', 'TH01473U1G967B', 'TH65023Q1S356B', 'TH20073HTQW31A', 'TH67013RTBKY5G', 'TH70083TSXUF4B', 'TH01473UWFFM3B', 'TH20073RWG991E', 'TH01143S2H0A2E', 'TH65053Q78UG5E', 'TH04073S5UH49C', 'TH01303VE0S29A', 'TH01373UB3D82C', 'TH60033PV8G64B', 'TH04063MQU3G4A1', 'THT20087P7NW5Z', 'TH01303SDDTP2C', 'TH10033UHG168B', 'TH26073UY1ZM1A', 'SSLT730006651767', 'TH01303EJW0H8A', 'TH66023M0BQ69C', 'THT20042G8989Z', 'TH20043UQCNT9D', 'TH67033SWMKH7C', '7110015818354', 'TH01373E7VJ83A', 'TH01403UUJGZ3B0', 'TH67023U39PJ7C', 'TH01473VJW806A', 'TH10113V5SA56B', 'THT20042HTNU4Z', 'TH38013CVWVA6A0', 'TH16033BJJFT0C', 'TH67033QAHVX6F', 'TH68043RGX702F', 'TH10113UQSBM7B', 'TH01423TNP7F6A', 'TH26063BFXQ89A', 'TH05063VDKN39F', 'TH04063V87RJ2E', 'TH04033V8HM87A1');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case pd.last_route_action
+        when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+    end as 最后一条路由
+from fle_staging.parcel_info pi
+# join tmpale.tmp_th_pno_0316 t on t.pno = pi.pno
+left join bi_pro.parcel_detail pd on pd.pno = pi.pno
+where
+    pi.pno in ('TH01043PNDWZ1B', 'TH01273UK0EU8D', 'TH04033PW36Y7A1', 'TH04033RZ7668A1', 'TH10033SAVRJ7K', 'TH10033SUC0X2K', 'TH10033TXAD56K', 'TH10033U71897B', 'TH10033UFG3N5K', 'TH20083HC5138B', 'TH24103N8JDW1B', 'TH67023QZ3T32C', 'THT01052B5HB8Z', 'THT01052CNZY9Z', 'THT013413GF97Z', 'THT04032CC0K2Z', 'THT05062FRFC5Z', 'THT67012B7QC9Z', 'THT67012BSNV5Z', 'THT67012D6ZS7Z', 'TH10033U4XZ40A', 'TH20083UK3EZ5C', 'TH20073VC6FB0B', 'TH04033QUZ5V4A1', 'TH04073PWE6P8K', 'TH20073RSMND0D', 'TH04013GY3C64I', 'TH20043V98EG4B', 'TH20073JYJBK0B', 'THT650120NF71Z', 'TH68043RH64Y2F', 'THT56107V97H3Z', 'TH10033U2S8P9P', 'TH67013QENWT9G', 'THT24011NRU87Z', 'TH33023BBP1E3C', 'TH27013TZ6TA5K', 'TH75103W3HT99C', 'TH01213Q1MTZ4A', 'TH21013VDNK97F', 'TH67013R9Y5R7H', 'TH20073EDGWN5B', 'TH01392WH3Y51B', 'THT15011KGTN6Z', 'TH01403RBZ4R0B0', 'THT20047PEQV5Z', 'TH04073PGWAK2A', 'TH04073KDUAG8K', 'TH10113V8QYG1A', 'TH68043RC3SC6F', 'TH19033UZXT74E', 'TH67013SBFDW1E', 'TH24033B29S10A', 'TH10113VE2B37B', 'TH01053VJQJW6B', 'TH04033JM5CD0A1', 'THT71057SC549Z', 'TH16013MVTPU0L', 'TH04073RKWXH4K-3', 'TH67013S01764H', 'TH21063UYU0U8A', 'TH67013RTA7W9G', 'TH68043S5REX1F', 'THT66021EQRK7Z', 'TH01373V58QS1C', 'TH63083SYPJ90B', 'TH10043VBWR22C', 'TH04073MWHYG9J', 'TH20083S5PKJ5A', 'TH20043VEAQT1E', 'TH67033V05572F', 'THT05062HBHQ8Z', 'TH70043V92E25K', 'TH66023HTTY82C', 'TH04033RDGXM9A1', 'THT0131BVKG9Z', 'THT670126BE69Z', 'TH20083UZXEQ8B', 'TH15013QRRZQ1O', 'TH20073K2ZRE7A', 'TH01403UU4SC8B0', 'TH01293BGQRC4A', 'THT04037PNHT5Z', 'THT1501148ZE3Z', 'THT24021P92A8Z', 'TH44113TG15V3B', 'TH01303VBEWY7A', 'TH04033QHGVW9A1', 'TH01283S8VQT3B1', 'TH67023H02DF9C', 'TH48013VEKGV1I', 'TH67013RJVPA6G', 'TH01203T5GA33B', 'TH67013R20E90G', 'TH24113MFMC47E', 'TH04063T1FT27C', 'TH24113MKGAC4C', 'TH20013NXYCJ2F', 'TH01403TSSVG6B0', 'TH67013S6V0Q7H', 'TH01373TXWYE9B', 'TH68043RPYAK0F', 'TH67033V9BEA2D', 'TH20073PG9TU9C', 'TH67013N36E68G', 'TH66023TKXTG3C', 'TH01203N984F1C', 'TH47133SX04K8I', 'TH70083PYRGK4B', 'TH20053TS9VJ3B', 'TH22043B4DTK7D', 'THT20047XU831Z', 'TH10033VEZ3P2E', 'TH20043V84MX7A', 'TH01393V87RF4E', 'TH67013RSN591H', 'TH01393HRZWK9F', 'TH26073U6VA98D', 'TH67013RVEBQ8G', 'TH04033TF7D09A1', 'TH20043HCS5Z3B1', 'TH01153NH7921A', 'THT24011M7TK4Z', 'TH61023TVVA45C', 'TH67013RMVS53G', 'TH670132JD7Q7E', 'TH67013RF6KH8G', 'TH05033TPS9X9C', 'TH37013VZ99E1A', 'TH68043RB4GT6F', 'TH32013CAU8M7A', 'TH61083B18GD8H', 'TH68043RTRX38F', 'TH71033UVTUJ9M', 'TH68043REJAX8F', 'TH67033R54H76F', 'TH67033EPWJ62A', 'TH11013R98463A', 'TH01053VA3JN1B', 'TH01303VESAU3C', 'TH02063J4EF95A0', 'TH01233S2KZ84E', 'LEXDO0057480603', 'TH01473TB4BH5B', 'TH67023R47AN0A', 'TH20073J9STN5E0', 'TH01053J3CGZ0C', 'TH01413VJ2J70B', 'TH70033UTT9C4D', 'TH20043DJX794A', 'TH20043RYW746H', 'SSLT730005611450', 'TH20043DN7JD3C', 'TH20043UU8DM1A', 'TH67013RNH7U2H', 'TH03043VCWQZ9H', 'TH01403RME2H7B0', 'TH01473UYWWS3A', 'TH20043UG13X3D', 'TH04033SA8UM9A1', 'TH01413VCJ0B1B', 'TH01403RCG2Z8B0', 'TH01273TEMWW7D', 'TH01503RY1FM6B0', 'TH64013HS07V7L', 'THT20047RMPP8Z', 'TH26073UFH341D', 'THT05032JPU55Z', 'TH20073JUV2C1B', 'TH67013RVCHB5G', 'TH24023VBEX45H', 'TH67013TBU433G', 'TH67013SWKQ56G', 'TH02023TETZ56D', 'THT21017R76C8Z', 'TH67013RTBG03G', 'TH20073RWG952E', 'THT54111Y05S5Z', 'TH01373V3N4T2B', 'TH67013RWV669H', 'TH01203RGB9T4B', 'THT20047RFJA9Z', 'TH64013E35UV5N', 'TH05063UAA8V7D', 'TH03043VDRPD3H', 'TH67013RH96T3G', 'TH04033TQE5B2A0', 'TH68043REV5B2F', 'TH15013QS6KP7O', 'TH67023RN22C5B', 'TH20083VF0UN0B', 'TH09013RNABW5D', 'TH02063UA32D7A', 'TH01213TPZH03A', 'TH68043RMVUJ0F', 'TH33053UWG5Q1C', 'THT0403KYNR5Z', 'TH02063T0QV55A', 'TH20043VEBBY8A', 'TH67013QXE7A7H', 'THT030122HJK2Z', 'TH10113V4QZ57B', 'TH63053KMKF75J', 'THT21012462Z5Z', 'TH67013SK64G8E', 'TH65013TY1KY1H', 'TH01073TUT8A9A', 'TH70083R9YWY5C', 'FLACB02017460937', 'TH01473UFV758B', 'TH10113UVYV98B', 'TH56023BQBZM8H', 'TH67013RH7VC8H', 'TH01213SJDJG6A', 'TH66023KG2X04C', 'TH21013V23S27C', 'TH01373JKRJ54B', 'THT56027XXEN0Z', 'TH66023J06CX6C', 'TH24023N0S583F', 'TH68043R62UJ9F', 'TH24043V2QUQ7D', 'TH67013SU38Q9G', 'TH67013RWBXK7G', 'TH68043RFPHE5F', 'TH65013MKY0M5G', 'TH10033VEA2Z4I', 'TH04033S62PK5A0', 'TH10033VDZBU2E', 'TH67013QQUSD5G', 'TH10033UAHNR6P', 'TH013932659B4G', 'TH01163UWSH23A0', 'TH01183VDZTS6A0', 'THT03022HC7C4Z', 'TH21013UUG723F', 'TH05033VB0VS9C', 'TH68043RMT4M6F', 'TH01373V3NEC0B', 'TH67013RVGR36G', 'TH55033K9VAG8B', 'TH01423UPVN92A', 'THT01407R38E5Z', 'TH10033V3HKC0Q', 'TH01473VBCC06C', 'TH65013SKH3W4H', 'TH67013Q87KT5H', 'TH01183RVDKX7A1', 'TH66023KJ79Z8C', 'TH67023HRZHJ8C', 'TH02043T5RW63O', 'TH10113VASDZ8B', 'TH05033U23QE7B', 'TH21063Q8GYK3A', 'TH05033USZTC8I', 'TH67013RPBH03G', 'TH20073JSVJK6B', 'LEXPU0180148516', 'TH67013RSGT12H', 'TH01393VJFQZ4B', 'TH47013U4XUC1C', 'THT67022AU899Z', 'TH67013RV5G61G', 'THT21062BHSV7Z', 'TH05033UH8NQ3G', 'SSLT730006233687', 'TH26073UZ34E7A', 'THT01407QXC36Z', 'TH74043V9FJX5C', 'TH10043VGDEP0E', 'TH12033VA3MD1B', 'TH20073HW5T27B', 'TH01273GJFNC3D', 'TH67013K54Q24B', 'TH05033UQWPU5J', 'TH02063FA2E71A-1', 'TH04033RMX396A1', 'TH20043CPU6J9B0', 'TH20083U2QAV3B', 'TH13133TYY7Q9D', 'TH20043V95CS6G', 'THT21017U94Y0Z', 'TH40053NCX632D', 'TH02063CAA6C8A', 'TH13023RM3PV2A-1', 'THT21062BDX08Z', 'THT01407RXMJ4Z', 'TH20073JJQWU7B', 'TH01373VNA8B8B', 'TH20083W61SP1D', 'TH01423U1JGS6A', 'TH24013NB1705L', 'TH20043V3D3C0D', 'TH24023VBBN50H', 'TH10113UXGYB2D', 'TH68043U88W11E', 'TH67013P6RCW6E', 'TH10033R2TZE6E', 'TH15063SJVGM1H', 'TH68043R5JS62F', 'TH10033V87PV6A', 'THT20047RDFW5Z', 'TH62013TA49W5A', 'TH10033UUGHX4B', 'THT21017R6VD6Z', 'TH20043DWPDU5C', 'TH01373V3R8A4C', 'TH15063HW76U7J', 'TH66013U1W973H', 'THT66021EHQ63Z', 'TH20043U2DVU4C', 'TH01473U1G967B', 'TH65023Q1S356B', 'TH20073HTQW31A', 'TH67013RTBKY5G', 'TH70083TSXUF4B', 'TH01473UWFFM3B', 'TH20073RWG991E', 'TH01143S2H0A2E', 'TH65053Q78UG5E', 'TH04073S5UH49C', 'TH01303VE0S29A', 'TH01373UB3D82C', 'TH60033PV8G64B', 'TH04063MQU3G4A1', 'THT20087P7NW5Z', 'TH01303SDDTP2C', 'TH10033UHG168B', 'TH26073UY1ZM1A', 'SSLT730006651767', 'TH01303EJW0H8A', 'TH66023M0BQ69C', 'THT20042G8989Z', 'TH20043UQCNT9D', 'TH67033SWMKH7C', '7110015818354', 'TH01373E7VJ83A', 'TH01403UUJGZ3B0', 'TH67023U39PJ7C', 'TH01473VJW806A', 'TH10113V5SA56B', 'THT20042HTNU4Z', 'TH38013CVWVA6A0', 'TH16033BJJFT0C', 'TH67033QAHVX6F', 'TH68043RGX702F', 'TH10113UQSBM7B', 'TH01423TNP7F6A', 'TH26063BFXQ89A', 'TH05063VDKN39F', 'TH04063V87RJ2E', 'TH04033V8HM87A1');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.pno
+from bi_pro.parcel_claim_task pct
+where
+    pct.source = 12 -- L来源
+    and pct.state = 6;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.pno
+from bi_pro.parcel_claim_task pct
+where
+    pct.source = 12 -- L来源
+    and pct.state = 7;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.pno
+    ,case pct.state
+        when 6 then '理赔完成'
+        when 7 then '理赔终止'
+    end 理赔状态
+    ,case plt.`source`
+        when 1 then 'a-问题件-丢失'
+        when 2 then 'b-记录本-丢失'
+        when 3 then 'c-包裹状态未更新'
+        when 4 then 'd-问题件-破损/短少'
+        when 5 then 'e-记录本-索赔-丢失'
+        when 6 then 'f-记录本-索赔-破损/短少'
+        when 7 then 'g-记录本-索赔-其他'
+        when 8 then 'h-包裹状态未更新-ipc计数'
+        when 9 then 'i-问题件-外包装破损险'
+        when 10 then 'j-问题记录本-外包装破损险'
+        when 11 then 'k-超时效包裹'
+        when 12 then 'l-高度疑似丢失'
+    end '闪速认定问题来源'
+    ,case plt.state
+        when 1 then '丢失件待处理'
+        when 2 then '疑似丢失件待处理'
+        when 3 then '待工单回复'
+        when 4 then '已工单回复'
+        when 5 then '包裹未丢失'
+        when 6 then '丢失件处理完成'
+    end 闪人认定任务状态
+from bi_pro.parcel_claim_task pct
+left join bi_pro.parcel_lose_task plt on pct.pno and plt.pno
+where
+    pct.source = 12 -- L来源
+    and pct.state in (7,8)
+    and plt.state not in (5,6);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.pno
+    ,case pct.state
+        when 6 then '理赔完成'
+        when 7 then '理赔终止'
+    end 理赔状态
+    ,case plt.`source`
+        when 1 then 'a-问题件-丢失'
+        when 2 then 'b-记录本-丢失'
+        when 3 then 'c-包裹状态未更新'
+        when 4 then 'd-问题件-破损/短少'
+        when 5 then 'e-记录本-索赔-丢失'
+        when 6 then 'f-记录本-索赔-破损/短少'
+        when 7 then 'g-记录本-索赔-其他'
+        when 8 then 'h-包裹状态未更新-ipc计数'
+        when 9 then 'i-问题件-外包装破损险'
+        when 10 then 'j-问题记录本-外包装破损险'
+        when 11 then 'k-超时效包裹'
+        when 12 then 'l-高度疑似丢失'
+    end '闪速认定问题来源'
+    ,case plt.state
+        when 1 then '丢失件待处理'
+        when 2 then '疑似丢失件待处理'
+        when 3 then '待工单回复'
+        when 4 then '已工单回复'
+        when 5 then '包裹未丢失'
+        when 6 then '丢失件处理完成'
+    end 闪人认定任务状态
+from bi_pro.parcel_claim_task pct
+left join bi_pro.parcel_lose_task plt on pct.pno = plt.pno
+where
+    pct.source = 12 -- L来源
+    and pct.state in (7,8)
+    and plt.state not in (5,6);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.pno
+    ,case pct.state
+        when 6 then '理赔完成'
+        when 7 then '理赔终止'
+    end 理赔状态
+    ,plt.id
+    ,case plt.`source`
+        when 1 then 'a-问题件-丢失'
+        when 2 then 'b-记录本-丢失'
+        when 3 then 'c-包裹状态未更新'
+        when 4 then 'd-问题件-破损/短少'
+        when 5 then 'e-记录本-索赔-丢失'
+        when 6 then 'f-记录本-索赔-破损/短少'
+        when 7 then 'g-记录本-索赔-其他'
+        when 8 then 'h-包裹状态未更新-ipc计数'
+        when 9 then 'i-问题件-外包装破损险'
+        when 10 then 'j-问题记录本-外包装破损险'
+        when 11 then 'k-超时效包裹'
+        when 12 then 'l-高度疑似丢失'
+    end '闪速认定问题来源'
+    ,case plt.state
+        when 1 then '丢失件待处理'
+        when 2 then '疑似丢失件待处理'
+        when 3 then '待工单回复'
+        when 4 then '已工单回复'
+        when 5 then '包裹未丢失'
+        when 6 then '丢失件处理完成'
+    end 闪人认定任务状态
+from bi_pro.parcel_claim_task pct
+left join bi_pro.parcel_lose_task plt on pct.pno = plt.pno
+where
+    pct.source = 12 -- L来源
+    and pct.state in (7,8)
+    and plt.state not in (5,6);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    wo.order_no
+    ,wor.staff_info_id
+    ,hsi.node_department_id
+    ,wor.created_at
+from bi_pro.work_order wo
+left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+where
+    wo.order_no = '0416763084300226';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    wo.order_no
+    ,wor.staff_info_id
+    ,hsi.node_department_id
+    ,wor.created_at
+    ,hsi.state
+from bi_pro.work_order wo
+left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+where
+    wo.order_no = '0416763084300226';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+        and wo.order_no = '0416763084300226';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+    and wo.order_no = '0416763084300226'
+order by 7;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+        ,count(wor.id) over (partition by wo.id) hf_num
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+        and wo.order_no = '0416763084300226';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+        ,count(wor.id) over (partition by wo.id) hf_num
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,t2.hf_num 回复总次数
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+        ,count(wor.id) over (partition by wo.id) hf_num
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+        and wo.order_no = '0716771222555027';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+        ,count(wor.id) over (partition by wo.id) hf_num
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+#         and wo.order_no = '0716771222555027'
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,t2.hf_num 回复总次数
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+    and wo.order_no = '0416763084300226';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+        ,count(wor.id) over (partition by wo.id) hf_num
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+#         and wo.order_no = '0716771222555027'
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,t2.hf_num 回复总次数
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+    and wo.order_no = '0716771222555027';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+        ,count(wor.id) over (partition by wo.id) hf_num
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+#         and wo.order_no = '0716771222555027'
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,t1.hf_num 回复总次数
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t1 on t1.id = wo.id and t1.rn = 1
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1
+    and wo.order_no = '0716771222555027';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        wo.id
+        ,wor.created_at
+        ,row_number() over (partition by wo.id order by wor.created_at) rn
+        ,count(wor.id) over (partition by wo.id) hf_num
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+    where
+        wo.created_at >= date_sub(curdate(),interval 30 day)
+        and wo.created_at < curdate()
+        and hsi.state = 1
+        and hsi.node_department_id = 86
+#         and wo.order_no = '0716771222555027'
+)
+
+SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,wo.created_at 创建时间
+    ,t1.hf_num 回复总次数
+    ,wor.`created_at` 第一次工单回复时间
+    ,timestampdiff(second , wo.created_at, wor.created_at) '第一次回复时长（与创建工单的时间相比）'
+    ,t2.created_at 第二次回复时间
+    ,timestampdiff(second, wor.created_at, t2.created_at) '第二次回复时长（与第一次的时间对比）'
+    ,t3.created_at 第三次回复时间
+    ,timestampdiff(second, t2.created_at, t3.created_at) '第三次回复时长（与第二次回复时间对比）'
+    ,(timestampdiff(second , wo.created_at, wor.created_at) + ifnull(timestampdiff(second, wor.created_at, t2.created_at), 0) + ifnull(timestampdiff(second, t2.created_at, t3.created_at), 0))/(1 + if(t2.created_at is null ,0 ,1) + if(t3.created_at is null ,0 ,1)) '平均响应时长（每个相差间隔的平均响应时间）'
+    ,wo.`closed_at`  工单关闭时间
+    ,timestampdiff(second, wo.created_at, wo.closed_at) '总用时长（关闭工单的时间-创建工单的时间）'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,wor.`staff_info_id`  第一次回复人ID
+    ,hi1.`name`  第一次回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<24  then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and  TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )<72  then '是'
+        else '否'
+    end  是否在24小时内回复
+    ,if(wor.created_at is not null and wo.`original_acceptance_info` is not null  and TIMESTAMPDIFF(HOUR, wo.`created_at`,wor.`created_at` )>48,'是','否') 是否为FH48小时超时工单
+    ,TIMESTAMPDIFF(MINUTE, wo.`created_at`,wor.`created_at`) 第一次回复时长
+    ,if(wt.`created_at` is not null and nwt.`created_at` is null,'是','否') 是否为工作时间创建工单
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<40 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(MINUTE, wt.`created_at`,wor.`created_at`)<2920 then '是'
+        else '否'
+    end 工作时间内创建的工单是否在40分钟内回复
+    ,case
+        when wo.`original_acceptance_info` is null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<24 then '是'
+        when wo.`original_acceptance_info` is not null and wor.created_at is not null and TIMESTAMPDIFF(HOUR, nwt.`created_at`,wor.`created_at` )<72 then '是'
+        else '否'
+    end 非工作时间是否在24小时内回复
+    ,case
+        when nwt.`tg` in (1,3) and wor.`created_at` < concat(date_add(nwt.`created_at`, interval 1 day) , ' 10:00') then '是'
+        when nwt.`tg` in (2,4) and wor.`created_at` < concat(date(nwt.`created_at`), ' 10:00') then '是'
+        ELSE '否'
+    end as '工作时间外创建的工单是否在次日10:00前回复'
+from `bi_pro`.work_order wo
+left join
+    ( #第一次回复
+        select
+            *
+        from
+            (
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+            )wor
+        where wor.rn=1
+    )wor on wo.id = wor.`order_id`
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =wor.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id
+left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <10000 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <10000 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id
+left join t t1 on t1.id = wo.id and t1.rn = 1
+left join t t2 on t2.id = wo.id and t2.rn = 2
+left join t t3 on t3.id = wo.id and t3.rn = 3
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+    -- and wo.status < 4
+    -- and wo.`created_store_id` !=1 -- 自动创建的工单
+    and hi1.`node_department_id` =86
+    and hi1.`state` =1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,ss.name 妥投网点
+    ,wo.content '工单回复'
+    ,pi.created_at
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_03166 t  on t.pno = pi.pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+left join
+    (
+        select
+            wo.pnos
+            ,wor.content
+            ,row_number() over (partition by wo.pnos order by wor.created_at desc) rn
+        from bi_pro.work_order wo
+        join t on wo.pnos = t.pno
+        left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    ) wo on wo.pnos = t.pno and wo.rn = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,ss.name 妥投网点
+    ,wo.content '工单回复'
+    ,pi.created_at
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_03166 t  on t.pno = pi.pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+left join
+    (
+        select
+            wo.pnos
+            ,wor.content
+            ,row_number() over (partition by wo.pnos order by wor.created_at desc) rn
+        from bi_pro.work_order wo
+        join tmpale.tmp_th_pno_03166 t on wo.pnos = t.pno
+        left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    ) wo on wo.pnos = t.pno and wo.rn = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,ss.name 妥投网点
+    ,wo.content '工单回复'
+    ,group_concat(concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key)) 签收凭证
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_03166 t  on t.pno = pi.pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+left join
+    (
+        select
+            wo.pnos
+            ,wor.content
+            ,row_number() over (partition by wo.pnos order by wor.created_at desc) rn
+        from bi_pro.work_order wo
+        join tmpale.tmp_th_pno_03166 t on wo.pnos = t.pno
+        left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    ) wo on wo.pnos = t.pno and wo.rn = 1
+left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
+left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
 with rep as
 (
     select
@@ -8120,3 +10207,454 @@ where
     wo.created_store_id = 3 -- 总部客服中心
     and wo.created_at >= date_sub(curdate(), interval 1 day)
     and wo.created_at < curdate();
+;-- -. . -..- - / . -. - .-. -.--
+select
+        plt.pno
+        ,plt.id
+        ,plt.client_id
+        ,plt.created_at
+        ,plt.last_valid_store_id
+        ,plt.last_valid_staff_info_id
+    from bi_pro.parcel_lose_task plt
+    where
+        plt.state < 5
+        and plt.source = 2;
+;-- -. . -..- - / . -. - .-. -.--
+with t1 as
+(
+    select
+        plt.pno
+        ,plt.id
+        ,plt.client_id
+        ,plt.created_at
+        ,plt.last_valid_store_id
+        ,plt.last_valid_staff_info_id
+    from bi_pro.parcel_lose_task plt
+    where
+        plt.state < 5
+        and plt.source = 2
+)
+,t as
+(
+    select
+        wo.id
+        ,wo.loseparcel_task_id
+        ,wo.created_at order_creat_at
+        ,wor.content wor_content
+        ,woi.object_key
+        ,row_number() over (partition by wo.loseparcel_task_id order by wo.created_at) r1
+        ,row_number() over (partition by wo.id order by wor.created_at desc ) r2
+    from bi_pro.work_order wo
+    join t1 on t1.id = wo.loseparcel_task_id
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.work_order_img woi on woi.origin_id = wor.id
+)
+,t2 as
+(
+    select
+        wo.pnos
+        ,wo.created_at
+        ,row_number() over (partition by wo.pnos order by wo.created_at ) rn
+    from bi_pro.work_order wo
+    join t1 on t1.pno = wo.pnos
+)
+select
+    t1.created_at 任务生成时间
+    ,t1.id 任务ID
+    ,t1.pno 运单号
+    ,t1.client_id 客户ID
+    ,las2.route_action
+    ,case las2.route_action # 路由动作
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end as 最后一条路由
+    ,las2.remark 最后一条路由备注
+    ,mark.remark 最后一条包裹备注
+    ,t1.last_valid_staff_info_id 最后有效路由操作人
+    ,ss_valid.name 最后有效路由网点
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,dst_ss.name 目的地网点
+    ,del_ss.name 妥投网点
+    ,pi.ticket_delivery_staff_info_id 妥投快递员ID
+    ,if(pi.state = 5 ,convert_tz(pi.finished_at, '+00:00', '+07:00'), null) 包裹妥投时间
+    ,if(st_distance_sphere(point(pi.`ticket_delivery_staff_lng`, pi.`ticket_delivery_staff_lat`), point(del_ss.`lng`, del_ss.`lat`)) <= 100, '是', '否') 是否在网点妥投
+    ,if(pi.state = 5 and pho.routed_at < pi.finished_at , '是', '否') 妥投前是否给客户打电话
+    ,pi.dst_phone  收件人电话
+    ,num.num 创建工单次数
+    ,1st.order_creat_at 第一次创建工单时间
+    ,fir.created_at 第一次全组织发工单时间
+    ,lst.content 最后一次全组织工单回复内容
+    ,1st.wor_content 第一次回复内容
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',1st.object_key) 第一次回复附件
+    ,2nd.wor_content 第二次回复内容
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',2nd.object_key) 第二次回复附件
+    ,3rd.wor_content 第三次回复内容
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',3rd.object_key) 第三次回复附件
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key) 签收凭证
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
+from t1
+left join fle_staging.parcel_info pi on pi.pno = t1.pno
+left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
+left join fle_staging.sys_store del_ss on del_ss.id = pi.ticket_delivery_store_id
+left join fle_staging.sys_store ss_valid on ss_valid.id = t1.last_valid_store_id
+left join
+    (
+        select
+            *
+        from
+            (
+                select
+                    pr.route_action
+                    ,pr.pno
+                    ,pr.staff_info_id
+                    ,pr.routed_at
+                    ,pr.store_id
+                    ,pr.remark
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                 from rot_pro.parcel_route pr
+                 join
+                     (
+                        select t1.pno from t1 group by 1
+                    )t1 on t1.pno = pr.pno
+                where
+                    pr.routed_at > curdate() - interval 30 day
+            ) pr
+        where pr.rn = 1
+    ) las2 on las2.pno = t1.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at) rn
+        from rot_pro.parcel_route pr
+        where pr.route_action = 'PHONE'
+            and json_extract(pr.extra_value, '$.callDuration') > 7
+            and pr.routed_at > curdate() - interval 30 day
+    ) pho on pho.pno = t1.pno and pho.rn = 1
+left join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
+            ,pr.remark
+        from rot_pro.parcel_route pr
+        join
+            (
+                select t1.pno from t1 group by 1
+            ) t on pr.pno = t.pno
+        where pr.route_action = 'MANUAL_REMARK'
+            and pr.routed_at > curdate() - interval 30 day
+    ) mark on mark.pno = t1.pno and mark.rn = 1
+left join
+    (
+        select
+            t.loseparcel_task_id
+            ,count(distinct t.id) num
+        from t
+        group by 1
+    ) num on num.loseparcel_task_id = t1.id
+left join
+    (
+        select
+            *
+        from t
+        where
+            t.r1 = 1
+            and t.r2 = 1
+    ) 1st on 1st.loseparcel_task_id = t1.id
+left join
+    (
+        select
+            *
+        from t
+        where
+            t.r2 = 1
+            and t.r1 = 2
+    ) 2nd on 2nd.loseparcel_task_id = t1.id
+left join
+    (
+        select
+            *
+        from t
+        where
+            t.r2 = 1
+            and t.r1 = 3
+    ) 3rd on 3rd.loseparcel_task_id = t1.id
+left join t2 fir on fir.pnos = t1.pno and fir.rn = 1
+left join
+    (
+        select
+            wo2.pnos
+            ,wor.content
+            ,row_number() over (partition by wo2.pnos order by wor.created_at desc) rn
+        from bi_pro.work_order wo2
+        join t1 on t1.pno = wo2.pnos
+        left join bi_pro.work_order_reply wor on wor.order_id = wo2.id
+        where
+            wor.staff_info_id != wo2.created_staff_info_id
+    ) lst on lst.pnos = t1.pno and lst.rn = 1
+left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
+left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+    t.pno,
+    DATE_FORMAT(t.created_at, '%Y-%m-%d') as created_date,
+    1 AS flag -- 疑似丢失
+FROM bi_pro.parcel_lose_task  t
+LEFT JOIN bi_pro.parcel_detail  pd ON pd.pno = t.pno
+left join fle_staging.sys_store ss on ss.id = pd.resp_store_id
+WHERE
+    t.source IN (3, 33)
+    AND t.state IN (1,2,3,4)
+#     AND pd.resp_store_id = '{$storeId}'
+    and ss.name = 'PYI_SP-พัทยาใต้';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hsi.hire_date
+from bi_pro.hr_staff_info hsi
+where
+    hsi.staff_info_id in ('119999', '121776', '125595', '127320', '144914', '126471', '129577', '143552', '128544', '130629', '139340', '142684', '121517', '124245', '122849', '147026', '129478', '139564', '138995', '132638', '142468', '142398', '121959', '147204', '140513', '141731', '119363', '143365', '146200', '131902', '146662', '136717', '141425', '147700', '123315', '143644', '146887', '146301', '146973', '147313', '132704', '119263', '129450', '143836', '138168', '126277', '126820', '132318', '127738', '143159', '142878', '120650', '142461', '145659', '137498', '137552', '138000', '123831', '138684', '146078', '147338', '136411', '138850', '148502', '147271', '121614', '137223', '141200', '144392', '146816', '147626', '146985', '147117', '145885', '147910', '126985', '138674', '145092', '147716', '141582', '143109', '144085', '146844', '120671', '132576', '131210', '141791', '145706', '146910', '148060', '148693', '143813', '144606', '144713', '147202', '121549', '136363', '141386', '141151', '143837', '145412', '146858', '135396', '136414', '136979', '146185', '141935', '146629', '135674', '124103', '137645', '141549', '146865', '133938', '139445', '142106', '142674', '145900', '137230', '145800', '146031', '147246', '121500', '124751', '139759', '144557', '145803', '146810', '146970', '147001', '144886', '146472', '123868', '143519', '146076', '146737', '147083', '148413', '133321', '138572', '139911', '143055', '143674', '147333', '147929', '120718', '128919', '147316', '147780', '147828', '148073');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,if(de.cod_enabled = 1, '是', '否') 是否COD
+    ,de.dst_store_in_time 到达目的地网点时间
+from tmpale.tmp_th_pno_0318 t
+left join dwm.dwd_ex_th_parcel_details de on de.pno = t.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,if(de.cod_enabled = 1, '是', '否') 是否COD
+    ,de.dst_store_in_time 到达目的地网点时间
+from
+    (
+        select
+            t.pno
+        from tmpale.tmp_th_pno_0318 t
+        group by 1
+    ) t
+left join dwm.dwd_ex_th_parcel_details de on de.pno = t.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,if(de.cod_enabled = 1, '是', '否') 是否COD
+    ,de.pickup_time 揽收时间
+    ,de.dst_store_in_time 到达目的地网点时间
+from
+    (
+        select
+            t.pno
+        from tmpale.tmp_th_pno_0318 t
+        group by 1
+    ) t
+left join dwm.dwd_ex_th_parcel_details de on de.pno = t.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,case de.cod_enabled
+        when 0 then '否'
+        when 1 then '是'
+    end 是否COD
+    ,de.pickup_time 揽收时间
+    ,de.dst_store_in_time
+from
+    (
+        select
+            t.pno
+        from tmpale.tmp_th_pno_0318 t
+        group by 1
+    ) t
+join dwm.dwd_ex_th_parcel_details de on de.pno = t.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,case pi.cod_enabled
+        when 0 then '否'
+        when 1 then '是'
+    end 是否COD
+    ,de.dst_store_in_time
+from
+    (
+        select
+            t.pno
+        from tmpale.tmp_th_pno_0318 t
+        group by 1
+    ) t
+join dwm.dwd_ex_th_parcel_details de on de.pno = t.pno
+left join fle_staging.parcel_info pi on pi.pno = t.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,pct.claims_amount/100 网点理赔
+    ,b.claim_money 闪速理赔
+from tmpale.tmp_th_pno_zjq_0319 t
+left join  fle_staging.pickup_claims_ticket pct on pct.pno = t.pno and pct.state = 5 and pct.claims_type_category = 1 -- 理赔
+left join
+    (
+        select
+            a.*
+        from
+            (
+                select
+                    pct.`pno`
+                    ,pct.`id`
+                    ,row_number() over (partition by pct.`pno` order by pct.`id`  DESC ) row_num
+                from bi_pro.parcel_claim_task pct
+                where
+                    pct.state= 6
+            ) a
+        where
+            a.row_num = 1
+    ) a on a.pno = t.pno
+left join
+    (
+        select
+            *
+        from
+            (
+                select
+                    pcn.`task_id`
+                    ,replace(json_extract(pcn.`neg_result`,'$.money'),'\"','') claim_money
+                    ,row_number() over (partition by pcn.`task_id` order by pcn.`created_at` DESC ) row_num
+                from bi_pro.parcel_claim_negotiation pcn
+            ) b
+        where
+            b.row_num = 1
+    ) b on b.task_id = a.id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.运单号
+    ,pct.claims_amount/100 网点理赔
+    ,b.claim_money 闪速理赔
+from tmpale.tmp_th_pno_zjq_0319 t
+left join  fle_staging.pickup_claims_ticket pct on pct.pno = t.运单号 and pct.state = 5 and pct.claims_type_category = 1 -- 理赔
+left join
+    (
+        select
+            a.*
+        from
+            (
+                select
+                    pct.`pno`
+                    ,pct.`id`
+                    ,row_number() over (partition by pct.`pno` order by pct.`id`  DESC ) row_num
+                from bi_pro.parcel_claim_task pct
+                where
+                    pct.state= 6
+            ) a
+        where
+            a.row_num = 1
+    ) a on a.pno = t.运单号
+left join
+    (
+        select
+            *
+        from
+            (
+                select
+                    pcn.`task_id`
+                    ,replace(json_extract(pcn.`neg_result`,'$.money'),'\"','') claim_money
+                    ,row_number() over (partition by pcn.`task_id` order by pcn.`created_at` DESC ) row_num
+                from bi_pro.parcel_claim_negotiation pcn
+            ) b
+        where
+            b.row_num = 1
+    ) b on b.task_id = a.id;
