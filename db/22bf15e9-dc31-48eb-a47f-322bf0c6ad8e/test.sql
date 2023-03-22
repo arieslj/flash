@@ -95,3 +95,68 @@ where
             or ( pi.state = 7 and pi2.created_at >= '2022-12-31 17:00:00' and pi2.created_at < '2023-02-28 17:00:00')
         )
 ;
+SELECT
+    t.pno
+    ,pi.client_id 客户ID
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,convert_tz(pi.finished_at,'+00:00','+07:00') 妥投时间
+    ,ss.name 妥投网点
+    ,convert_tz(pr.routed_at,'+00:00','+07:00') 第一次到件入仓扫描时间
+    ,pr.name 第一次到件入仓扫描网点
+    ,dpd.last_route_time 最后有效路由时间
+    ,dpd.last_cn_route_action 最后有效路由
+    ,ps.van_in_proof_id 出车凭证编码
+    ,ss2.name 发车网点
+    ,ps.next_store_name 下一站
+    ,convert_tz(fvp.created_at,'+00:00','+07:00') 打印出车凭证时间
+from tmpale.tmp_th_pno_322_1 t
+left join fle_staging.parcel_info pi
+on t.pno=pi.pno
+left join dwm.tmp_ex_big_clients_id_detail bc
+on pi.client_id=bc.client_id
+left join fle_staging.ka_profile kp
+on pi.client_id=kp.id
+left join fle_staging.sys_store ss
+on pi.ticket_delivery_store_id=ss.id
+left join
+(
+    select pr.*
+    from
+    (
+    SELECT
+    pr.pno
+    ,pr.routed_at
+    ,ss.name
+    ,row_number()over(PARTITION by pr.pno order by pr.routed_at) rn
+    from rot_pro.parcel_route pr
+    left join fle_staging.sys_store ss
+    on pr.store_id=ss.id
+    where pr.route_action='ARRIVAL_WAREHOUSE_SCAN'
+    and pr.routed_at>='2023-02-27'
+    )pr where pr.rn=1
+)pr on pr.pno=t.pno
+left join dwm.dwd_ex_th_parcel_details dpd
+on dpd.pno=t.pno
+left join
+(
+    select *
+    from
+    (
+        select
+        ps.pno
+        ,ps.van_in_proof_id
+        ,ps.next_store_name
+        ,row_number()over(partition by ps.pno order by van_plan_arrived_at) rn
+        from dw_dmd.parcel_store_stage_new ps
+        join tmpale.tmp_th_pno_322_1 t on ps.pno = t.pno
+        where ps.van_in_proof_id is not null
+    )ps where ps.rn=1
+)ps on ps.pno=t.pno
+left join fle_staging.fleet_van_proof fvp
+on fvp.id=ps.van_in_proof_id
+left join fle_staging.sys_store ss2
+on fvp.store_id=ss2.id

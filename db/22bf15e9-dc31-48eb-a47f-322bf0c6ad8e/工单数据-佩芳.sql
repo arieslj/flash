@@ -11,8 +11,6 @@ with rep as
         wo.created_store_id = 3
         and wo.created_at >= date_sub(curdate(), interval 1 day)
         and wo.created_at < curdate()
-#         and wo.created_at >= '2023-03-17'
-#         and wo.created_at < '2023-03-20'
 )
 , pho as
 (
@@ -159,5 +157,3 @@ where
     wo.created_store_id = 3 -- 总部客服中心
     and wo.created_at >= date_sub(curdate(), interval 1 day)
     and wo.created_at < curdate()
-    and wo.created_at >= '2023-03-17'
-#     and wo.created_at < '2023-03-20'

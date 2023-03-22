@@ -19,3 +19,5 @@ where
     plt.source in (3,33)  -- c来源
     and plt.state in (1,2,3,4)
 group by 2
+;
+
