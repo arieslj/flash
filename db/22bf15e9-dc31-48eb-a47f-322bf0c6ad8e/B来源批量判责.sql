@@ -152,6 +152,7 @@ select
     ,if(pi.state = 5 ,convert_tz(pi.finished_at, '+00:00', '+07:00'), null) 包裹妥投时间
     ,if(st_distance_sphere(point(pi.`ticket_delivery_staff_lng`, pi.`ticket_delivery_staff_lat`), point(del_ss.`lng`, del_ss.`lat`)) <= 100, '是', '否') 是否在网点妥投
     ,if(pi.state = 5 and pho.routed_at < pi.finished_at , '是', '否') 妥投前是否给客户打电话
+    ,if(noduty.pno is null, '否', '是') 是否无需追责过
     ,pi.dst_phone  收件人电话
     ,num.num 创建工单次数
     ,1st.order_creat_at 第一次创建工单时间
@@ -268,5 +269,15 @@ left join
         where
             wor.staff_info_id != wo2.created_staff_info_id
     ) lst on lst.pnos = t1.pno and lst.rn = 1
+left join
+    (
+        select
+            plt2.pno
+        from bi_pro.parcel_lose_task plt2
+        where
+            plt2.state = 5
+            and plt2.source = 2
+        group by 1
+    ) noduty on noduty.pno = t1.pno
 left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
 left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER'
