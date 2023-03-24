@@ -2324,48 +2324,6 @@ left join
     )  b on a.month_d = b.month_d and a.name = b.name;
 ;-- -. . -..- - / . -. - .-. -.--
 select
-    a.*
-    ,b.总访问_认领
-    ,b.网点每人平均访问次数_认领
-    ,b.访问员工数_认领
-from
-    (
-        select
-            t.month_d
-            ,ss.name
-            ,sum(t.count_num)/count(distinct t.staff_info) 网点每人平均访问次数_hub
-            ,sum(t.count_num) 总访问_hub
-            ,count(distinct t.staff_info) 访问员工数_hub
-        from tmpale.tmp_ph_hub_0318 t
-        left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
-        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
-        where
-            ss.category in (8,12)
-#             and ss.name = '11 PN5-HUB_Santa Rosa'
-            and t.count_num > 2
-        group by 1,2
-    ) a
-left join
-    (
-         select
-            t.month_d
-            ,ss.name
-            ,sum(t._col1)/count(distinct t. c_sid_ms) 网点每人平均访问次数_认领
-            ,sum(t._col1) 总访问_认领
-            ,count(distinct t. c_sid_ms) 访问员工数_认领
-        from tmpale.tmp_ph_renlin_0318  t
-        left join ph_bi.hr_staff_info hsi on t.c_sid_ms = hsi.staff_info_id
-        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
-        where
-            ss.category in (8,12)
-#             and ss.name = '11 PN5-HUB_Santa Rosa'
-            and t._col1 > 2
-        group by 1,2
-    )  b on a.month_d = b.month_d and a.name = b.name;
-;-- -. . -..- - / . -. - .-. -.--
-select
     pi.pno
     ,case pi.returned
         when 0 then '正向'
@@ -3269,3 +3227,45 @@ left join
         where
             pr.routed_at < lost.routed_at
     ) bef on bef.pno = t.pno and bef.rn = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.总访问_认领
+    ,b.网点每人平均访问次数_认领
+    ,b.访问员工数_认领
+from
+    (
+        select
+            t.month_d
+            ,ss.name
+            ,sum(t.count_num)/count(distinct t.staff_info) 网点每人平均访问次数_hub
+            ,sum(t.count_num) 总访问_hub
+            ,count(distinct t.staff_info) 访问员工数_hub
+        from tmpale.tmp_ph_hub_0318 t
+        left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+#             and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t.count_num > 2
+        group by 1,2
+    ) a
+left join
+    (
+         select
+            t.month_d
+            ,ss.name
+            ,sum(t._col1)/count(distinct t. c_sid_ms) 网点每人平均访问次数_认领
+            ,sum(t._col1) 总访问_认领
+            ,count(distinct t. c_sid_ms) 访问员工数_认领
+        from tmpale.tmp_ph_renlin_0318  t
+        left join ph_bi.hr_staff_info hsi on t.c_sid_ms = hsi.staff_info_id
+        left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
+#         left join ph_staging.sys_department sd on sd.id = hsi.sys_department_id
+        where
+            ss.category in (8,12)
+#             and ss.name = '11 PN5-HUB_Santa Rosa'
+            and t._col1 > 2
+        group by 1,2
+    )  b on a.month_d = b.month_d and a.name = b.name;

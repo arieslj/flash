@@ -18,7 +18,12 @@ with t as
 
 SELECT
     concat('`',wo.order_no)  工单编号
-    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,case wo.status
+        when 1 then '未阅读'
+        when 2 then '已经阅读'
+        when 3 then '已回复'
+        when 4 then '已关闭'
+    end 状态
     ,wo.`client_id` 客户ID
     ,wo.`pnos`  运单号
     ,case wo.order_type

@@ -11638,3 +11638,316 @@ select
 from fle_staging.pickup_claims_ticket pct
 join tmpale.tmp_th_pno_0323 t on t.pno = pct.pno
 group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+    distinct pls.pno '运单号เลขพัสดุ'
+    ,c.created_at 首次预警时间
+    ,ds.store_name '网点名称'
+    ,pls.created_at '任务生成时间เวลาที่จัดการสำเร็จ'
+    ,if(
+        TIMESTAMPDIFF(hour,pls.created_at,now())<48,
+    concat(cast(TIMESTAMPDIFF(minute,now(),date_add(pls.created_at,interval 2 day))/60 as int),'h ',cast(round(TIMESTAMPDIFF(minute,now(),date_add(pls.created_at,interval 2 day))%60,0)as int),'min'),
+    concat('已超时',concat(cast(TIMESTAMPDIFF(minute,date_add(pls.created_at,interval 2 day),now())/60 as int),'h ',cast(round(TIMESTAMPDIFF(minute,date_add(pls.created_at,interval 2 day),now())%60,0)as int),'min'))) '任务处理倒计时เวลาที่สะสม'
+    ,pls.pack_no '集包号เลขแบ็กกิ้ง'
+    ,pls.arrival_time '入仓时间เวลาที่เข้าคลัง'
+    ,pls.parcel_created_at '揽件时间เวลาที่รับ'
+    ,pls.proof_id '出车凭证ใบรับรองปล่อยรถ'
+    ,case pls.state
+    when 1 then '待处理'
+    when 2 then '网点处理'
+    when 3 then '超时自动处理'
+    when 4 then 'QAQC处理'
+    when 5 then '已更新路由(无需处理)'
+    end  '状态สถานะ'
+    ,case pls.speed
+    when 1 then '是'
+    when 2 then '否'
+    end  'SPEED件มีพัสดุSpeed'
+    ,pls.last_valid_action '最后有效路由สถานะสุดท้าย'
+    ,pls.last_valid_at '最后操作时间เวลาสุดท้ายที่ดำเนินการ'
+    ,ds2.store_name '最后有效路由所在网点สาขาสุดท้ายที่ดำเนินการ'
+    ,ds.piece_name '片区District'
+    ,ds.region_name '大区Area'
+    ,bc.client_name 客户名称
+from bi_center.parcel_lose_task_sub_c pls
+left join fle_staging.parcel_info pi on pi.pno = pls.pno
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+left join dwm.dim_th_sys_store_rd ds on pls.store_id = ds.store_id and ds.stat_date = date_sub(curdate(), interval 1 day )
+left join dwm.dim_th_sys_store_rd ds2 on pls.last_valid_store_id = ds2.store_id and ds2.stat_date = date_sub(curdate(), interval 1 day )
+left join
+    (
+        select
+            pls.pno
+            ,plt.created_at
+            ,row_number() over (partition by pls.pno order by plt.created_at) rn
+        from bi_center.parcel_lose_task_sub_c pls
+        left join bi_pro.parcel_lose_task plt on pls.pno = plt.pno and plt.source = 3
+        where
+             pls.created_at > '2023-01-09 00:00:00'
+            and pls.state= 1
+    ) c on c.pno = pls.pno and c.rn = 1
+where
+    pls.created_at > '2023-01-09 00:00:00'
+    and pls.state=1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,ss.name
+from bi_pro.hr_staff_info hsi
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    hsi.staff_info_id in (52613,632192,3365244);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,if(pi.returned = 1, pi.pno, pi.recent_pno) 退件单号
+    ,ss.name 判定责任网点
+    ,dst_ss.name 目的地网点
+    ,ss2.name 揽件网点
+    ,pi.cod_amount/100 COD金额
+    ,plt.last_valid_action 最后有效路由
+    ,plt.last_valid_staff_info_id 最后有效路由操作员工
+    ,ss3.name 最后有效路由操作人所属网点
+    ,plr.staff_id 责任人
+    ,hsi2.name 责任人姓名
+    ,ss4.name 责任人所属网点
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join fle_staging.sys_store ss on ss.id = plr.store_id
+left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
+left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = plt.last_valid_staff_info_id
+left join fle_staging.sys_store ss3 on ss3.id = hsi.sys_store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = plr.staff_id
+left join fle_staging.sys_store ss4 on ss4.id = hsi2.sys_store_id
+where
+    plt.updated_at >= '2023-03-01'
+    and plt.state = 6
+    and plt.duty_result = 1
+    and plt.source in (1,2,3,12)
+    and plr.store_id = 'TH01400201';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.id
+    ,if(pi.returned = 1, pi.pno, pi.recent_pno) 退件单号
+    ,ss.name 判定责任网点
+    ,dst_ss.name 目的地网点
+    ,ss2.name 揽件网点
+    ,pi.cod_amount/100 COD金额
+    ,plt.last_valid_action 最后有效路由
+    ,plt.last_valid_staff_info_id 最后有效路由操作员工
+    ,ss3.name 最后有效路由操作人所属网点
+    ,plr.staff_id 责任人
+    ,hsi2.name 责任人姓名
+    ,ss4.name 责任人所属网点
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join fle_staging.sys_store ss on ss.id = plr.store_id
+left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
+left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = plt.last_valid_staff_info_id
+left join fle_staging.sys_store ss3 on ss3.id = hsi.sys_store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = plr.staff_id
+left join fle_staging.sys_store ss4 on ss4.id = hsi2.sys_store_id
+where
+    plt.updated_at >= '2023-03-01'
+    and plt.state = 6
+    and plt.duty_result = 1
+    and plt.source in (1,2,3,12)
+    and plr.store_id = 'TH01400201';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.id
+    ,if(pi.returned = 1, pi.pno, pi.recent_pno) 退件单号
+    ,ss.name 判定责任网点
+    ,dst_ss.name 目的地网点
+    ,ss2.name 揽件网点
+    ,pi.cod_amount/100 COD金额
+    ,plt.last_valid_action 最后有效路由
+    ,plt.last_valid_staff_info_id 最后有效路由操作员工
+    ,ss3.name 最后有效路由操作人所属网点
+    ,plr.staff_id 责任人
+    ,hsi2.is_sub_staff
+    ,hsi2.name 责任人姓名
+    ,ss4.name 责任人所属网点
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join fle_staging.sys_store ss on ss.id = plr.store_id
+left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
+left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = plt.last_valid_staff_info_id
+left join fle_staging.sys_store ss3 on ss3.id = hsi.sys_store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = plr.staff_id
+left join fle_staging.sys_store ss4 on ss4.id = hsi2.sys_store_id
+where
+    plt.updated_at >= '2023-03-01'
+    and plt.state = 6
+    and plt.duty_result = 1
+    and plt.source in (1,2,3,12)
+    and plr.store_id = 'TH01400201';
+;-- -. . -..- - / . -. - .-. -.--
+with rep as
+(
+    select
+        wo.order_no
+        ,wo.pnos
+        ,wor.created_at
+        ,row_number() over (partition by wo.order_no order by wor.created_at ) rn
+    from bi_pro.work_order wo
+    left join bi_pro.work_order_reply wor on wo.id = wor.order_id
+    where
+        wo.created_store_id = 3
+        and wo.created_at >= date_sub(curdate(), interval 1 day)
+        and wo.created_at < curdate()
+)
+, pho as
+(
+    select
+        pr.pno
+        ,pr.routed_at
+        ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+        ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk2
+    from rot_pro.parcel_route pr
+    join
+        (
+            select rep.pnos from rep group by 1
+        ) r on pr.pno = r.pnos
+    where
+        pr.route_action = 'PHONE'
+)
+select
+    date(wo.created_at) Date
+    ,wo.order_no 'Ticket ID'
+    ,wo.pnos 运单号
+    ,wo.client_id 客户ID
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then 'ka'
+        when kp.`id` is null then 'GE'
+    end '平台客户ลูกค้าแพลตฟอร์ม'
+    ,case ci.requester_category
+        when 0 then '托运人员 ผู้ส่ง'
+        when 1 then '收货人员 ผู้รับ'
+        when 2 then '操作人员 ฝ่ายปฏิบัติการ(Operation)'
+        when 3 then '销售人员 พนักงานขาย(Sales)'
+        when 4 then '客服人员 ฝ่ายบริการลูกค้า(CS)'
+    end '请求者角色ผู้ร้องขอ'
+    ,case ci.channel_category
+         when 0 then '电话 โทรศัพท์'
+         when 1 then '电子邮件 อีเมล'
+         when 2 then '网页 เว็บไซต์'
+         when 3 then '网点 สาขา'
+         when 4 then '自主投诉页面 การส่งคำร้องโดยลูกค้า'
+         when 5 then '网页（facebook） facebook'
+         when 6 then 'APPSTORE APPSTORE'
+         when 7 then 'Lazada系统 X-Space（LZD）'
+         when 8 then 'Shopee系统 In House(Shopee)'
+         when 9 then 'TikTok TikTok'
+    end '请求渠道ช่องทางการติดต่อ'
+    ,case wo.status
+        when 1 then '未阅读ไม่ได้อ่าน'
+        when 2 then '已经阅读อ่านแล้ว'
+        when 3 then '已回复ตอบกลับแล้ว'
+        when 4 then '已关闭ปิดแล้ว'
+    end '状态สถานะTicket'
+    ,wo.title 工单主题
+    ,case wo.order_type
+        when 1 then '查找运单 ค้นหาพัสดุ'
+        when 2 then '加快处理 เร่งจัดการ'
+        when 3 then '调查员工 ตรวจสอบพนักงาน'
+        when 4 then '其他 อื่นๆ'
+        when 5 then '网点信息维护提醒 แจ้งเตือนดูแลข้อมูลสาขา'
+        when 6 then '培训指导 แนะนำอบรม'
+        when 7 then '异常业务询问 ตรวจสอบการทำงานผิดปกติ'
+        when 8 then '包裹丢失 พัสดุสูญหาย'
+        when 9 then '包裹破损 พัสดุเสียหาย'
+        when 10 then '货物短少 พัสดุขาดหาย'
+        when 11 then '催单 เร่งติดตามพัสดุ'
+        when 12 then '有发无到 พัสดุตกหล่น'
+        when 13 then '上报包裹不在集包里 รายงานพัสดุไม่อยู่ในถุงแบ๊คกิ้ง'
+        when 16 then '漏揽收 รับพัสดุตกหล่น'
+        when 50 then '虚假撤销 ยกเลิกเป็นเท็จ'
+        when 17 then '已签收未收到 เซ็นรับไม่ได้รับ'
+        when 18 then '客户投诉 ลูกค้าร้องเรียน'
+        when 19 then '修改包裹信息 แก้ไขข้อมูลพัสดุ'
+        when 20 then '修改 COD 金额 แก้ไขยอดCOD'
+        when 21 then '解锁包裹 ปลดล็อกพัสดุ'
+        when 22 then '申请索赔 เคลม'
+        when 23 then 'MS 问题反馈 แจ้งปัญหาMS'
+        when 24 then 'FBI 问题反馈 แจ้งปัญหาFBI'
+        when 25 then 'KA System 问题反馈 แจ้งปัญหาKA System'
+        when 26 then 'App 问题反馈 แจ้งปัญหาApp'
+        when 27 then 'KIT 问题反馈 แจ้งปัญหาKIT'
+        when 28 then 'Backyard 问题反馈 แจ้งปัญหาBackyard'
+        when 29 then 'BS/FH 问题反馈 แจ้งปัญหาBS/FH'
+        when 30 then '系统建议 คำแนะนำระบบ'
+        when 31 then '申诉罚款 ยื่นขอคืนค่าปรับ'
+        else wo.order_type
+    end  '工单类型ประเภทTicket'
+    ,wo.created_at 工单创建时间
+    ,rep.created_at 工单回复时间
+    ,case wo.is_call
+        when 0 then '不需要 ไม่ต้องการ'
+        when 1 then '需要 ต้องการ'
+    end '致电客户ลูกค้าต้องการให้โทรหาหรือไม่'
+    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, 'NO', 'YES') 是否超时
+    ,case wo.up_report
+        when 0 then 'NO'
+        when 1 then 'YES'
+    end 是否上报虚假工单
+    ,datediff(wo.updated_at, wo.created_at) 工单处理天数
+    ,wo.store_id '受理网点ID/部门'
+    ,case
+        when ss.`category` in (1,2,10,13) then 'sp'
+        when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,ss.name 网点名称
+    ,ss.sorting_no 区域
+    ,smr.name Area
+    ,smp.name 片区
+    ,case pi.state
+        when 1 then '已揽收 รับพัสดุแล้ว'
+        when 2 then '运输中 ระหว่างการขนส่ง'
+        when 3 then '派送中 ระหว่างการจัดส่ง'
+        when 4 then '已滞留 พัสดุคงคลัง'
+        when 5 then '已签收 เซ็นรับแล้ว'
+        when 6 then '疑难件处理中 ระหว่างจัดการพัสดุมีปัญหา'
+        when 7 then '已退件 ตีกลับแล้ว'
+        when 8 then '异常关闭 ปิดงานมีปัญหา'
+        when 9 then '已撤销 ยกเลิกแล้ว'
+    end as '运单状态สถานะพัสดุ'
+    ,if(pi.state = 5, date(convert_tz(pi.finished_at, '+00:00', '+07:00')), null) 妥投日期
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+07:00'), null ) 妥投时间
+    ,convert_tz(p1.routed_at, '+00:00', '+07:00') 第一次联系客户
+    ,convert_tz(p2.routed_at, '+00:00', '+07:00') 最后联系客户
+    ,if(pi.state = 5, datediff(date(convert_tz(pi.finished_at, '+00:00', '+07:00')), date(convert_tz(pi.created_at, '+00:00', '+07:00'))), null) 揽收至妥投
+    ,datediff(curdate(), date(convert_tz(pi.created_at, '+00:00', '+07:00'))) 揽收至今
+from bi_pro.work_order wo
+join fle_staging.customer_issue ci on wo.customer_issue_id = ci.id
+left join rep on rep.order_no = wo.order_no and rep.rn = 1
+left join fle_staging.sys_store ss on ss.id = wo.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_manage_piece smp on smp.id = ss.manage_piece
+left join fle_staging.parcel_info pi on wo.pnos = pi.pno
+left join pho p1 on p1.pno = wo.pnos and p1.rk = 1
+left join pho p2 on p2.pno = wo.pnos and p2.rk = 1
+left join fle_staging.ka_profile kp on kp.id = wo.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = wo.client_id
+where
+    wo.created_store_id = 3 -- 总部客服中心
+    and wo.created_at >= date_sub(curdate(), interval 1 day)
+    and wo.created_at < curdate();
