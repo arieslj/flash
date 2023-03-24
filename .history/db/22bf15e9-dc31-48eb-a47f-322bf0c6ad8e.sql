@@ -11622,3 +11622,19 @@ left join fle_staging.fleet_van_proof fvp
 on fvp.id=ps.van_in_proof_id
 left join fle_staging.sys_store ss2
 on fvp.store_id=ss2.id;
+;-- -. . -..- - / . -. - .-. -.--
+select date_format(now(), '1%h%i');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from bi_pro.work_order wo
+where
+    date_format(wo.`created_at`,'1%h%i')>11900
+limit 100;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+    ,count(pct.id)
+from fle_staging.pickup_claims_ticket pct
+join tmpale.tmp_th_pno_0323 t on t.pno = pct.pno
+group by 1;

@@ -208,19 +208,7 @@ group by 1
 
 select
     t.pno
-    ,case pi.cod_enabled
-        when 0 then '否'
-        when 1 then '是'
-    end 是否COD
-    ,pi.dst_store_id 目的地网点ID
-    ,ss.name 目的地网点
-    ,
-from
-    (
-        select
-            t.pno
-        from tmpale.tmp_th_pno_0318 t
-        group by 1
-    ) t
-left join fle_staging.parcel_info pi on pi.pno = t.pno
-left join fle_staging.sys_store ss on ss.id = pi.dst_store_id and ss.state = 1
+    ,count(pct.id)
+from fle_staging.pickup_claims_ticket pct
+join tmpale.tmp_th_pno_0323 t on t.pno = pct.pno
+group by 1

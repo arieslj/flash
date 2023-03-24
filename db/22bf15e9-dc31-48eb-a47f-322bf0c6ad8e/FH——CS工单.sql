@@ -165,8 +165,9 @@ where
     -- and wo.status < 4
     -- and wo.`created_store_id` !=1 -- 自动创建的工单
     and hi1.`node_department_id` =86
-    and hi1.`state` =1
+    and hi1.`state` = 1
 #     and wo.order_no = '0716771222555027'
 # order by 7
 ;
+
 
