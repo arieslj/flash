@@ -30,8 +30,8 @@ with rep as
 select
     date(wo.created_at) Date
     ,wo.order_no 'Ticket ID'
-    ,wo.pnos 运单号
-    ,wo.client_id 客户ID
+    ,wo.pnos '运单号 เลขพัสดุ'
+    ,wo.client_id '客户ID ID ลูกค้า'
     ,case
         when bc.`client_id` is not null then bc.client_name
         when kp.id is not null and bc.id is null then 'ka'
@@ -62,7 +62,7 @@ select
         when 3 then '已回复ตอบกลับแล้ว'
         when 4 then '已关闭ปิดแล้ว'
     end '状态สถานะTicket'
-    ,wo.title 工单主题
+    ,wo.title '工单主题 หัวข้อรายการคำร'
     ,case wo.order_type
         when 1 then '查找运单 ค้นหาพัสดุ'
         when 2 then '加快处理 เร่งจัดการ'
@@ -96,35 +96,35 @@ select
         when 31 then '申诉罚款 ยื่นขอคืนค่าปรับ'
         else wo.order_type
     end  '工单类型ประเภทTicket'
-    ,wo.created_at 工单创建时间
-    ,rep.created_at 工单回复时间
+    ,wo.created_at '工单创建时间 เวลาเปิดคำร้อง'
+    ,rep.created_at '工单回复时间 เวลาตอบคำร้อง'
     ,case wo.is_call
         when 0 then '不需要 ไม่ต้องการ'
         when 1 then '需要 ต้องการ'
     end '致电客户ลูกค้าต้องการให้โทรหาหรือไม่'
-    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, 'NO', 'YES') 是否超时
+    ,if(timestampdiff(second, coalesce(rep.created_at, now()), wo.latest_deal_at) > 0, 'NO', 'YES') '是否超时 เกินเวลาที่กำหนด'
     ,case wo.up_report
         when 0 then 'NO'
         when 1 then 'YES'
-    end 是否上报虚假工单
-    ,datediff(wo.updated_at, wo.created_at) 工单处理天数
-    ,wo.store_id '受理网点ID/部门'
+    end '是否上报虚假工单 Ticketที่เป็นเท็จ'
+    ,datediff(wo.updated_at, wo.created_at) '工单处理天数 ระยะเวลาการจัดการ TK /วัน'
+    ,wo.store_id '受理网点ID/部门 แผนก/สาขาที่รับเรื่อง'
     ,case
         when ss.`category` in (1,2,10,13) then 'sp'
         when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
         when ss.`category` IN (4,5,7) then 'SHOP/ushop'
         when ss.`category` IN (6)  then 'FH'
-        when wo.`store_id` = '22' then 'kam客服中心'
-        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id` = '22' then 'kam客服中心 KAM CSสำนักงานใหญ'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心 CSสำนักงานใหญ'
         when wo.`store_id`= '12' then 'QA&QC'
-        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`store_id`= '18' then 'Flash Home客服中心 CS Flash Home'
         when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
-        else '其他网点'
-    end 受理部门
-    ,ss.name 网点名称
-    ,ss.sorting_no 区域
+        else '其他网点 สาขาอื่นๆ'
+    end '受理部门 แผนกที่รับผิดชอบ'
+    ,ss.name '网点名称 สาขา'
+    ,ss.sorting_no '区域 ภูมิภาค'
     ,smr.name Area
-    ,smp.name 片区
+    ,smp.name '片区 เขต'
     ,case pi.state
         when 1 then '已揽收 รับพัสดุแล้ว'
         when 2 then '运输中 ระหว่างการขนส่ง'
@@ -136,12 +136,12 @@ select
         when 8 then '异常关闭 ปิดงานมีปัญหา'
         when 9 then '已撤销 ยกเลิกแล้ว'
     end as '运单状态สถานะพัสดุ'
-    ,if(pi.state = 5, date(convert_tz(pi.finished_at, '+00:00', '+07:00')), null) 妥投日期
-    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+07:00'), null ) 妥投时间
-    ,convert_tz(p1.routed_at, '+00:00', '+07:00') 第一次联系客户
-    ,convert_tz(p2.routed_at, '+00:00', '+07:00') 最后联系客户
-    ,if(pi.state = 5, datediff(date(convert_tz(pi.finished_at, '+00:00', '+07:00')), date(convert_tz(pi.created_at, '+00:00', '+07:00'))), null) 揽收至妥投
-    ,datediff(curdate(), date(convert_tz(pi.created_at, '+00:00', '+07:00'))) 揽收至今
+    ,if(pi.state = 5, date(convert_tz(pi.finished_at, '+00:00', '+07:00')), null) '妥投日期วันที่ปิดงานนำส่ง'
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+07:00'), null ) '妥投时间 เวลาที่ปิดงานนำส่ง'
+    ,convert_tz(p1.routed_at, '+00:00', '+07:00') '第一次联系客户 เวลาโทรครั้งแรก'
+    ,convert_tz(p2.routed_at, '+00:00', '+07:00') '最后联系客户 เวลาโทรครั้งสุดท้าย'
+    ,if(pi.state = 5, datediff(date(convert_tz(pi.finished_at, '+00:00', '+07:00')), date(convert_tz(pi.created_at, '+00:00', '+07:00'))), null) '揽收至妥投 ระยะเวลาที่รับพัสดุ-ปิดงาน/วัน'
+    ,datediff(curdate(), date(convert_tz(pi.created_at, '+00:00', '+07:00'))) '揽收至今 ระยะเวลาตั้งแต่รับพัสดุถึงปัจจุบัน/วัน'
 from bi_pro.work_order wo
 join fle_staging.customer_issue ci on wo.customer_issue_id = ci.id
 left join rep on rep.order_no = wo.order_no and rep.rn = 1

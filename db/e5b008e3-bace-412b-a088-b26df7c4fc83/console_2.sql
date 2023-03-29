@@ -112,3 +112,31 @@ left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
 where
     t._col1 > 10
     and ss.id is not null
+;
+
+select
+    a.staff_info_id
+from
+    (
+
+        select
+            a.*
+        from
+            (
+                select
+                    mw.staff_info_id
+                    ,mw.id
+                    ,mw.created_at
+                    ,count(mw.id) over (partition by mw.staff_info_id) js_num
+                    ,row_number() over (partition by mw.staff_info_id order by mw.created_at desc) rn
+                from ph_backyard.message_warning mw
+            ) a
+        where
+            a.rn = 1
+    ) a
+left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = a.staff_info_id
+where
+    a.js_num >= 3
+    and a.created_at < '2023-01-01'
+    and hsi.state = 1
+group by 1

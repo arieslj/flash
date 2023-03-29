@@ -160,3 +160,8 @@ left join fle_staging.fleet_van_proof fvp
 on fvp.id=ps.van_in_proof_id
 left join fle_staging.sys_store ss2
 on fvp.store_id=ss2.id
+;
+
+
+-- 警告信
+
