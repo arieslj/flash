@@ -191,7 +191,7 @@ left join
                         select t1.pno from t1 group by 1
                     )t1 on t1.pno = pr.pno
                 where
-                    pr.routed_at > curdate() - interval 30 day
+                    pr.routed_at > curdate() - interval 10 day
             ) pr
         where pr.rn = 1
     ) las2 on las2.pno = t1.pno
@@ -202,9 +202,13 @@ left join
             ,pr.routed_at
             ,row_number() over (partition by pr.pno order by pr.routed_at) rn
         from rot_pro.parcel_route pr
+        join
+            (
+                select t1.pno from t1 group by 1
+            ) t on pr.pno = t.pno
         where pr.route_action = 'PHONE'
             and json_extract(pr.extra_value, '$.callDuration') > 7
-            and pr.routed_at > curdate() - interval 30 day
+            and pr.routed_at > curdate() - interval 10 day
     ) pho on pho.pno = t1.pno and pho.rn = 1
 left join
     (
@@ -219,7 +223,7 @@ left join
                 select t1.pno from t1 group by 1
             ) t on pr.pno = t.pno
         where pr.route_action = 'MANUAL_REMARK'
-            and pr.routed_at > curdate() - interval 30 day
+            and pr.routed_at > curdate() - interval 10 day
     ) mark on mark.pno = t1.pno and mark.rn = 1
 left join
     (

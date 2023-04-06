@@ -140,3 +140,70 @@ where
     and a.created_at < '2023-01-01'
     and hsi.state = 1
 group by 1
+;
+
+select
+     pr.`store_id` 网点ID
+    ,ss.name 网点
+    ,pr.pno 包裹
+
+from `ph_staging`.`parcel_route` pr
+left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
+left join ph_staging.sys_store ss on ss.id = pr.store_id
+where
+    pr.`route_action` in ('SHIPMENT_WAREHOUSE_SCAN')
+    and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y-%m-%d')=date_sub(curdate(),interval 1 day)
+    and pi.`exhibition_weight`<=3000
+    and (pi.`exhibition_length` +pi.`exhibition_width` +pi.`exhibition_height`)<=60
+    and pi.`exhibition_length` <=30
+    and pi.`exhibition_width` <=30
+    and pi.`exhibition_height` <=30
+#     and ss.category in (8,12)
+#     and ss.state = 1
+group by 1,2,3
+;
+select date_sub(curdate(),interval 1 day)
+;
+
+select
+    mw.staff_info_id 员工ID
+    ,mw.id 警告信ID
+    ,mw.created_at 警告信创建时间
+    ,mw.is_delete 是否删除
+    ,case mw.type_code
+        when 'warning_1'  then '迟到早退'
+        when 'warning_29' then '贪污包裹'
+        when 'warning_30' then '偷盗公司财物'
+        when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+        when 'warning_9'  then '腐败/滥用职权'
+        when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+        when 'warning_5'  then '持有或吸食毒品'
+        when 'warning_4'  then '工作时间或工作地点饮酒'
+        when 'warning_10' then '玩忽职守'
+        when 'warning_2'  then '无故连续旷工3天'
+        when 'warning_3'  then '贪污'
+        when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+        when 'warning_7'  then '通过社会媒体污蔑公司'
+        when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+        when 'warning_26' then 'Fake POD'
+        when 'warning_25' then 'Fake Status'
+        when 'warning_24' then '不接受或不配合公司的调查'
+        when 'warning_23' then '损害公司名誉'
+        when 'warning_22' then '失职'
+        when 'warning_28' then '贪污钱'
+        when 'warning_21' then '煽动/挑衅/损害公司利益'
+        when 'warning_20' then '谎报里程'
+        when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+        when 'warning_19' then '未按照网点规定的时间回款'
+        when 'warning_17' then '伪造证件'
+        when 'warning_12' then '未告知上级或无故旷工'
+        when 'warning_13' then '上级没有同意请假'
+        when 'warning_14' then '没有通过系统请假'
+        when 'warning_15' then '未按时上下班'
+        when 'warning_16' then '不配合公司的吸毒检查'
+        when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+        else mw.`type_code`
+    end as '警告原因'
+from ph_backyard.message_warning mw
+where
+    mw.staff_info_id in ('119872', '124880', '119279', '119022', '118822', '118925', '120282', '130832', '120267', '123336', '119617', '146865')

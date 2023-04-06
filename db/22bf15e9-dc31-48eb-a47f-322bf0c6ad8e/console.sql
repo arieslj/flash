@@ -154,3 +154,101 @@ where
     and plt.duty_result = 1
     and plt.source in (1,2,3,12)
     and plr.store_id = 'TH01400201'
+
+;
+
+
+
+-- 任务维度
+select
+tp.id 揽件任务id
+,convert_tz(oi.created_at,'+00:00','+07:00') 创建订单时间
+,convert_tz(oi.confirm_at,'+00:00','+07:00') 确认下单时间
+,oi.pno 运单号
+,tp.client_id
+,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+,convert_tz(tp.pickup_created_at,'+00:00','+07:00') 揽件任务生成时间
+,tr.remark 取消原因备注
+,concat( 'https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/'  ,sa.object_key) 取消揽件任务照片
+,convert_tz(tr.routed_at,'+00:00','+07:00') 取消任务时间
+,tp.staff_info_id 标记快递员ID
+,ss.name 标记快递员所属网点
+,case oi.state
+ when 0 then '已确认'
+ when 1 then '待揽件'
+ when 2 then '已揽收'
+ when 3 then '已取消(已终止)'
+ when 4 then '已删除(已作废)'
+ when 5 then '预下单'
+ when 6 then '被标记多次，限制揽收'
+end as 订单状态
+,convert_tz(pi.created_at,'+00:00','+07:00') 揽收时间
+,pi.ticket_pickup_staff_info_id 揽收快递员
+,ss2.name 揽收快递员网点
+,if(oi.state=3,convert_tz(oi.aborted_at,'+00:00','+07:00'),null) 取消订单时间
+,if(tcf.pickup_id is not null ,'是','否') '是否进入【FBI-QAQC-虚假标记审核-标记超大件、违禁物品审核】'
+,case tcf.state
+when 1 then '待处理'
+when 2 then '责任人已认定'
+when 3 then '无需判责'
+end 判责结果
+,tcf.process_time 审核时间
+,tcf.staff_info_id 责任快递员ID
+,tcf.store_name 责任快递员网点
+
+from fle_staging.ticket_pickup tp
+
+left join dwm.tmp_ex_big_clients_id_detail bc
+on tp.client_id=bc.client_id
+
+left join fle_staging.ka_profile kp
+on tp.client_id=kp.id
+
+left join fle_staging.ticket_pickup_order_relation tpo -- 转单前任务id
+on if(tp.transfer_ancestry is not null,substring(tp.transfer_ancestry,1,9),tp.id)=tpo.ticket_pickup_id
+
+left join bi_pro.ticket_cancel_fake_mark tcf -- 【FBI-QAQC-虚假标记审核-标记超大件、违禁物品审核】
+on tp.id=tcf.pickup_id
+
+left join fle_staging.order_info oi
+on tpo.order_id=oi.id
+
+left join fle_staging.parcel_info pi
+on oi.pno=pi.pno
+left join bi_pro.hr_staff_info hsi2
+on pi.ticket_pickup_staff_info_id=hsi2.staff_info_id
+left join fle_staging.sys_store ss2
+on hsi2.sys_store_id=ss2.id
+
+left join bi_pro.hr_staff_info hsi
+on tp.staff_info_id=hsi.staff_info_id
+
+left join fle_staging.sys_store ss
+on hsi.sys_store_id=ss.id
+
+left join m2_pro.ticket_route tr
+on tp.id=tr.current_ticket_id
+
+left join fle_staging.sys_attachment sa
+on tp.id=sa.oss_bucket_key
+and sa.oss_bucket_type in ('TICKET_CANCEL_PICKUP_MARK_UPLOAD','TICKET_CANCEL_CANCEL_ORDER_PHOTO_UPLOAD')
+
+left join fle_staging.ticket_pickup_marker tpm
+on tp.id=tpm.pickup_id
+
+where 1=1
+and tcf.process_time>='2023-03-01'
+and tcf.process_time<'2023-03-29'
+and tp.state=4 -- 取消任务
+and tr.route_action=2
+-- and tr.operator_type<>6
+and tpm.marker_id in (87,100) -- 违禁品
+-- and tp.id=417050585
+
+group by 1,4
+;
+select substring_index()
