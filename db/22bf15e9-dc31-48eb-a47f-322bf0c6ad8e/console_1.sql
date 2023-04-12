@@ -314,3 +314,230 @@ left join
 left join bi_pro.parcel_lose_task plt on plt.pno = de.pno and plt.state = 6 and plt.duty_result = 1
 where
      di.parcel_state = 6 -- 疑难件处理中
+;
+
+with t as
+(
+    select
+    t.id
+    ,t.order_no
+    ,t.created_at
+    ,t.staff_info_id
+    ,row_number()over (partition by t.id order by t.created_at) rn
+    from
+        (
+            select
+            wo.id
+            ,wo.order_no
+            ,wor.created_at
+            ,wor.staff_info_id
+            ,lead(wor.staff_info_id,1)over(partition by wo.id order by wor.created_at desc) lead1
+        ,hsi.state
+        from bi_pro.work_order wo
+        left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+        where
+            wo.created_at >= date_sub(curdate(),interval 30 day)
+
+            and (hsi.node_department_id = 86 or wor.staff_info_id=wo.created_staff_info_id)
+
+        )t
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = t.staff_info_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id =t.lead1
+    where (t.staff_info_id<>t.lead1 or t.lead1 is null)
+    and (hsi.node_department_id<>hsi2.node_department_id or t.lead1 is null)
+
+    and hsi.node_department_id = 86
+
+)
+select
+  tt.*
+  ,if(tt.'是否为工作时间创建/回复工单' ='是' or (tt.'是否为工作时间创建/回复工单' ='否' and TIMESTAMPDIFF(second, tt.'发起人创建/回复工单时间เวลาผู้สร้างสำผัส',tt.回复人回复时间เวลาผู้ตอบงสำผัส)>64800),'否','是') 非工作时间是否在18小时内回复
+from
+(
+    SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,t1.rn 是第几次回复เป็นการตอบกลับครั้งที่เท่าไหร่
+    ,w.created_at '发起人创建/回复工单时间เวลาผู้สร้างสำผัส'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,t1.created_at 回复人回复时间เวลาผู้ตอบงสำผัส
+    ,t1.`staff_info_id`  回复人ID
+    ,hi1.`name`  回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,if(t1.created_at is not null and wo.`original_acceptance_info` is not null,'是','否') 是否为FH48小时超时工单
+	,if(
+           (( date_format(w.`created_at`,'%w')  between 1 and 5  and th.day is null and date_format(w.`created_at`,'1%H%i')>=11000 and date_format(w.`created_at`,'1%H%i') <=11900)
+        or ((date_format(w.`created_at`,'%w') in (0,6) or th.day is not null) and date_format(w.`created_at`,'1%H%i')>=11000 and date_format(w.`created_at`,'1%H%i') <=11700))
+    ,'是','否') '是否为工作时间创建/回复工单'
+    ,TIMESTAMPDIFF(second,w.created_at,t1.created_at) '回复时长(秒)'
+    ,round(TIMESTAMPDIFF(second,w.created_at,t1.created_at)/60,1) '回复时长(分钟)'
+    ,if((TIMESTAMPDIFF(second,w.created_at,t1.created_at)/60)<30,'是','否') 是否在30分钟内回复
+from `bi_pro`.work_order wo
+left join t t1 on t1.id = wo.id
+left join
+(
+     select
+        w.id
+        ,w.created_at
+        ,substring(w.created_at,1,10) dt
+        ,wo.created_staff_info_id staff_info_id
+        ,row_number()over(partition by w.id order by w.created_at)  rn
+    from
+        (
+        select
+            wo.id
+            ,wo.created_at
+        from `bi_pro`.work_order wo
+        where wo.created_at >= date_sub(curdate(),interval 30 day)
+        union  all
+        select
+            wor.order_id
+            ,wor.created_at
+        from
+            (
+                select
+                wor.*
+                from
+                (
+                    select
+                    wor.order_id
+                    ,wor.created_at
+                    ,wor.staff_info_id
+                    ,lead(wor.staff_info_id,1)over(partition by wor.order_id order by wor.created_at desc) lead1
+                from `bi_pro`.work_order_reply wor
+                left join `bi_pro`.work_order wo
+                on wor.order_id=wo.id
+                where wor.created_at >= date_sub(curdate(),interval 30 day)
+                and wo.created_staff_info_id is not null
+
+                group by 1,2,3
+                )wor
+                left join `bi_pro`.work_order wo on wor.order_id=wo.id
+                left join  bi_pro.hr_staff_info hsi on wor.staff_info_id=hsi.staff_info_id
+                left join  bi_pro.hr_staff_info hsi2 on wor.lead1=hsi2.staff_info_id
+                where wor.staff_info_id=wo.created_staff_info_id
+                and wor.lead1<>wor.staff_info_id and wor.lead1 is not null
+
+            )wor
+        )w
+        left join `bi_pro`.work_order wo on w.id=wo.id
+       -- where wo.order_no='17167946103110547'
+        order by 2
+)w on w.id=wo.id and w.rn=t1.rn
+left join
+( -- 法定假日
+    select
+        th.day
+    from backyard_pro.thailand_holiday th
+)th on th.day=w.dt
+/*left join
+    ( #cs回复
+
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+                left join `bi_pro`.`hr_staff_info` hsi on wor.staff_info_id=hsi.staff_info_id
+                where 1=1
+                and hsi.state = 1
+                and hsi.node_department_id = 86
+    )wor on wo.id = wor.`order_id` and wor.rn=t1.rn*/
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =t1.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+/*left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+           (date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id*/
+
+/*left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <12400 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <12400 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            (date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900))
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id*/
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+
+    -- and wo.`created_store_id` !=1
+    and hi1.`node_department_id` =86
+
+ -- and wo.order_no = '04167852250514875'
+group by 1,3
+order by 1,3
+)tt

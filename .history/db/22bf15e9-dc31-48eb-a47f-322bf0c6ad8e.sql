@@ -12396,294 +12396,6 @@ left join
 left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
 left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
 ;-- -. . -..- - / . -. - .-. -.--
-with t1 as
-(
-    select
-        plt.pno
-        ,plt.id
-        ,plt.client_id
-        ,plt.created_at
-        ,plt.last_valid_store_id
-        ,plt.last_valid_staff_info_id
-    from bi_pro.parcel_lose_task plt
-    where
-        plt.state < 5
-        and plt.source = 2
-)
-,t as
-(
-    select
-        wo.id
-        ,wo.loseparcel_task_id
-        ,wo.created_at order_creat_at
-        ,wor.content wor_content
-        ,woi.object_key
-        ,row_number() over (partition by wo.loseparcel_task_id order by wo.created_at) r1
-        ,row_number() over (partition by wo.id order by wor.created_at desc ) r2
-    from bi_pro.work_order wo
-    join t1 on t1.id = wo.loseparcel_task_id
-    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
-    left join bi_pro.work_order_img woi on woi.origin_id = wor.id
-)
-,t2 as
-(
-    select
-        wo.pnos
-        ,wo.created_at
-        ,row_number() over (partition by wo.pnos order by wo.created_at ) rn
-    from bi_pro.work_order wo
-    join t1 on t1.pno = wo.pnos
-)
-select
-    t1.created_at 任务生成时间
-    ,t1.id 任务ID
-    ,t1.pno 运单号
-    ,t1.client_id 客户ID
-    ,las2.route_action
-    ,case las2.route_action # 路由动作
-         when 'ACCEPT_PARCEL' then '接件扫描'
-         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
-         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
-         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
-         when 'CANCEL_PARCEL' then '撤销包裹'
-         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
-         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
-         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
-         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
-         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
-         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
-         when 'CLAIMS_CLOSE' then '理赔关闭'
-         when 'CLAIMS_COMPLETE' then '理赔完成'
-         when 'CLAIMS_CONTACT' then '已联系客户'
-         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
-         when 'CLOSE_ORDER' then '关闭订单'
-         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
-         when 'CREATE_WORK_ORDER' then '创建工单'
-         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
-         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
-         when 'DELIVERY_CONFIRM' then '确认妥投'
-         when 'DELIVERY_MARKER' then '派件标记'
-         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
-         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
-         when 'DELIVERY_TRANSFER' then '派件转单'
-         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
-         when 'DETAIN_WAREHOUSE' then '货件留仓'
-         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
-         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
-         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
-         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
-         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
-         when 'DIFFICULTY_SEAL' then '集包异常'
-         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
-         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
-         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
-         when 'EXCHANGE_PARCEL' then '换货'
-         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
-         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
-         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
-         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
-         when 'HURRY_PARCEL' then '催单'
-         when 'INCOMING_CALL' then '来电接听'
-         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
-         when 'INVENTORY' then '盘库'
-         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
-         when 'MANUAL_REMARK' then '添加备注'
-         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
-         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
-         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
-         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
-         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
-         when 'PENDING_RETURN' then '待退件'
-         when 'PHONE' then '电话联系'
-         when 'PICK_UP_STORE' then '待自提取件'
-         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
-         when 'PRINTING' then '打印面单'
-         when 'QAQC_OPERATION' then 'QAQC判责'
-         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
-         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
-         when 'REFUND_CONFIRM' then '退件妥投'
-         when 'REPAIRED' then '上报问题修复路由'
-         when 'REPLACE_PNO' then '换单'
-         when 'REPLY_WORK_ORDER' then '回复工单'
-         when 'REVISION_TIME' then '改约时间'
-         when 'SEAL' then '集包'
-         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
-         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
-         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
-         when 'SORTING_SCAN' then '分拣扫描'
-         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
-         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
-         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
-         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
-         when 'TAKE_PHOTO' then '异常打单拍照'
-         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
-         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
-         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
-         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
-         when 'TRANSFER_QAQC' then '转交QAQC处理'
-         when 'UNSEAL' then '拆包'
-         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
-         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
-         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
-         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
-         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
-         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
-        end as 最后一条路由
-    ,las2.remark 最后一条路由备注
-    ,mark.remark 最后一条包裹备注
-    ,t1.last_valid_staff_info_id 最后有效路由操作人
-    ,ss_valid.name 最后有效路由网点
-    ,case pi.state
-        when 1 then '已揽收'
-        when 2 then '运输中'
-        when 3 then '派送中'
-        when 4 then '已滞留'
-        when 5 then '已签收'
-        when 6 then '疑难件处理中'
-        when 7 then '已退件'
-        when 8 then '异常关闭'
-        when 9 then '已撤销'
-    end as 包裹状态
-    ,dst_ss.name 目的地网点
-    ,del_ss.name 妥投网点
-    ,pi.ticket_delivery_staff_info_id 妥投快递员ID
-    ,if(pi.state = 5 ,convert_tz(pi.finished_at, '+00:00', '+07:00'), null) 包裹妥投时间
-    ,if(st_distance_sphere(point(pi.`ticket_delivery_staff_lng`, pi.`ticket_delivery_staff_lat`), point(del_ss.`lng`, del_ss.`lat`)) <= 100, '是', '否') 是否在网点妥投
-    ,if(pi.state = 5 and pho.routed_at < pi.finished_at , '是', '否') 妥投前是否给客户打电话
-    ,if(noduty.pno is null, '否', '是') 是否无需追责过
-    ,pi.dst_phone  收件人电话
-    ,num.num 创建工单次数
-    ,1st.order_creat_at 第一次创建工单时间
-    ,fir.created_at 第一次全组织发工单时间
-    ,lst.content 最后一次全组织工单回复内容
-    ,1st.wor_content 第一次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',1st.object_key) 第一次回复附件
-    ,2nd.wor_content 第二次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',2nd.object_key) 第二次回复附件
-    ,3rd.wor_content 第三次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',3rd.object_key) 第三次回复附件
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key) 签收凭证
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
-from t1
-left join fle_staging.parcel_info pi on pi.pno = t1.pno
-left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
-left join fle_staging.sys_store del_ss on del_ss.id = pi.ticket_delivery_store_id
-left join fle_staging.sys_store ss_valid on ss_valid.id = t1.last_valid_store_id
-left join
-    (
-        select
-            *
-        from
-            (
-                select
-                    pr.route_action
-                    ,pr.pno
-                    ,pr.staff_info_id
-                    ,pr.routed_at
-                    ,pr.store_id
-                    ,pr.remark
-                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-                 from rot_pro.parcel_route pr
-                 join
-                     (
-                        select t1.pno from t1 group by 1
-                    )t1 on t1.pno = pr.pno
-                where
-                    pr.routed_at > curdate() - interval 10 day
-            ) pr
-        where pr.rn = 1
-    ) las2 on las2.pno = t1.pno
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at) rn
-        from rot_pro.parcel_route pr
-        join
-            (
-                select t1.pno from t1 group by 1
-            ) t on pr.pno = t.pno
-        where pr.route_action = 'PHONE'
-            and json_extract(pr.extra_value, '$.callDuration') > 7
-            and pr.routed_at > curdate() - interval 10 day
-    ) pho on pho.pno = t1.pno and pho.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-            ,pr.remark
-        from rot_pro.parcel_route pr
-        join
-            (
-                select t1.pno from t1 group by 1
-            ) t on pr.pno = t.pno
-        where pr.route_action = 'MANUAL_REMARK'
-            and pr.routed_at > curdate() - interval 10 day
-    ) mark on mark.pno = t1.pno and mark.rn = 1
-left join
-    (
-        select
-            t.loseparcel_task_id
-            ,count(distinct t.id) num
-        from t
-        group by 1
-    ) num on num.loseparcel_task_id = t1.id
-left join
-    (
-        select
-            *
-        from t
-        where
-            t.r1 = 1
-            and t.r2 = 1
-    ) 1st on 1st.loseparcel_task_id = t1.id
-left join
-    (
-        select
-            *
-        from t
-        where
-            t.r2 = 1
-            and t.r1 = 2
-    ) 2nd on 2nd.loseparcel_task_id = t1.id
-left join
-    (
-        select
-            *
-        from t
-        where
-            t.r2 = 1
-            and t.r1 = 3
-    ) 3rd on 3rd.loseparcel_task_id = t1.id
-left join t2 fir on fir.pnos = t1.pno and fir.rn = 1
-left join
-    (
-        select
-            wo2.pnos
-            ,wor.content
-            ,row_number() over (partition by wo2.pnos order by wor.created_at desc) rn
-        from bi_pro.work_order wo2
-        join t1 on t1.pno = wo2.pnos
-        left join bi_pro.work_order_reply wor on wor.order_id = wo2.id
-        where
-            wor.staff_info_id != wo2.created_staff_info_id
-    ) lst on lst.pnos = t1.pno and lst.rn = 1
-left join
-    (
-        select
-            plt2.pno
-        from bi_pro.parcel_lose_task plt2
-        where
-            plt2.state = 5
-            and plt2.source = 2
-        group by 1
-    ) noduty on noduty.pno = t1.pno
-left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
-left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
-;-- -. . -..- - / . -. - .-. -.--
 select
     ss.name
     ,count(distinct di.pno) 3月份上传虚假
@@ -13447,3 +13159,2234 @@ left join
 left join bi_pro.parcel_lose_task plt on plt.pno = de.pno and plt.state = 6 and plt.duty_result = 1
 where
      di.parcel_state = 6;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.name
+    ,ss.name name2
+    ,count(ph.hno) num
+from fle_staging.parcel_headless ph
+left join fle_staging.sys_store ss on ss.id = ph.submit_store_id
+left join fle_staging.sys_store ss2 on ss2.id = ph.claim_store_id
+where
+    ph.claim_store_id is not null
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.name
+    ,ss.name name2
+    ,count(ph.hno) num
+from fle_staging.parcel_headless ph
+left join fle_staging.sys_store ss on ss.id = ph.submit_store_id
+left join fle_staging.sys_store ss2 on ss2.id = ph.claim_store_id
+where
+    ph.claim_store_id is not null
+    and ph.state < 4
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.creat_month
+    ,a.submit_store_name
+    ,count(a.hno) 上报丢失量
+    ,count(if(a.pno is not null and a.claim_store_id is not null, a.hno, null)) 网点认领量
+    ,count(if(a.pno is not null and a.claim_store_id is null, a.hno, null)) 非网点人员认领量
+    ,count(if(a.head_state = '未认领-待认领', a.hno, null)) '待认领量'
+    ,count(if(a.head_state = '未认领-已失效', a.hno, null)) '未认领-定时任务失效量'
+    ,count(if(a.head_state = '认领成功', a.hno, null)) '认领成功-未失效量'
+    ,count(if(a.head_state = '认领成功-已失效', a.hno, null)) '无理赔认领-定时任务失效量'
+    ,count(if(a.head_state = '认领失败-已失效', a.hno, null)) '有理赔认领-理赔失效量'
+    ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功-已失效', a.hno, null)))/count(a.hno) 匹配成功率1
+    ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功-已失效', a.hno, null)) + count(if(a.head_state = '认领失败-已失效', a.hno, null)))/count(a.hno) 匹配成功率2
+from
+    (
+        select
+            ph.hno
+            ,substr(ph.created_at, 1, 4) creat_month
+            ,ph.submit_store_name
+            ,ph.pno
+            ,case
+                when ph.state = 0 then '未认领-待认领'
+                when ph.state = 2 then '认领成功'
+                when ph.state = 3 and ph.pno is null then '未认领-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+            end head_state
+            ,ph.state
+            ,ph.claim_store_id
+            ,ph.claim_store_name
+            ,ph.claim_at
+        from  fle_staging.parcel_headless ph
+        left join
+            (
+                select
+                    ph.pno
+                    ,min(pct.created_at) claim_time
+                from fle_staging.parcel_headless ph
+                join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                where
+                    ph.state = 3 -- 时效
+                group by 1
+            ) sx on sx.pno = ph.pno
+        where
+            ph.state < 4
+            and ph.created_at >= '2023-01-01'
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.creat_month
+    ,a.submit_store_name
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领平均时长（继续派送）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领平均时长（包含因理赔失效）
+from
+    (
+        select
+            ph.hno
+            ,substr(ph.created_at, 1, 4) creat_month
+            ,ph.submit_store_name
+            ,ph.pno
+            ,case
+                when ph.state = 0 then '未认领-待认领'
+                when ph.state = 2 then '认领成功'
+                when ph.state = 3 and ph.pno is null then '未认领-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+            end head_state
+            ,ph.state
+            ,ph.created_at
+            ,ph.claim_store_id
+            ,ph.claim_store_name
+            ,ph.claim_at
+            ,ph.updated_at
+        from  fle_staging.parcel_headless ph
+        left join
+            (
+                select
+                    ph.pno
+                    ,min(pct.created_at) claim_time
+                from fle_staging.parcel_headless ph
+                join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                where
+                    ph.state = 3 -- 失效
+                group by 1
+            ) sx on sx.pno = ph.pno
+        where
+            ph.state < 4
+            and ph.created_at >= '2023-01-01'
+            and ph.pno is not null -- 有认领动作
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.creat_month
+    ,a.submit_store_name
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领件数（继续派送）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领平均时长（继续派送）
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领件数（包含因理赔失效）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领平均时长（包含因理赔失效）
+from
+    (
+        select
+            ph.hno
+            ,substr(ph.created_at, 1, 4) creat_month
+            ,ph.submit_store_name
+            ,ph.pno
+            ,case
+                when ph.state = 0 then '未认领-待认领'
+                when ph.state = 2 then '认领成功'
+                when ph.state = 3 and ph.pno is null then '未认领-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+            end head_state
+            ,ph.state
+            ,ph.created_at
+            ,ph.claim_store_id
+            ,ph.claim_store_name
+            ,ph.claim_at
+            ,ph.updated_at
+        from  fle_staging.parcel_headless ph
+        left join
+            (
+                select
+                    ph.pno
+                    ,min(pct.created_at) claim_time
+                from fle_staging.parcel_headless ph
+                join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                where
+                    ph.state = 3 -- 失效
+                group by 1
+            ) sx on sx.pno = ph.pno
+        where
+            ph.state < 4
+            and ph.created_at >= '2023-01-01'
+            and ph.pno is not null -- 有认领动作
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.creat_month
+    ,a.submit_store_name
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领件数（继续派送）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领平均时长（继续派送）
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领件数（包含因理赔失效）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领平均时长（包含因理赔失效）
+from
+    (
+        select
+            ph.hno
+            ,substr(ph.created_at, 1, 4) creat_month
+            ,ph.submit_store_name
+            ,ph.pno
+            ,case
+                when ph.state = 0 then '未认领-待认领'
+                when ph.state = 2 then '认领成功'
+                when ph.state = 3 and ph.pno is null then '未认领-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                when ph.state = 3 and ph.pno is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+            end head_state
+            ,ph.state
+            ,ph.created_at
+            ,ph.claim_store_id
+            ,ph.claim_store_name
+            ,ph.claim_at
+            ,ph.updated_at
+        from  fle_staging.parcel_headless ph
+        left join
+            (
+                select
+                    ph.pno
+                    ,min(pct.created_at) claim_time
+                from fle_staging.parcel_headless ph
+                join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                where
+                    ph.state = 3 -- 失效
+                group by 1
+            ) sx on sx.pno = ph.pno
+        where
+            ph.state < 4
+            and ph.created_at >= '2023-01-01'
+            and ph.pno is not null -- 有认领动作
+            and ph.claim_staff_id is not null
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from dwm.dwd_th_sls_pro_flash_point
+limit 100;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    min(p_date)
+from dwm.dwd_th_sls_pro_flash_point;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fp.p_month 日期
+    ,ss.name 网点
+    ,ss.id 网点ID
+    ,fp.view_num 访问人次
+#     ,fp.view_staff_num uv
+    ,fp.match_num 点击匹配量
+    ,fp.search_num 点击搜索量
+    ,fp.sucess_num 成功匹配量
+from
+    (
+        select
+            json_extract(ext_info,'$.organization_id') store_id
+            ,substr(fp.p_date, 1, 4) p_month
+            ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+            ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+            ,count(if(json_extract(ext_info,'$.matchResult') = 'true', fp.user_id, null)) sucess_num
+        from dwm.dwd_th_sls_pro_flash_point fp
+        where
+            fp.p_date >= '2022-01-01'
+            and fp.page_id ='/package/packageMatch'
+            and fp.p_app = 'FLE-MS-UI'
+        group by 1,2
+    ) fp
+left join fle_staging.sys_store ss on ss.id = fp.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fp.p_month 日期
+    ,ss.name 网点
+    ,ss.id 网点ID
+    ,fp.view_num 访问人次
+#     ,fp.view_staff_num uv
+    ,fp.match_num 点击匹配量
+    ,fp.search_num 点击搜索量
+    ,fp.sucess_num 成功匹配量
+from
+    (
+        select
+            json_extract(ext_info,'$.organization_id') store_id
+            ,substr(fp.p_date, 1, 4) p_month
+            ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+            ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+            ,count(if(json_extract(ext_info,'$.matchResult') = 'true', fp.user_id, null)) sucess_num
+        from dwm.dwd_th_sls_pro_flash_point fp
+        where
+            fp.p_date >= '2022-01-01'
+            and fp.page_id ='/package/packageMatch'
+            and fp.p_app = 'FLE-MS-UI'
+        group by 1,2
+    ) fp
+left join fle_staging.sys_store ss on ss.id = fp.store_id
+where
+    ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select json_extract(fp.ext_info,'$.matchResult') from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-02-09 18:13:38';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$.matchResult')
+    ,JSON_UNQUOTE(fp.ext_info,'$.matchResult')
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-02-09 18:13:38';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$[1]')
+
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-02-09 18:13:38';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$[2]')
+
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-02-09 18:13:38';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$[0]')
+
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-02-09 18:13:38';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$[0]')
+    ,fp.ext_info
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-02-09 18:13:38';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$[0]')
+    ,fp.ext_info
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-03-25 09:50:50';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$[1]')
+    ,fp.ext_info
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-03-25 09:50:50';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fp.p_month 日期
+    ,ss.name 网点
+    ,ss.id 网点ID
+    ,fp.view_num 访问人次
+#     ,fp.view_staff_num uv
+    ,fp.match_num 点击匹配量
+    ,fp.search_num 点击搜索量
+    ,fp.sucess_num 成功匹配量
+from
+    (
+        select
+            json_extract(ext_info,'$.organization_id') store_id
+            ,substr(fp.p_date, 1, 4) p_month
+            ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+            ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+            ,count(if(json_extract(ext_info,'$.matchResult') = 'true', fp.user_id, null)) sucess_num
+        from dwm.dwd_th_sls_pro_flash_point fp
+        where
+            fp.p_date >= '2023-01-01'
+            and fp.page_id ='/package/packageMatch'
+            and fp.p_app = 'FLE-MS-UI'
+        group by 1,2
+    ) fp
+left join fle_staging.sys_store ss on ss.id = fp.store_id
+where
+    ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fp.p_month 日期
+    ,ss.name 网点
+    ,ss.id 网点ID
+    ,fp.view_num 访问人次
+#     ,fp.view_staff_num uv
+    ,fp.match_num 点击匹配量
+    ,fp.search_num 点击搜索量
+    ,fp.sucess_num 成功匹配量
+from
+    (
+        select
+            json_extract(ext_info,'$.organization_id') store_id
+            ,substr(fp.p_date, 1, 4) p_month
+            ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+            ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+            ,count(if(cast(json_extract(ext_info,'$.matchResult') as string) = 'true', fp.user_id, null)) sucess_num
+        from dwm.dwd_th_sls_pro_flash_point fp
+        where
+            fp.p_date >= '2023-01-01'
+            and fp.page_id ='/package/packageMatch'
+            and fp.p_app = 'FLE-MS-UI'
+        group by 1,2
+    ) fp
+left join fle_staging.sys_store ss on ss.id = fp.store_id
+where
+    ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fp.p_month 日期
+    ,ss.name 网点
+    ,ss.id 网点ID
+    ,fp.view_num 访问人次
+#     ,fp.view_staff_num uv
+    ,fp.match_num 点击匹配量
+    ,fp.search_num 点击搜索量
+    ,fp.sucess_num 成功匹配量
+from
+    (
+        select
+            json_extract(ext_info,'$.organization_id') store_id
+            ,substr(fp.p_date, 1, 4) p_month
+            ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+            ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+            ,count(if(cast(json_extract(ext_info,'$.matchResult') as string) = 'true', fp.user_id, null)) sucess_num
+        from dwm.dwd_th_sls_pro_flash_point fp
+        where
+            fp.p_date >= '2023-01-01'
+#             and fp.page_id ='/package/packageMatch'
+#             and fp.p_app = 'FLE-MS-UI'
+        group by 1,2
+    ) fp
+left join fle_staging.sys_store ss on ss.id = fp.store_id
+where
+    ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fp.p_month 日期
+    ,ss.name 网点
+    ,ss.id 网点ID
+    ,fp.view_num 访问人次
+#     ,fp.view_staff_num uv
+    ,fp.match_num 点击匹配量
+    ,fp.search_num 点击搜索量
+    ,fp.sucess_num 成功匹配量
+from
+    (
+        select
+            json_extract(ext_info,'$.organization_id') store_id
+            ,substr(fp.p_date, 1, 4) p_month
+            ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+            ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+            ,count(if(cast(json_extract(ext_info,'$.matchResult') as string) = "true", fp.user_id, null)) sucess_num
+        from dwm.dwd_th_sls_pro_flash_point fp
+        where
+            fp.p_date >= '2023-01-01'
+#             and fp.page_id ='/package/packageMatch'
+#             and fp.p_app = 'FLE-MS-UI'
+        group by 1,2
+    ) fp
+left join fle_staging.sys_store ss on ss.id = fp.store_id
+where
+    ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fp.p_month 日期
+    ,ss.name 网点
+    ,ss.id 网点ID
+    ,fp.view_num 访问人次
+#     ,fp.view_staff_num uv
+    ,fp.match_num 点击匹配量
+    ,fp.search_num 点击搜索量
+    ,fp.sucess_num 成功匹配量
+from
+    (
+        select
+            json_extract(ext_info,'$.organization_id') store_id
+            ,substr(fp.p_date, 1, 4) p_month
+            ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+            ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+            ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+            ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+        from dwm.dwd_th_sls_pro_flash_point fp
+        where
+            fp.p_date >= '2023-01-01'
+#             and fp.page_id ='/package/packageMatch'
+#             and fp.p_app = 'FLE-MS-UI'
+        group by 1,2
+    ) fp
+left join fle_staging.sys_store ss on ss.id = fp.store_id
+where
+    ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(fp.ext_info,'$[1]')
+    ,fp.ext_info
+    ,json_extract(ext_info,'$.matchResult')
+from dwm.dwd_th_sls_pro_flash_point fp where fp.event_time = '2023-03-25 09:50:50';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.点击搜索量
+    ,b.点击匹配量
+    ,b.成功匹配量 HUB无头件匹配成功量
+    ,a.`无理赔认领-定时任务失效量` + a.`认领成功-未失效量` - b.成功匹配量 网点认领处认领数
+from
+    (
+        select
+            a.creat_month 日期
+            ,a.submit_store_name 上报网点
+            ,count(a.hno) 上报丢失量
+            ,count(a.pno) 网点认领量
+            ,count(if(a.pno is not null and a.claim_store_id is not null, a.hno, null)) 网点认领量
+            ,count(if(a.pno is not null and a.claim_store_id is null, a.hno, null)) 非网点人员认领量（总部）
+            ,count(if(a.head_state = '未认领-待认领', a.hno, null)) '待认领量'
+            ,count(if(a.head_state = '未认领-已失效', a.hno, null)) '未认领-定时任务失效量'
+            ,count(if(a.head_state = '认领成功', a.hno, null)) '认领成功-未失效量'
+            ,count(if(a.head_state = '认领成功-已失效', a.hno, null)) '无理赔认领-定时任务失效量'
+            ,count(if(a.head_state = '认领失败-已失效', a.hno, null)) '有理赔认领-理赔失效量'
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功-已失效', a.hno, null)))/count(a.hno) 匹配成功率1
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功-已失效', a.hno, null)) + count(if(a.head_state = '认领失败-已失效', a.hno, null)))/count(a.hno) 匹配成功率2
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 4) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领-待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.pno is null then '未认领-已失效'
+                        when ph.state = 3 and ph.pno is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                        when ph.state = 3 and ph.pno is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-01-01'
+            ) a
+        group by 1,2
+    ) a
+left join
+    (
+        select
+            fp.p_month 日期
+            ,ss.name 网点
+            ,ss.id 网点ID
+            ,fp.view_num 访问人次
+        #     ,fp.view_staff_num uv
+            ,fp.match_num 点击匹配量
+            ,fp.search_num 点击搜索量
+            ,fp.sucess_num 成功匹配量
+        from
+            (
+                select
+                    json_extract(ext_info,'$.organization_id') store_id
+                    ,substr(fp.p_date, 1, 4) p_month
+                    ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                    ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                    ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_th_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+        #             and fp.page_id ='/package/packageMatch'
+        #             and fp.p_app = 'FLE-MS-UI'
+                group by 1,2
+            ) fp
+        left join fle_staging.sys_store ss on ss.id = fp.store_id
+        where
+            ss.category in (8,12)
+    ) b on a.日期 = b.日期 and a.上报网点 = b.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.点击搜索量
+    ,b.点击匹配量
+    ,b.成功匹配量 HUB无头件匹配成功量
+    ,a.`无理赔认领-定时任务失效量` + a.`认领成功-未失效量` - b.成功匹配量 网点认领处认领数
+from
+    (
+        select
+            a.creat_month 日期
+            ,a.submit_store_name 上报网点
+            ,count(a.hno) 上报丢失量
+            ,count(a.pno) 网点认领量
+            ,count(if(a.pno is not null and a.claim_store_id is not null, a.hno, null)) 网点认领量
+            ,count(if(a.pno is not null and a.claim_store_id is null, a.hno, null)) 非网点人员认领量（总部）
+            ,count(if(a.head_state = '未认领-待认领', a.hno, null)) '待认领量'
+            ,count(if(a.head_state = '未认领-已失效', a.hno, null)) '未认领-定时任务失效量'
+            ,count(if(a.head_state = '认领成功', a.hno, null)) '认领成功-未失效量'
+            ,count(if(a.head_state = '认领成功-已失效', a.hno, null)) '无理赔认领-定时任务失效量'
+            ,count(if(a.head_state = '认领失败-已失效', a.hno, null)) '有理赔认领-理赔失效量'
+            ,(count(if(a.head_state = '认领成功' and a.claim_store_id is not null , a.hno, null)) + count(if(a.head_state = '认领成功-已失效' and a.claim_store_id is not null , a.hno, null)))/count(a.hno) HUB匹配成功率1
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功-已失效', a.hno, null)))/count(a.hno) 匹配成功率1
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功-已失效', a.hno, null)) + count(if(a.head_state = '认领失败-已失效', a.hno, null)))/count(a.hno) 匹配成功率2
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 4) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领-待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.pno is null then '未认领-已失效'
+                        when ph.state = 3 and ph.pno is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                        when ph.state = 3 and ph.pno is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-01-01'
+            ) a
+        group by 1,2
+    ) a
+left join
+    (
+        select
+            fp.p_month 日期
+            ,ss.name 网点
+            ,ss.id 网点ID
+            ,fp.view_num 访问人次
+        #     ,fp.view_staff_num uv
+            ,fp.match_num 点击匹配量
+            ,fp.search_num 点击搜索量
+            ,fp.sucess_num 成功匹配量
+        from
+            (
+                select
+                    json_extract(ext_info,'$.organization_id') store_id
+                    ,substr(fp.p_date, 1, 4) p_month
+                    ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                    ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                    ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_th_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                group by 1,2
+            ) fp
+        left join fle_staging.sys_store ss on ss.id = fp.store_id
+        where
+            ss.category in (8,12)
+    ) b on a.日期 = b.日期 and a.上报网点 = b.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ph.submit_store_name
+    ,ph.pno
+    ,ph.hno
+from fle_staging.parcel_headless ph
+where
+    ph.created_at > '2023-02-28 16:00:00'
+    and ph.created_at < '2023-03-31 16:00:00'
+    and ph.pno is not null
+    and ph.claim_store_id is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ph.submit_store_name
+    ,ph.pno
+    ,ph.hno
+from fle_staging.parcel_headless ph
+where
+    ph.created_at > '2023-03-06 16:00:00'
+    and ph.created_at < '2023-03-31 16:00:00'
+    and ph.pno is not null
+    and ph.claim_store_id is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ph.submit_store_name
+    ,ph.pno
+    ,ph.hno
+from fle_staging.parcel_headless ph
+where
+    ph.created_at > '2023-03-06 16:00:00'
+    and ph.created_at < '2023-04-07 16:00:00'
+    and ph.pno is not null
+    and ph.claim_store_id is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ph.submit_store_name
+    ,ph.pno
+    ,ph.hno
+    ,ss.name
+from fle_staging.parcel_headless ph
+left join fle_staging.parcel_info pi on pi.pno = ph.pno
+left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+where
+    ph.created_at > '2023-03-06 16:00:00'
+    and ph.created_at < '2023-04-07 16:00:00'
+    and ph.pno is not null
+    and ph.claim_store_id is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.点击搜索量
+    ,b.点击匹配量
+    ,b.成功匹配量 HUB无头件匹配成功量
+    ,a.`认领_认领无理赔-定时任务失效` + a.`认领_认领无理赔_未失效` - b.成功匹配量 网点认领处认领数
+from
+    (
+        select
+            a.creat_month 日期
+            ,a.submit_store_name 上报HUB
+            ,count(a.hno) 上报丢失量
+            ,count(if(a.claim_store_id is not null , a.hno, null)) HUB认领量
+            ,count(if(a.head_state = '未认领_待认领', a.hno, null)) 'HUB待认领量'
+            ,count(if(a.head_state = '未认领_已失效', a.hno, null)) 'HUB未认领_定时任务失效'
+            ,count(if(a.head_state = '认领成功', a.hno, null)) '认领_认领无理赔_未失效'
+            ,count(if(a.head_state = '认领成功_已失效', a.hno, null)) '认领_认领无理赔-定时任务失效'
+            ,count(if(a.head_state = '认领失败_已失效', a.hno, null)) '认领_认领有理赔_理赔失效'
+            ,(count(if(a.head_state = '认领成功' and a.claim_store_id is not null , a.hno, null)) + count(if(a.head_state = '认领成功_已失效' and a.claim_store_id is not null , a.hno, null)))/count(a.hno) HUB匹配成功率1
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)))/count(a.hno) 匹配成功率1
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)))/count(a.hno) 匹配成功率2
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 4) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领_待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at < coalesce(sx.claim_time,curdate()) then '认领成功_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at >= coalesce(sx.claim_time,curdate()) then '认领失败_已失效' -- 理赔失效
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-01-01'
+            ) a
+        group by 1,2
+    ) a
+left join
+    (
+        select
+            fp.p_month 日期
+            ,ss.name 网点
+            ,ss.id 网点ID
+            ,fp.view_num 访问人次
+        #     ,fp.view_staff_num uv
+            ,fp.match_num 点击匹配量
+            ,fp.search_num 点击搜索量
+            ,fp.sucess_num 成功匹配量
+        from
+            (
+                select
+                    json_extract(ext_info,'$.organization_id') store_id
+                    ,substr(fp.p_date, 1, 4) p_month
+                    ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                    ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                    ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_th_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                group by 1,2
+            ) fp
+        left join fle_staging.sys_store ss on ss.id = fp.store_id
+        where
+            ss.category in (8,12)
+    ) b on a.日期 = b.日期 and a.上报HUB = b.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.点击搜索量
+    ,b.点击匹配量
+    ,b.成功匹配量 HUB无头件匹配成功量
+    ,a.`已认领_认领无理赔-定时任务失效` + a.`已认领_认领无理赔_未失效` - b.成功匹配量 包裹认领处认领数
+from
+    (
+        select
+            a.creat_month 日期
+            ,a.submit_store_name 上报HUB
+            ,count(a.hno) 上报丢失量
+            ,count(if(a.claim_store_id is not null , a.hno, null)) HUB认领量
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) 认领成功量（继续派送）
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)))/count(a.hno) 匹配成功率1（继续派送）
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)) '认领成功量（继续派送+理赔失效）'
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)))/count(a.hno) '匹配成功率2(继续派送+理赔失效)'
+            ,count(if(a.head_state = '未认领_待认领', a.hno, null)) 'HUB待认领量'
+            ,count(if(a.head_state = '未认领_已失效', a.hno, null)) 'HUB未认领_定时任务失效'
+            ,count(if(a.head_state = '认领成功', a.hno, null)) '已认领_认领无理赔_未失效'
+            ,count(if(a.head_state = '认领成功_已失效', a.hno, null)) '已认领_认领无理赔-定时任务失效'
+            ,count(if(a.head_state = '认领失败_已失效', a.hno, null)) '已认领_认领有理赔_理赔失效'
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 4) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领_待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at < coalesce(sx.claim_time,curdate()) then '认领成功_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at >= coalesce(sx.claim_time,curdate()) then '认领失败_已失效' -- 理赔失效
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-01-01'
+            ) a
+        group by 1,2
+    ) a
+left join
+    (
+        select
+            fp.p_month 日期
+            ,ss.name 网点
+            ,ss.id 网点ID
+            ,fp.view_num 访问人次
+        #     ,fp.view_staff_num uv
+            ,fp.match_num 点击匹配量
+            ,fp.search_num 点击搜索量
+            ,fp.sucess_num 成功匹配量
+        from
+            (
+                select
+                    json_extract(ext_info,'$.organization_id') store_id
+                    ,substr(fp.p_date, 1, 4) p_month
+                    ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                    ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                    ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_th_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                group by 1,2
+            ) fp
+        left join fle_staging.sys_store ss on ss.id = fp.store_id
+        where
+            ss.category in (8,12)
+    ) b on a.日期 = b.日期 and a.上报HUB = b.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.访问人次
+    ,b.点击搜索量
+    ,b.点击匹配量
+    ,b.成功匹配量 HUB无头件匹配成功量
+    ,a.`已认领_认领无理赔-定时任务失效` + a.`已认领_认领无理赔_未失效` - b.成功匹配量 包裹认领处认领数
+from
+    (
+        select
+            a.creat_month 日期
+            ,a.submit_store_name 上报HUB
+            ,count(a.hno) 上报丢失量
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) 认领成功量（继续派送）
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)))/count(a.hno) 匹配成功率1（继续派送）
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)) '认领成功量（继续派送+理赔失效）'
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)))/count(a.hno) '匹配成功率2(继续派送+理赔失效)'
+            ,count(if(a.head_state = '未认领_待认领', a.hno, null)) 'HUB待认领量'
+            ,count(if(a.head_state = '未认领_已失效', a.hno, null)) 'HUB未认领_定时任务失效'
+            ,count(if(a.head_state = '认领成功', a.hno, null)) '已认领_认领无理赔_未失效'
+            ,count(if(a.head_state = '认领成功_已失效', a.hno, null)) '已认领_认领无理赔-定时任务失效'
+            ,count(if(a.head_state = '认领失败_已失效', a.hno, null)) '已认领_认领有理赔_理赔失效'
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 4) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领_待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at < coalesce(sx.claim_time,curdate()) then '认领成功_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at >= coalesce(sx.claim_time,curdate()) then '认领失败_已失效' -- 理赔失效
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-01-01'
+            ) a
+        group by 1,2
+    ) a
+left join
+    (
+        select
+            fp.p_month 日期
+            ,ss.name 网点
+            ,ss.id 网点ID
+            ,fp.view_num 访问人次
+        #     ,fp.view_staff_num uv
+            ,fp.match_num 点击匹配量
+            ,fp.search_num 点击搜索量
+            ,fp.sucess_num 成功匹配量
+        from
+            (
+                select
+                    json_extract(ext_info,'$.organization_id') store_id
+                    ,substr(fp.p_date, 1, 4) p_month
+                    ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                    ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                    ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_th_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                group by 1,2
+            ) fp
+        left join fle_staging.sys_store ss on ss.id = fp.store_id
+        where
+            ss.category in (8,12)
+    ) b on a.日期 = b.日期 and a.上报HUB = b.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.访问人次
+    ,b.点击搜索量
+    ,b.点击匹配量
+    ,b.成功匹配量 HUB无头件匹配成功量
+    ,a.`已认领_认领无理赔_定时任务失效` + a.`已认领_认领无理赔_未失效` - b.成功匹配量 包裹认领处认领数
+from
+    (
+        select
+            a.creat_month 日期
+            ,a.submit_store_name 上报HUB
+            ,count(a.hno) 上报丢失量
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) 认领成功量（继续派送）
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)))/count(a.hno) 匹配成功率1（继续派送）
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)) '认领成功量（继续派送+理赔失效）'
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)))/count(a.hno) '匹配成功率2(继续派送+理赔失效)'
+            ,count(if(a.head_state = '未认领_待认领', a.hno, null)) 'HUB待认领量'
+            ,count(if(a.head_state = '未认领_已失效', a.hno, null)) 'HUB未认领_定时任务失效'
+            ,count(if(a.head_state = '认领成功', a.hno, null)) '已认领_认领无理赔_未失效'
+            ,count(if(a.head_state = '认领成功_已失效', a.hno, null)) '已认领_认领无理赔_定时任务失效'
+            ,count(if(a.head_state = '认领失败_已失效', a.hno, null)) '已认领_认领有理赔_理赔失效'
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 7) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领_待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at < coalesce(sx.claim_time,curdate()) then '认领成功_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at >= coalesce(sx.claim_time,curdate()) then '认领失败_已失效' -- 理赔失效
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-01-01'
+            ) a
+        group by 1,2
+    ) a
+left join
+    (
+        select
+            fp.p_month 日期
+            ,ss.name 网点
+            ,ss.id 网点ID
+            ,fp.view_num 访问人次
+        #     ,fp.view_staff_num uv
+            ,fp.match_num 点击匹配量
+            ,fp.search_num 点击搜索量
+            ,fp.sucess_num 成功匹配量
+        from
+            (
+                select
+                    json_extract(ext_info,'$.organization_id') store_id
+                    ,substr(fp.p_date, 1, 7) p_month
+                    ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                    ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                    ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_th_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                group by 1,2
+            ) fp
+        left join fle_staging.sys_store ss on ss.id = fp.store_id
+        where
+            ss.category in (8,12)
+    ) b on a.日期 = b.日期 and a.上报HUB = b.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.creat_month
+    ,a.submit_store_name
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领件数（继续派送）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领平均时长（继续派送）
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领件数（包含因理赔失效）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领平均时长（包含因理赔失效）
+from
+    (
+        select
+            ph.hno
+            ,substr(ph.created_at, 1, 4) creat_month
+            ,ph.submit_store_name
+            ,ph.pno
+            ,case
+                when ph.state = 0 then '未认领-待认领'
+                when ph.state = 2 then '认领成功'
+                when ph.state = 3 and ph.claim_store_id is null then '未认领-已失效'
+                when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+            end head_state
+            ,ph.state
+            ,ph.created_at
+            ,ph.claim_store_id
+            ,ph.claim_store_name
+            ,ph.claim_at
+            ,ph.updated_at
+        from  fle_staging.parcel_headless ph
+        left join
+            (
+                select
+                    ph.pno
+                    ,min(pct.created_at) claim_time
+                from fle_staging.parcel_headless ph
+                join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                where
+                    ph.state = 3 -- 失效
+                group by 1
+            ) sx on sx.pno = ph.pno
+        where
+            ph.state < 4
+            and ph.created_at >= '2022-12-31 17:00:00'
+            and ph.pno is not null -- 有认领动作
+            and ph.claim_staff_id is not null
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.creat_month 日期
+    ,a.submit_store_name 上报HUB
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领件数（继续派送）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效'), a.pno, null)) 认领平均时长（继续派送）
+    ,count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领件数（包含因理赔失效）
+    ,sum(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600,null))/count(if(a.head_state in ('认领成功', '认领成功-已失效','认领失败-已失效'), a.pno, null)) 认领平均时长（包含因理赔失效）
+from
+    (
+        select
+            ph.hno
+            ,substr(ph.created_at, 1, 7) creat_month
+            ,ph.submit_store_name
+            ,ph.pno
+            ,case
+                when ph.state = 0 then '未认领-待认领'
+                when ph.state = 2 then '认领成功'
+                when ph.state = 3 and ph.claim_store_id is null then '未认领-已失效'
+                when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+            end head_state
+            ,ph.state
+            ,ph.created_at
+            ,ph.claim_store_id
+            ,ph.claim_store_name
+            ,ph.claim_at
+            ,ph.updated_at
+        from  fle_staging.parcel_headless ph
+        left join
+            (
+                select
+                    ph.pno
+                    ,min(pct.created_at) claim_time
+                from fle_staging.parcel_headless ph
+                join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                where
+                    ph.state = 3 -- 失效
+                group by 1
+            ) sx on sx.pno = ph.pno
+        where
+            ph.state < 4
+            and ph.created_at >= '2022-12-31 17:00:00'
+            and ph.pno is not null -- 有认领动作
+            and ph.claim_staff_id is not null
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t1 as
+(
+    select
+        plt.pno
+        ,plt.id
+        ,plt.client_id
+        ,plt.created_at
+        ,plt.last_valid_store_id
+        ,plt.last_valid_staff_info_id
+    from bi_pro.parcel_lose_task plt
+    where
+        plt.state < 5
+        and plt.source = 2
+)
+,t as
+(
+    select
+        wo.id
+        ,wo.loseparcel_task_id
+        ,wo.created_at order_creat_at
+        ,wor.content wor_content
+        ,woi.object_key
+        ,row_number() over (partition by wo.loseparcel_task_id order by wo.created_at) r1
+        ,row_number() over (partition by wo.id order by wor.created_at desc ) r2
+    from bi_pro.work_order wo
+    join t1 on t1.id = wo.loseparcel_task_id
+    left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+    left join bi_pro.work_order_img woi on woi.origin_id = wor.id
+)
+,t2 as
+(
+    select
+        wo.pnos
+        ,wo.created_at
+        ,row_number() over (partition by wo.pnos order by wo.created_at ) rn
+    from bi_pro.work_order wo
+    join t1 on t1.pno = wo.pnos
+)
+select
+    t1.created_at 任务生成时间
+    ,t1.id 任务ID
+    ,t1.pno 运单号
+    ,t1.client_id 客户ID
+    ,las2.route_action
+    ,case las2.route_action # 路由动作
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end as 最后一条路由
+    ,las2.remark 最后一条路由备注
+    ,mark.remark 最后一条包裹备注
+    ,t1.last_valid_staff_info_id 最后有效路由操作人
+    ,ss_valid.name 最后有效路由网点
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,dst_ss.name 目的地网点
+    ,del_ss.name 妥投网点
+    ,pi.ticket_delivery_staff_info_id 妥投快递员ID
+    ,if(pi.state = 5 ,convert_tz(pi.finished_at, '+00:00', '+07:00'), null) 包裹妥投时间
+    ,if(st_distance_sphere(point(pi.`ticket_delivery_staff_lng`, pi.`ticket_delivery_staff_lat`), point(del_ss.`lng`, del_ss.`lat`)) <= 100, '是', '否') 是否在网点妥投
+    ,if(pi.state = 5 and pho.routed_at < pi.finished_at , '是', '否') 妥投前是否给客户打电话
+    ,if(noduty.pno is null, '否', '是') 是否无需追责过
+    ,pi.dst_phone  收件人电话
+    ,num.num 创建工单次数
+    ,1st.order_creat_at 第一次创建工单时间
+    ,fir.created_at 第一次全组织发工单时间
+    ,lst.content 最后一次全组织工单回复内容
+    ,1st.wor_content 第一次回复内容
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',1st.object_key) 第一次回复附件
+    ,2nd.wor_content 第二次回复内容
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',2nd.object_key) 第二次回复附件
+    ,3rd.wor_content 第三次回复内容
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',3rd.object_key) 第三次回复附件
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key) 签收凭证
+    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
+from t1
+left join fle_staging.parcel_info pi on pi.pno = t1.pno
+left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
+left join fle_staging.sys_store del_ss on del_ss.id = pi.ticket_delivery_store_id
+left join fle_staging.sys_store ss_valid on ss_valid.id = t1.last_valid_store_id
+left join
+    (
+        select
+            *
+        from
+            (
+                select
+                    pr.route_action
+                    ,pr.pno
+                    ,pr.staff_info_id
+                    ,pr.routed_at
+                    ,pr.store_id
+                    ,pr.remark
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                 from rot_pro.parcel_route pr
+                 join
+                     (
+                        select t1.pno from t1 group by 1
+                    )t1 on t1.pno = pr.pno
+                where
+                    pr.routed_at > curdate() - interval 10 day
+            ) pr
+        where pr.rn = 1
+    ) las2 on las2.pno = t1.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at) rn
+        from rot_pro.parcel_route pr
+        join
+            (
+                select t1.pno from t1 group by 1
+            ) t on pr.pno = t.pno
+        where pr.route_action = 'PHONE'
+            and json_extract(pr.extra_value, '$.callDuration') > 7
+            and pr.routed_at > curdate() - interval 10 day
+    ) pho on pho.pno = t1.pno and pho.rn = 1
+left join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
+            ,pr.remark
+        from rot_pro.parcel_route pr
+        join
+            (
+                select t1.pno from t1 group by 1
+            ) t on pr.pno = t.pno
+        where pr.route_action = 'MANUAL_REMARK'
+            and pr.routed_at > curdate() - interval 10 day
+    ) mark on mark.pno = t1.pno and mark.rn = 1
+left join
+    (
+        select
+            t.loseparcel_task_id
+            ,count(distinct t.id) num
+        from t
+        group by 1
+    ) num on num.loseparcel_task_id = t1.id
+left join
+    (
+        select
+            *
+        from t
+        where
+            t.r1 = 1
+            and t.r2 = 1
+    ) 1st on 1st.loseparcel_task_id = t1.id
+left join
+    (
+        select
+            *
+        from t
+        where
+            t.r2 = 1
+            and t.r1 = 2
+    ) 2nd on 2nd.loseparcel_task_id = t1.id
+left join
+    (
+        select
+            *
+        from t
+        where
+            t.r2 = 1
+            and t.r1 = 3
+    ) 3rd on 3rd.loseparcel_task_id = t1.id
+left join t2 fir on fir.pnos = t1.pno and fir.rn = 1
+left join
+    (
+        select
+            wo2.pnos
+            ,wor.content
+            ,row_number() over (partition by wo2.pnos order by wor.created_at desc) rn
+        from bi_pro.work_order wo2
+        join t1 on t1.pno = wo2.pnos
+        left join bi_pro.work_order_reply wor on wor.order_id = wo2.id
+        where
+            wor.staff_info_id != wo2.created_staff_info_id
+    ) lst on lst.pnos = t1.pno and lst.rn = 1
+left join
+    (
+        select
+            plt2.pno
+        from bi_pro.parcel_lose_task plt2
+        where
+            plt2.state = 5
+            and plt2.source = 2
+        group by 1
+    ) noduty on noduty.pno = t1.pno
+left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
+left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from fle_staging.ka_profile kp
+where
+    kp.authentication_phone = '022880035';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from fle_staging.ka_profile kp
+where
+    kp.id = 'CAM2214';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        fp.p_date 日期
+        ,ss.name 网点
+        ,ss.id 网点ID
+        ,fp.view_num 访问人次
+    #     ,fp.view_staff_num uv
+        ,fp.match_num 点击匹配量
+        ,fp.search_num 点击搜索量
+        ,fp.sucess_num 成功匹配量
+    from
+        (
+            select
+                json_extract(ext_info,'$.organization_id') store_id
+                ,fp.p_date
+                ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+            from dwm.dwd_th_sls_pro_flash_point fp
+            where
+                fp.p_date >= '2023-03-01'
+            group by 1,2
+        ) fp
+    left join fle_staging.sys_store ss on ss.id = fp.store_id
+    where
+        ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    b.creat_month
+    ,b.submit_store_name
+    ,case
+        when b.use_time < 24 then '1天内'
+        when b.use_time >= 24 and b.use_time < 48 then '1-2天'
+        when b.use_time >= 48 and b.use_time < 72 then '2-3天'
+        when b.use_time >= 72 and b.use_time < 168 then '3-7天'
+        when b.use_time >= 168 then '超一周'
+    end 认领用时
+    ,count(b.pno) 包裹件数
+from
+    (
+        select
+            a.creat_month
+            ,a.submit_store_name
+            ,a.pno
+            ,timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600 use_time
+            ,a.created_at
+            ,a.claim_at
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 7) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领-待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领-已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+                    end head_state
+                    ,ph.state
+                    ,ph.created_at
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                    ,ph.updated_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 失效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2022-12-31 17:00:00'
+                    and ph.claim_store_id is not null -- 有认领动作
+                    and ph.claim_staff_id is not null
+            ) a
+        where
+            a.head_state in ('认领成功', '认领成功-已失效')
+    ) b
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    b.creat_month
+    ,b.submit_store_name
+    ,count(if(b.use_time < 24, b.pno, null)) 认领包裹数_1天内
+    ,count(if(b.use_time >= 24 and b.use_time < 48, b.pno, null)) 认领包裹数_1_2天
+    ,count(if(b.use_time >= 48 and b.use_time < 72, b.pno, null)) 认领包裹数_2_3天
+    ,count(if(b.use_time >= 72 and b.use_time < 168, b.pno, null)) 认领包裹数_3_7天
+    ,count(if(b.use_time >= 168, b.pno, null)) 认领包裹数_超一周
+    ,count(b.pno) 总认领包裹数
+from
+    (
+        select
+            a.creat_month
+            ,a.submit_store_name
+            ,a.pno
+            ,timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600 use_time
+            ,a.created_at
+            ,a.claim_at
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 7) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领-待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领-已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+                    end head_state
+                    ,ph.state
+                    ,ph.created_at
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                    ,ph.updated_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 失效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2022-12-31 17:00:00'
+                    and ph.claim_store_id is not null -- 有认领动作
+                    and ph.claim_staff_id is not null
+            ) a
+        where
+            a.head_state in ('认领成功', '认领成功-已失效')
+    ) b
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,substr(plt.created_at, 1, 4) creat_month
+    ,count(distinct plt.pno) num
+from bi_pro.parcel_lose_task plt
+left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-01-01'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+    ,b.访问人次
+    ,b.点击搜索量
+    ,b.点击匹配量
+    ,b.成功匹配量 HUB无头件匹配成功量
+    ,a.`已认领_认领无理赔_定时任务失效` + a.`已认领_认领无理赔_未失效` - b.成功匹配量 包裹认领处认领数
+    ,c.num 丢失包裹量
+from
+    (
+        select
+            a.creat_month 日期
+            ,a.submit_store_name 上报HUB
+            ,a.submit_store_id
+            ,count(a.hno) 上报丢失量
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) 认领成功量（继续派送）
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)))/count(a.hno) 匹配成功率1（继续派送）
+            ,count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)) '认领成功量（继续派送+理赔失效）'
+            ,(count(if(a.head_state = '认领成功', a.hno, null)) + count(if(a.head_state = '认领成功_已失效', a.hno, null)) + count(if(a.head_state = '认领失败_已失效', a.hno, null)))/count(a.hno) '匹配成功率2(继续派送+理赔失效)'
+            ,count(if(a.head_state = '未认领_待认领', a.hno, null)) 'HUB待认领量'
+            ,count(if(a.head_state = '未认领_已失效', a.hno, null)) 'HUB未认领_定时任务失效'
+            ,count(if(a.head_state = '认领成功', a.hno, null)) '已认领_认领无理赔_未失效'
+            ,count(if(a.head_state = '认领成功_已失效', a.hno, null)) '已认领_认领无理赔_定时任务失效'
+            ,count(if(a.head_state = '认领失败_已失效', a.hno, null)) '已认领_认领有理赔_理赔失效'
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 7) creat_month
+                    ,ph.submit_store_name
+                    ,ph.submit_store_id
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领_待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at < coalesce(sx.claim_time,curdate()) then '认领成功_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at >= coalesce(sx.claim_time,curdate()) then '认领失败_已失效' -- 理赔失效
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-01-01'
+            ) a
+        group by 1,2,3
+    ) a
+left join
+    (
+        select
+            fp.p_month 日期
+            ,ss.name 网点
+            ,ss.id 网点ID
+            ,fp.view_num 访问人次
+        #     ,fp.view_staff_num uv
+            ,fp.match_num 点击匹配量
+            ,fp.search_num 点击搜索量
+            ,fp.sucess_num 成功匹配量
+        from
+            (
+                select
+                    json_extract(ext_info,'$.organization_id') store_id
+                    ,substr(fp.p_date, 1, 7) p_month
+                    ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                    ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                    ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                    ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_th_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                group by 1,2
+            ) fp
+        left join fle_staging.sys_store ss on ss.id = fp.store_id
+        where
+            ss.category in (8,12)
+    ) b on a.日期 = b.日期 and a.上报HUB = b.网点
+left join
+    (
+        select
+            plr.store_id
+            ,substr(plt.created_at, 1, 7) creat_month
+            ,count(distinct plt.pno) num
+        from bi_pro.parcel_lose_task plt
+        left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+        where
+            plt.state = 6
+            and plt.duty_result = 1
+            and plt.created_at >= '2023-01-01'
+        group by 1,2
+    ) c on c.store_id = a.submit_store_id and a.日期 = c.creat_month;
+;-- -. . -..- - / . -. - .-. -.--
+select * from rev_pro.suspected_headless_parcel_detail_v1 limit100;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    b.creat_month 日期
+    ,b.submit_store_name 上报HUB
+    ,count(if(b.use_time < 24, b.pno, null)) 认领包裹数_1天内
+    ,count(if(b.use_time >= 24 and b.use_time < 48, b.pno, null)) 认领包裹数_1_2天
+    ,count(if(b.use_time >= 48 and b.use_time < 72, b.pno, null)) 认领包裹数_2_3天
+    ,count(if(b.use_time >= 72 and b.use_time < 168, b.pno, null)) 认领包裹数_3_7天
+    ,count(if(b.use_time >= 168, b.pno, null)) 认领包裹数_超一周
+    ,count(b.pno) 总认领包裹数
+from
+    (
+        select
+            a.creat_month
+            ,a.submit_store_name
+            ,a.pno
+            ,timestampdiff(second , a.created_at, coalesce(a.claim_at, a.updated_at))/3600 use_time
+            ,a.created_at
+            ,a.claim_at
+        from
+            (
+                select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 7) creat_month
+                    ,ph.submit_store_name
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领-待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领-已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at < coalesce(sx.claim_time,curdate()) then '认领成功-已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.updated_at >= coalesce(sx.claim_time,curdate()) then '认领失败-已失效'
+                    end head_state
+                    ,ph.state
+                    ,ph.created_at
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                    ,ph.updated_at
+                from  fle_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from fle_staging.parcel_headless ph
+                        join bi_pro.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 失效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2022-12-31 17:00:00'
+                    and ph.claim_store_id is not null -- 有认领动作
+                    and ph.claim_staff_id is not null
+            ) a
+        where
+            a.head_state in ('认领成功', '认领成功-已失效')
+    ) b
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+    t.id
+    ,t.order_no
+    ,t.created_at
+    ,t.staff_info_id
+    ,row_number()over (partition by t.id order by t.created_at) rn
+    from
+        (
+            select
+            wo.id
+            ,wo.order_no
+            ,wor.created_at
+            ,wor.staff_info_id
+            ,lead(wor.staff_info_id,1)over(partition by wo.id order by wor.created_at desc) lead1
+        ,hsi.state
+        from bi_pro.work_order wo
+        left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+        where
+            wo.created_at >= date_sub(curdate(),interval 30 day)
+
+            and (hsi.node_department_id = 86 or wor.staff_info_id=wo.created_staff_info_id)
+
+        )t
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = t.staff_info_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id =t.lead1
+    where (t.staff_info_id<>t.lead1 or t.lead1 is null)
+    and (hsi.node_department_id<>hsi2.node_department_id or t.lead1 is null)
+
+    and hsi.node_department_id = 86
+
+)
+select
+  tt.*
+  ,if(tt.'是否为工作时间创建/回复工单' ='是' or (tt.'是否为工作时间创建/回复工单' ='否' and TIMESTAMPDIFF(second, tt.'发起人创建/回复工单时间เวลาผู้สร้างสำผัส',tt.回复人回复时间เวลาผู้ตอบงสำผัส)>64800),'否','是') 非工作时间是否在18小时内回复
+from
+(
+    SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,t1.rn 是第几次回复เป็นการตอบกลับครั้งที่เท่าไหร่
+    ,w.created_at '发起人创建/回复工单时间เวลาผู้สร้างสำผัส'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,t1.created_at 回复人回复时间เวลาผู้ตอบงสำผัส
+    ,t1.`staff_info_id`  回复人ID
+    ,hi1.`name`  回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,if(t1.created_at is not null and wo.`original_acceptance_info` is not null,'是','否') 是否为FH48小时超时工单
+	,if(
+           (( date_format(w.`created_at`,'%w')  between 1 and 5  and th.day is null and date_format(w.`created_at`,'1%H%i')>=11000 and date_format(w.`created_at`,'1%H%i') <=11900)
+        or ((date_format(w.`created_at`,'%w') in (0,6) or th.day is not null) and date_format(w.`created_at`,'1%H%i')>=11000 and date_format(w.`created_at`,'1%H%i') <=11700))
+    ,'是','否') '是否为工作时间创建/回复工单'
+    ,TIMESTAMPDIFF(second,w.created_at,t1.created_at) '回复时长(秒)'
+    ,round(TIMESTAMPDIFF(second,w.created_at,t1.created_at)/60,1) '回复时长(分钟)'
+    ,if((TIMESTAMPDIFF(second,w.created_at,t1.created_at)/60)<30,'是','否') 是否在30分钟内回复
+from `bi_pro`.work_order wo
+left join t t1 on t1.id = wo.id
+left join
+(
+     select
+        w.id
+        ,w.created_at
+        ,substring(w.created_at,1,10) dt
+        ,wo.created_staff_info_id staff_info_id
+        ,row_number()over(partition by w.id order by w.created_at)  rn
+    from
+        (
+        select
+            wo.id
+            ,wo.created_at
+        from `bi_pro`.work_order wo
+        where wo.created_at >= date_sub(curdate(),interval 30 day)
+        union  all
+        select
+            wor.order_id
+            ,wor.created_at
+        from
+            (
+                select
+                wor.*
+                from
+                (
+                    select
+                    wor.order_id
+                    ,wor.created_at
+                    ,wor.staff_info_id
+                    ,lead(wor.staff_info_id,1)over(partition by wor.order_id order by wor.created_at desc) lead1
+                from `bi_pro`.work_order_reply wor
+                left join `bi_pro`.work_order wo
+                on wor.order_id=wo.id
+                where wor.created_at >= date_sub(curdate(),interval 30 day)
+                and wo.created_staff_info_id is not null
+
+                group by 1,2,3
+                )wor
+                left join `bi_pro`.work_order wo on wor.order_id=wo.id
+                left join  bi_pro.hr_staff_info hsi on wor.staff_info_id=hsi.staff_info_id
+                left join  bi_pro.hr_staff_info hsi2 on wor.lead1=hsi2.staff_info_id
+                where wor.staff_info_id=wo.created_staff_info_id
+                and wor.lead1<>wor.staff_info_id and wor.lead1 is not null
+
+            )wor
+        )w
+        left join `bi_pro`.work_order wo on w.id=wo.id
+       -- where wo.order_no='17167946103110547'
+        order by 2
+)w on w.id=wo.id and w.rn=t1.rn
+left join
+(--法定假日
+    select
+        th.day
+    from backyard_pro.thailand_holiday th
+)th on th.day=w.dt
+/*left join
+    ( #cs回复
+
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+                left join `bi_pro`.`hr_staff_info` hsi on wor.staff_info_id=hsi.staff_info_id
+                where 1=1
+                and hsi.state = 1
+                and hsi.node_department_id = 86
+    )wor on wo.id = wor.`order_id` and wor.rn=t1.rn*/
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =t1.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+/*left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+           (date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id*/
+
+/*left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <12400 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <12400 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            (date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900))
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id*/
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+
+    -- and wo.`created_store_id` !=1
+    and hi1.`node_department_id` =86
+
+ -- and wo.order_no = '04167852250514875'
+group by 1,3
+order by 1,3
+)tt;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+    t.id
+    ,t.order_no
+    ,t.created_at
+    ,t.staff_info_id
+    ,row_number()over (partition by t.id order by t.created_at) rn
+    from
+        (
+            select
+            wo.id
+            ,wo.order_no
+            ,wor.created_at
+            ,wor.staff_info_id
+            ,lead(wor.staff_info_id,1)over(partition by wo.id order by wor.created_at desc) lead1
+        ,hsi.state
+        from bi_pro.work_order wo
+        left join bi_pro.work_order_reply wor on wor.order_id = wo.id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = wor.staff_info_id
+        where
+            wo.created_at >= date_sub(curdate(),interval 30 day)
+
+            and (hsi.node_department_id = 86 or wor.staff_info_id=wo.created_staff_info_id)
+
+        )t
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = t.staff_info_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id =t.lead1
+    where (t.staff_info_id<>t.lead1 or t.lead1 is null)
+    and (hsi.node_department_id<>hsi2.node_department_id or t.lead1 is null)
+
+    and hsi.node_department_id = 86
+
+)
+select
+  tt.*
+  ,if(tt.'是否为工作时间创建/回复工单' ='是' or (tt.'是否为工作时间创建/回复工单' ='否' and TIMESTAMPDIFF(second, tt.'发起人创建/回复工单时间เวลาผู้สร้างสำผัส',tt.回复人回复时间เวลาผู้ตอบงสำผัส)>64800),'否','是') 非工作时间是否在18小时内回复
+from
+(
+    SELECT
+    concat('`',wo.order_no)  工单编号
+    ,case wo.status when 1 then '未阅读' when 2 then '已经阅读' when 3 then '已回复' when 4 then '已关闭' end 状态
+    ,t1.rn 是第几次回复เป็นการตอบกลับครั้งที่เท่าไหร่
+    ,w.created_at '发起人创建/回复工单时间เวลาผู้สร้างสำผัส'
+    ,wo.`created_staff_info_id`  发起人ID
+    ,hi.`name`  发起人姓名
+    ,wo.created_store_id 发起人网点ID
+    ,ss.`short_name`  发起人所属部门网点code
+    ,ss.`name`  发起人所属部门名称
+    ,t1.created_at 回复人回复时间เวลาผู้ตอบงสำผัส
+    ,t1.`staff_info_id`  回复人ID
+    ,hi1.`name`  回复人姓名
+    ,case when ss1.`category` in (1,2,10,13) then 'sp'
+        when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+        when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+        when ss1.`category` IN (6)  then 'FH'
+        when wo.`store_id` = '22' then 'kam客服中心'
+        when wo.`store_id`in (3,'customer_manger') then  '总部客服中心'
+        when wo.`store_id`= '12' then 'QA&QC'
+        when wo.`store_id`= '18' then 'Flash Home客服中心'
+        when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+        else '其他网点'
+    end 受理部门
+    ,wo.`client_id` 客户ID
+    ,wo.`pnos`  运单号
+    ,case wo.order_type
+        when 1 then '查找运单'
+        when 2 then '加快处理'
+        when 3 then '调查员工'
+        when 4 then '其他'
+        when 5 then '网点信息维护提醒'
+        when 6 then '培训指导'
+        when 7 then '异常业务询问'
+        when 8 then '包裹丢失'
+        when 9 then '包裹破损'
+        when 10 then '货物短少'
+        when 11 then '催单'
+        when 12 then '有发无到'
+        when 13 then '上报包裹不在集包里'
+        when 16 then '漏揽收'
+        when 50 then '虚假撤销'
+        when 17 then '已签收未收到'
+        when 18 then '客户投诉'
+        when 19 then '修改包裹信息'
+        when 20 then '修改 COD 金额'
+        when 21 then '解锁包裹'
+        when 22 then '申请索赔'
+        when 23 then 'MS 问题反馈'
+        when 24 then 'FBI 问题反馈'
+        when 25 then 'KA System 问题反馈'
+        when 26 then 'App 问题反馈'
+        when 27 then 'KIT 问题反馈'
+        when 28 then 'Backyard 问题反馈'
+        when 29 then 'BS/FH 问题反馈'
+        when 30 then '系统建议'
+        when 31 then '申诉罚款'
+        else wo.order_type
+    end  工单类型
+    ,wo.title 工单标题
+    ,if(t1.created_at is not null and wo.`original_acceptance_info` is not null,'是','否') 是否为FH48小时超时工单
+	,if(
+           (( date_format(w.`created_at`,'%w')  between 1 and 5  and th.day is null and date_format(w.`created_at`,'1%H%i')>=11000 and date_format(w.`created_at`,'1%H%i') <=11900)
+        or ((date_format(w.`created_at`,'%w') in (0,6) or th.day is not null) and date_format(w.`created_at`,'1%H%i')>=11000 and date_format(w.`created_at`,'1%H%i') <=11700))
+    ,'是','否') '是否为工作时间创建/回复工单'
+    ,TIMESTAMPDIFF(second,w.created_at,t1.created_at) '回复时长(秒)'
+    ,round(TIMESTAMPDIFF(second,w.created_at,t1.created_at)/60,1) '回复时长(分钟)'
+    ,if((TIMESTAMPDIFF(second,w.created_at,t1.created_at)/60)<30,'是','否') 是否在30分钟内回复
+from `bi_pro`.work_order wo
+left join t t1 on t1.id = wo.id
+left join
+(
+     select
+        w.id
+        ,w.created_at
+        ,substring(w.created_at,1,10) dt
+        ,wo.created_staff_info_id staff_info_id
+        ,row_number()over(partition by w.id order by w.created_at)  rn
+    from
+        (
+        select
+            wo.id
+            ,wo.created_at
+        from `bi_pro`.work_order wo
+        where wo.created_at >= date_sub(curdate(),interval 30 day)
+        union  all
+        select
+            wor.order_id
+            ,wor.created_at
+        from
+            (
+                select
+                wor.*
+                from
+                (
+                    select
+                    wor.order_id
+                    ,wor.created_at
+                    ,wor.staff_info_id
+                    ,lead(wor.staff_info_id,1)over(partition by wor.order_id order by wor.created_at desc) lead1
+                from `bi_pro`.work_order_reply wor
+                left join `bi_pro`.work_order wo
+                on wor.order_id=wo.id
+                where wor.created_at >= date_sub(curdate(),interval 30 day)
+                and wo.created_staff_info_id is not null
+
+                group by 1,2,3
+                )wor
+                left join `bi_pro`.work_order wo on wor.order_id=wo.id
+                left join  bi_pro.hr_staff_info hsi on wor.staff_info_id=hsi.staff_info_id
+                left join  bi_pro.hr_staff_info hsi2 on wor.lead1=hsi2.staff_info_id
+                where wor.staff_info_id=wo.created_staff_info_id
+                and wor.lead1<>wor.staff_info_id and wor.lead1 is not null
+
+            )wor
+        )w
+        left join `bi_pro`.work_order wo on w.id=wo.id
+       -- where wo.order_no='17167946103110547'
+        order by 2
+)w on w.id=wo.id and w.rn=t1.rn
+left join
+( -- 法定假日
+    select
+        th.day
+    from backyard_pro.thailand_holiday th
+)th on th.day=w.dt
+/*left join
+    ( #cs回复
+
+                select
+                    wor.`created_at`
+                    ,wor.`order_id`
+                    ,wor.`staff_info_id`
+                    ,row_number() over(partition by wor.`order_id` order by wor.`created_at`) rn
+                from `bi_pro`.work_order_reply wor
+                left join `bi_pro`.`hr_staff_info` hsi on wor.staff_info_id=hsi.staff_info_id
+                where 1=1
+                and hsi.state = 1
+                and hsi.node_department_id = 86
+    )wor on wo.id = wor.`order_id` and wor.rn=t1.rn*/
+left join `bi_pro`.`hr_staff_info` hi on hi.`staff_info_id` = wo.`created_staff_info_id`
+left join `bi_pro`.`sys_store` ss on ss.`id` = wo.`created_store_id`
+left join `bi_pro`.`hr_staff_info` hi1 on hi1.`staff_info_id` =t1.`staff_info_id`
+left join `bi_pro`.`sys_store` ss1 on ss1.`id` = wo.`store_id`
+/*left join
+    (   #工作时间
+        SELECT
+            wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weekNum
+        FROM `bi_pro`.work_order wo
+        where
+           (date_format(wo.`created_at`,'%w')  between 1 and 5
+            and date_format(wo.`created_at`,'1%H%i') between 11000 and 11900)
+            or (date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%H%i') between 11000 and 11700)
+    ) wt on wt.id = wo.id*/
+
+/*left join
+    ( #非工作时间
+        select  wo.`id`
+            ,wo.`created_at`
+            ,date_format(wo.`created_at`,'%w') as weeknum
+            ,case
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>11900 and date_format(wo.`created_at`,'1%h%i') <12400 then '1'
+                when  date_format(wo.`created_at`,'%w')  between 1 and 5 and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '2'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>11700 and date_format(wo.`created_at`,'1%h%i') <12400 then '3'
+                when  date_format(wo.`created_at`,'%w') in (0,6) and date_format(wo.`created_at`,'1%h%i')>=10000 and date_format(wo.`created_at`,'1%h%i') <11000 then '4'
+            end as 'tg'
+        from `bi_pro`.work_order wo
+        where
+            (date_format(wo.`created_at`,'%w')  between 1 and 5
+            and (date_format(wo.`created_at`,'1%H%i') <11000
+            or date_format(wo.`created_at`,'1%H%i')>11900))
+            or (date_format(wo.`created_at`,'%w') in (0,6) and (date_format(wo.`created_at`,'1%H%i') <11000 or date_format(wo.`created_at`,'1%H%i')>11700))
+    ) nwt on nwt.id = wo.id*/
+where
+    wo.created_at >= date_sub(curdate(),interval 30 day)
+    and wo.created_at < curdate()
+
+    -- and wo.`created_store_id` !=1
+    and hi1.`node_department_id` =86
+
+ -- and wo.order_no = '04167852250514875'
+group by 1,3
+order by 1,3
+)tt;

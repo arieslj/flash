@@ -268,3 +268,10 @@ select
     and ss.id is not null
     and cg.name = 'Shopee'
     and month(date_add(wo.created_at, interval 6 hour)) = 2
+;
+
+select
+    *
+from fle_staging.ka_profile kp
+where
+    kp.id = 'CAM2214'

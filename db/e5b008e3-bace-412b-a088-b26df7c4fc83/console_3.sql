@@ -280,9 +280,142 @@ ORDER BY 2
 
 
 
+select
+    pcd.pno
+    ,if(pi.returned = 0, '正向', '逆向') 包裹流向
+    ,pi.customary_pno 原单号
+    ,oi.cogs_amount/100 cog金额
+    ,pi2.store_total_amount 总运费
+    ,pi2.cod_amount/100 COD金额
+    ,pi2.cod_poundage_amount COD手续费
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 当前包裹状态
+from ph_staging.parcel_change_detail pcd
+left join ph_staging.parcel_info pi on pcd.pno = pi.pno
+left join ph_staging.parcel_info pi2 on pi2.pno = if(pi.returned = 0, pi.pno, pi.customary_pno)
+left join ph_staging.order_info oi on if(pi.returned = 0, pi.pno, pi.customary_pno) = oi.pno
+where
+    pcd.new_value = 'PH19040F05'
+    and pcd.created_at >= '2023-01-31 16:00:00' -- 23年1月后数据
+
+;
+select
+    pi.store_total_amount
+    ,pi.store_parcel_amount
+    ,pi.cod_poundage_amount
+    ,pi.material_amount
+    ,pi.insure_amount
+    ,pi.freight_insure_amount
+    ,pi.label_amount
+    ,pi.cod_amount
+from ph_staging.parcel_info pi
+where
+    pi.pno = 'P18031DPPG5BQ'
+
+;
 
 
+select
+    t.dated
+    ,t.staff
+    ,count(distinct t.pno) num
+    ,group_concat(t.pno) pno
+from tmpale.tmp_ph_test_0406 t
+group by 1,2
+;
+
+select
+    ss.name
+    ,ss2.name name2
+    ,count(ph.hno) num
+from ph_staging.parcel_headless ph
+left join ph_staging.sys_store ss on ss.id = ph.submit_store_id
+left join ph_staging.sys_store ss2 on ss2.id = ph.claim_store_id
+where
+    ph.claim_store_id is not null
+group by 1,2
+
+;
 
 
+with t as
+(
+    select
+        sh.store_id
+        ,sh.unload_period
+        ,sh.pno
+        ,sh.parcel_type
+        ,case sh.parcel_type
+            when 0 then '1,2'
+            when 1 then '2,3'
+            when 2 then '3'
+        end type
+    from ph_nbd.suspected_headless_parcel_detail_v1 sh
+    where
+        sh.arrival_date = '2023-03-29'
+)
+select
+    a.unload_period
+    ,a.submit_store_id
+    ,a.hno
+    ,b.area
+    ,b.num
+from
+    (
+        select
+            ph.submit_store_name
+            ,ph.submit_store_id
+            ,a.unload_period
+            ,ph.hno
+            ,ph.created_at
+        from ph_staging.parcel_headless ph
+        join
+            (
+                select
+                    t.store_id
+                    ,t.unload_period
+                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
+                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
 
+                    ,t.type
+                from t
+            ) a on ph.submit_store_id = a.store_id
+        where
+            ph.created_at >= date_sub(a.time1, interval 8 hour)
+            and ph.created_at < date_sub(a.time2, interval 8 hour)
+            and a.type like  concat('%', ph.find_area_category, '%')
+            and ph.state = 0
+        group by 1,2,3,4
+    ) a
+left join
+    (
+        select
+            sh.store_id
+#             ,case  sh.parcel_type
+#                 when 0 then 'A'
+#                 when 1 then 'B'
+#                 when 2 then 'C'
+#             end area
+            ,sh.unload_period
+            ,count(distinct sh.pno) num
+        from ph_nbd.suspected_headless_parcel_detail_v1 sh
+        where
+            sh.arrival_date = '${date}'
+        group by 1,2
+    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
 
+;
+
+# select * from ph_nbd.suspected_headless_parcel_detail_v1 sh where  sh.store_id = 'PH19280F01' and sh.arrival_date = '2023-03-29'
+#
+# ;
+# select * from ph_staging.parcel_headless ph where date(convert_tz(ph.created_at,'+00:00', '+08:00')) = '2023-04-02' and ph.submit_store_id = 'PH19280F01';

@@ -212,3 +212,58 @@ select
 from fle_staging.pickup_claims_ticket pct
 join tmpale.tmp_th_pno_0323 t on t.pno = pct.pno
 group by 1
+
+
+;
+
+
+select
+    ss.name
+    ,ss.name name2
+    ,count(ph.hno) num
+from fle_staging.parcel_headless ph
+left join fle_staging.sys_store ss on ss.id = ph.submit_store_id
+left join fle_staging.sys_store ss2 on ss2.id = ph.claim_store_id
+where
+    ph.claim_store_id is not null
+    and ph.state < 4
+group by 1
+
+;
+
+select
+    *
+from fle_staging.parcel_headless ph
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ph.operator_id
+
+;
+
+-- 临时取数，hub无头件
+
+select
+        fp.p_date 日期
+        ,ss.name 网点
+        ,ss.id 网点ID
+        ,fp.view_num 访问人次
+    #     ,fp.view_staff_num uv
+        ,fp.match_num 点击匹配量
+        ,fp.search_num 点击搜索量
+        ,fp.sucess_num 成功匹配量
+    from
+        (
+            select
+                json_extract(ext_info,'$.organization_id') store_id
+                ,fp.p_date
+                ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+                ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+                ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+                ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+                ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+            from dwm.dwd_th_sls_pro_flash_point fp
+            where
+                fp.p_date >= '2023-03-01'
+            group by 1,2
+        ) fp
+    left join fle_staging.sys_store ss on ss.id = fp.store_id
+    where
+        ss.category in (8,12)
