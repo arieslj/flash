@@ -267,3 +267,68 @@ select
     left join fle_staging.sys_store ss on ss.id = fp.store_id
     where
         ss.category in (8,12)
+
+;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+with pl AS
+(
+    select
+        pl.*
+    from
+    (
+        select
+            pl.pno
+            ,pl.state
+            ,pl.duty_result
+            ,pl.operator_id
+            ,pl.created_at
+            ,pl.updated_at
+            ,pl.source
+            ,row_number()over(partition by pl.pno order by pl.created_at) rn
+        from bi_pro.parcel_lose_task pl
+        where pl.created_at>='2023-04-01'
+#         and pl.created_at<'2023-03-01'
+        and pl.source=12
+#         and pl.pno = 'TH20013U4VGY5M'
+    )pl where pl.rn=1
+)
+
+# select
+#     pl.pno
+#     ,pl.created_at
+#     ,pr.min_at
+#     ,pr.max_at
+#     ,pr.forceTakePhotoCategory
+# from pl
+# join fle_staging.parcel_info pi on pl.pno=pi.pno and pi.cod_enabled=1
+# left join
+# (
+    select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+#     and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO'
+#     and pr.pno='TH20013U4VGY5M'
+)pr on pl.pno=pr.pno
+
+#  where forceTakePhotoCategory=3

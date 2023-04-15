@@ -31,9 +31,9 @@ SELECT
     ,pr5.实际盘点量
     ,pr4.应盘点量- pr5.实际盘点量 未盘点量
     ,concat(round(pr5.实际盘点量/pr4.应盘点量,4)*100,'%') 盘点率
-    ,pr6.应集包量
-    ,pr7.实际集包量
-    ,concat(round(pr7.实际集包量/pr6.应集包量,4)*100,'%') 集包率
+    ,seal.应该集包包裹量
+    ,seal.应集包且实际集包的总包裹量 实际集包量
+    ,seal.集包率 集包率
 from
     (
         select
@@ -53,6 +53,7 @@ left join
             ,count(distinct(if(v2.`job_title` in (16,272),v2.`staff_info_id`,null))) 出勤主管人数
         from `ph_bi`.`attendance_data_v2` v2
         left join `ph_bi`.`hr_staff_info` hi on hi.`staff_info_id` =v2.`staff_info_id`
+        join ph_staging.sys_store ss on ss.id = hi.sys_store_id and ss.category in (8,12)
         where
             v2.`stat_date`=date_sub(curdate(),interval 1 day)
             and
@@ -65,6 +66,7 @@ left join
             pr.`store_id`
             ,count(distinct(pr.`pno`)) 妥投量
         from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
         where
             pr.`route_action` in ('DELIVERY_CONFIRM')
             and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
@@ -76,6 +78,7 @@ LEFT JOIN
             pr.`store_id`
             ,count(distinct(pr.`pno`)) 应到量
         from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
         where
             pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
             and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
@@ -93,6 +96,7 @@ left join
                     ,pr.`store_id`
                     ,pr.`routed_at`
                 from `ph_staging`.`parcel_route` pr
+                join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
                 where
                     pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
                     and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
@@ -110,6 +114,7 @@ left join
                     ,pr.staff_info_name
                     ,pr.extra_value
                 from `ph_staging`.`parcel_route` pr
+                join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
                 where
                     pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
                                        'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
@@ -130,6 +135,7 @@ left join
             dc.`store_id`
             ,count(distinct(dc.`pno`)) 应派量
         from `ph_bi`.`dc_should_delivery_today` dc
+        join ph_staging.sys_store ss on ss.id = dc.store_id and ss.category in (8,12)
         where
             dc.`stat_date`= date_sub(curdate(),interval 1 day)
         group by 1
@@ -140,6 +146,7 @@ left join
             pr.`store_id`
             ,count(distinct(pr.`pno`)) 交接量
         from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
         where
             pr.`route_action` in ('DELIVERY_TICKET_CREATION_SCAN')
             and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y-%m-%d')=date_sub(curdate(),interval 1 day)
@@ -166,6 +173,7 @@ left join
                              ,pr.`routed_at`
                              ,row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
                         from `ph_staging`.`parcel_route` pr
+                        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
                         where
                             DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
                             and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
@@ -186,6 +194,7 @@ left join
                         ,pr.`store_id`
                         ,pr.`routed_at`
                     from `ph_staging`.`parcel_route` pr
+                    join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
                     where
                         pr.`route_action` in ( 'DEPARTURE_GOODS_VAN_CK_SCAN')
                         and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
@@ -202,6 +211,7 @@ left join
             pr.`store_id`
             ,count(distinct(pr.`pno`)) 实际盘点量
         from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
         where
             pr.`route_action` in ('INVENTORY','DETAIN_WAREHOUSE','DISTRIBUTION_INVENTORY','SORTING_SCAN')
             and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
@@ -209,34 +219,42 @@ left join
     )pr5 on pr5.`store_id`=ss.`id`
 left join
     (
-        select #应集包
-            pr.`store_id`
-            ,count(distinct pr.`pno`) 应集包量
-        from `ph_staging`.`parcel_route` pr
-        left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
-        left join ph_staging.parcel_route pr2 on pr2.pno = pr.pno and pr2.route_action = 'UNSEAL' and DATE_FORMAT(CONVERT_TZ(pr2.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day) and pr2.store_id = pr.store_id
-        where
-            pr.`route_action` in ('SHIPMENT_WAREHOUSE_SCAN')
-            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-            and pi.`exhibition_weight`<=3000
-            and (pi.`exhibition_length` +pi.`exhibition_width` +pi.`exhibition_height`)<=60
-            and pi.`exhibition_length` <=30
-            and pi.`exhibition_width` <=30
-            and pi.`exhibition_height` <=30
-            and pr2.pno is not null
-        GROUP BY 1
-    )pr6 on pr6.`store_id`=ss.`id`
-left join
-    (
-        select #实际集包
-            pr.`store_id`
-            ,count(distinct pr.`pno`) 实际集包量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ( 'SEAL')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr7 on pr7.`store_id`=ss.`id`
+        SELECT
+            a.store_id
+            ,date(a.van_arrive_phtime) AS '到港日期'
+            ,SUM(a.hub_should_seal) AS '应该集包包裹量'
+            ,SUM(IF (a.hub_should_seal = 1 AND a.seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
+            ,SUM(IF (a.hub_should_seal = 1  AND a.seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
+        FROM
+            (
+                SELECT
+                    pi.pno
+                    , pss.store_name AS 'hub_name'
+                    ,pss.store_id
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
+                            8 HOUR) AS 'van_arrive_phtime'
+                    , pss.arrival_pack_no
+                    , pack.es_unseal_store_name
+                    ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
+            -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
+                         AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
+                    , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
+                FROM ph_staging.parcel_info pi
+                JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
+                    AND pi.pno = pss.pno
+                    AND pss.store_category IN (8, 12)
+                    AND pss.store_name != '66 BAG_HUB_Maynila'
+                    AND pss.store_name NOT REGEXP '^Air|^SEA'
+                LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
+                WHERE
+                    1 = 1
+                    AND pi.state < 9
+                    AND pi.returned = 0
+            ) a
+        GROUP BY 1, 2
+        ORDER BY 1, 2
+    ) seal on seal.store_id = ss.id
 group by 1,2,3,4
 order by 2;
 
@@ -447,7 +465,7 @@ LEFT JOIN ( SELECT #实际集包
            )pr7 on pr7.`store_id`=ss.`id`
 
 group by 1,2,3,4
-ORDER BY 2
+ORDER BY 2;
 
 
 
@@ -466,46 +484,41 @@ ORDER BY 2
 
 
 -- 0394
-SELECT
-    hub_name
-    ,date(van_arrive_phtime) AS '到港日期'
-    ,SUM(hub_should_seal) AS '应该集包包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-    ,SUM(IF (hub_should_seal = 1  AND seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '应拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '应直接集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际直接集包包裹数'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '集包率'
-FROM
-    (
         SELECT
-            pi.pno
-            , pss.store_name AS 'hub_name'
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                    8 HOUR) AS 'van_arrive_phtime'
-            , pss.arrival_pack_no
-            , pack.es_unseal_store_name
-            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
-            , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-        FROM ph_staging.parcel_info pi
-        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-            AND pi.pno = pss.pno
-            AND pss.store_category IN (8, 12)
-            AND pss.store_name != '66 BAG_HUB_Maynila'
-            AND pss.store_name NOT REGEXP '^Air|^SEA'
-        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-        WHERE
-            1 = 1
-            AND pi.state < 9
-            AND pi.returned = 0
-    )
-GROUP BY 1, 2
-ORDER BY 1, 2
+            a.store_id
+            ,date(a.van_arrive_phtime) AS '到港日期'
+            ,SUM(a.hub_should_seal) AS '应该集包包裹量'
+            ,SUM(IF (a.hub_should_seal = 1 AND a.seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
+            ,SUM(IF (a.hub_should_seal = 1  AND a.seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
+        FROM
+            (
+                SELECT
+                    pi.pno
+                    , pss.store_name AS 'hub_name'
+                    ,pss.store_id
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
+                            8 HOUR) AS 'van_arrive_phtime'
+                    , pss.arrival_pack_no
+                    , pack.es_unseal_store_name
+                    ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
+            -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
+                         AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
+                    , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
+                FROM ph_staging.parcel_info pi
+                JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
+                    AND pi.pno = pss.pno
+                    AND pss.store_category IN (8, 12)
+                    AND pss.store_name != '66 BAG_HUB_Maynila'
+                    AND pss.store_name NOT REGEXP '^Air|^SEA'
+                LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
+                WHERE
+                    1 = 1
+                    AND pi.state < 9
+                    AND pi.returned = 0
+            ) a
+        GROUP BY 1, 2
+        ORDER BY 1, 2
 
 ;
 

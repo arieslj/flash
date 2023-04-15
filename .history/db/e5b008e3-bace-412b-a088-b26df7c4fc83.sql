@@ -10893,3 +10893,1952 @@ select
     left join ph_staging.sys_store ss on ss.id = fp.store_id
     where
         ss.category in (8,12);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,ss3.name 揽收网点
+    ,pr.next_store_name 揽收网点下一站
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id
+left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id
+left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+where
+    pi.created_at >= convert_tz('2023-04-10', '+08:00', '+00:00')
+    and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
+    and ss2.id = 'PH14160302'  -- 99hub
+    and ss3.category = 14;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
+    ,pi.pno
+    ,ss3.name 揽收网点
+    ,pr.next_store_name 揽收网点下一站
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id
+left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id
+left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+where
+    pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
+    and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
+    and ss2.id = 'PH14160302'  -- 99hub
+    and ss3.category = 14;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
+    ,pi.pno
+    ,ss3.name 揽收网点
+    ,pr.next_store_name 揽收网点下一站
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
+left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
+left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
+where
+    pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
+    and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
+    and ss2.id = 'PH14160302'  -- 99hub
+    and ss3.category = 14;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.日期
+    ,a.揽收网点
+    ,count(if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
+    ,count(if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
+from
+    (
+        select
+            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
+            ,pi.pno
+            ,ss3.name 揽收网点
+            ,pr.next_store_name 揽收网点下一站
+            ,pr.next_store_id
+        from ph_staging.parcel_info pi
+        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
+        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
+        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
+        where
+            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
+            and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
+            and ss2.id = 'PH14160302'  -- 99hub
+            and ss3.category = 14 -- PDC
+            and pr.pno is not null
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.日期
+    ,a.揽收网点
+    ,count(distinct if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
+    ,count(distinct if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
+from
+    (
+        select
+            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
+            ,pi.pno
+            ,ss3.name 揽收网点
+            ,pr.next_store_name 揽收网点下一站
+            ,pr.next_store_id
+        from ph_staging.parcel_info pi
+        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
+        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
+        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
+        where
+            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
+            and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
+            and ss2.id = 'PH14160302'  -- 99hub
+            and ss3.category = 14 -- PDC
+            and pr.pno is not null
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.日期
+    ,a.揽收网点
+    ,count(distinct if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
+    ,count(distinct if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
+from
+    (
+        select
+            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
+            ,pi.pno
+            ,ss3.name 揽收网点
+            ,pr.next_store_name 揽收网点下一站
+            ,pr.next_store_id
+        from ph_staging.parcel_info pi
+        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
+        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
+        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
+        where
+            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
+            and pi.created_at < convert_tz('2023-04-11', '+08:00', '+00:00')
+            and ss2.id = 'PH14160302'  -- 99hub
+            and ss3.category = 14 -- PDC
+            and pr.pno is not null
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.日期
+    ,a.揽收网点
+    ,count(distinct if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
+    ,count(distinct if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
+from
+    (
+        select
+            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
+            ,pi.pno
+            ,ss3.name 揽收网点
+            ,pr.next_store_name 揽收网点下一站
+            ,pr.next_store_id
+        from ph_staging.parcel_info pi
+        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
+        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
+        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
+        where
+            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
+            and pi.created_at < convert_tz('2023-04-12', '+08:00', '+00:00')
+            and ss2.id = 'PH14160302'  -- 99hub
+            and ss3.category = 14 -- PDC
+            and pr.pno is not null
+    ) a
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        sh.store_id
+        ,sh.unload_period
+        ,sh.pno
+        ,sh.parcel_type
+        ,case sh.parcel_type
+            when 0 then '1,2'
+            when 1 then '2,3'
+            when 2 then '3'
+        end type
+    from ph_nbd.suspected_headless_parcel_detail_v1 sh
+    where
+        sh.arrival_date = '2023-03-29'
+)
+select
+    a.unload_period
+    ,a.submit_store_id
+    ,max(b.num) max_num
+from
+    (
+        select
+            ph.submit_store_name
+            ,ph.submit_store_id
+            ,a.unload_period
+            ,ph.hno
+            ,ph.created_at
+        from ph_staging.parcel_headless ph
+        join
+            (
+                select
+                    t.store_id
+                    ,t.unload_period
+                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
+                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
+
+                    ,t.type
+                from t
+            ) a on ph.submit_store_id = a.store_id
+        where
+            ph.created_at >= date_sub(a.time1, interval 8 hour)
+            and ph.created_at < date_sub(a.time2, interval 8 hour)
+            and a.type like  concat('%', ph.find_area_category, '%')
+            and ph.state = 0
+        group by 1,2,3,4
+    ) a
+left join
+    (
+        select
+            sh.store_id
+            ,case  sh.parcel_type
+                when 0 then 'A'
+                when 1 then 'B'
+                when 2 then 'C'
+            end area
+            ,sh.unload_period
+            ,count(distinct sh.pno) num
+        from ph_nbd.suspected_headless_parcel_detail_v1 sh
+        where
+            sh.arrival_date = '2023-03-29'
+        group by 1,2
+    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        sh.store_id
+        ,sh.unload_period
+        ,sh.pno
+        ,sh.parcel_type
+        ,case sh.parcel_type
+            when 0 then '1,2'
+            when 1 then '2,3'
+            when 2 then '3'
+        end type
+    from ph_nbd.suspected_headless_parcel_detail_v1 sh
+    where
+        sh.arrival_date = '2023-03-29'
+)
+select
+    a.unload_period
+    ,a.submit_store_id
+    ,a.hno
+    ,max(b.num) max_num
+from
+    (
+        select
+            ph.submit_store_name
+            ,ph.submit_store_id
+            ,a.unload_period
+            ,ph.hno
+            ,ph.created_at
+        from ph_staging.parcel_headless ph
+        join
+            (
+                select
+                    t.store_id
+                    ,t.unload_period
+                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
+                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
+
+                    ,t.type
+                from t
+            ) a on ph.submit_store_id = a.store_id
+        where
+            ph.created_at >= date_sub(a.time1, interval 8 hour)
+            and ph.created_at < date_sub(a.time2, interval 8 hour)
+            and a.type like  concat('%', ph.find_area_category, '%')
+            and ph.state = 0
+        group by 1,2,3,4
+    ) a
+left join
+    (
+        select
+            sh.store_id
+            ,case  sh.parcel_type
+                when 0 then 'A'
+                when 1 then 'B'
+                when 2 then 'C'
+            end area
+            ,sh.unload_period
+            ,count(distinct sh.pno) num
+        from ph_nbd.suspected_headless_parcel_detail_v1 sh
+        where
+            sh.arrival_date = '2023-03-29'
+        group by 1,2
+    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            sh.store_id
+            ,case  sh.parcel_type
+                when 0 then 'A'
+                when 1 then 'B'
+                when 2 then 'C'
+            end area
+            ,sh.unload_period
+            ,count(distinct sh.pno) num
+        from ph_nbd.suspected_headless_parcel_detail_v1 sh
+        where
+            sh.arrival_date = '2023-03-29'
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+    a.store_id
+    ,date(a.van_arrive_phtime) AS '到港日期'
+    ,SUM(a.hub_should_seal) AS '应该集包包裹量'
+    ,SUM(IF (a.hub_should_seal = 1 AND a.seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
+    ,SUM(IF (a.hub_should_seal = 1  AND a.seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
+FROM
+    (
+        SELECT
+            pi.pno
+            , pss.store_name AS 'hub_name'
+            ,pss.store_id
+            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
+                    8 HOUR) AS 'van_arrive_phtime'
+            , pss.arrival_pack_no
+            , pack.es_unseal_store_name
+            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
+    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
+            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
+                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
+            , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
+        FROM ph_staging.parcel_info pi
+        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
+            AND pi.pno = pss.pno
+            AND pss.store_category IN (8, 12)
+            AND pss.store_name != '66 BAG_HUB_Maynila'
+            AND pss.store_name NOT REGEXP '^Air|^SEA'
+        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
+        WHERE
+            1 = 1
+            AND pi.state < 9
+            AND pi.returned = 0
+    ) a
+GROUP BY 1, 2
+ORDER BY 1, 2;
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+    date_sub(curdate(),interval 1 day) 日期
+    ,ss.`name` 网点名称
+    ,smr.`name` 大区
+    ,smp.`name` 片区
+    ,v2.出勤收派员人数
+    ,v2.出勤仓管人数
+    ,v2.出勤主管人数
+    ,pr.妥投量
+    ,pr1.应到量
+    ,pr2.实到量
+    ,concat(round(pr2.实到量/pr1.应到量,4)*100,'%') 到件入仓率
+    ,dc.应派量
+    ,pr3.交接量
+    ,concat(round(pr3.交接量/dc.应派量,4)*100,'%') 交接率
+    ,pr4.应盘点量
+    ,pr5.实际盘点量
+    ,pr4.应盘点量- pr5.实际盘点量 未盘点量
+    ,concat(round(pr5.实际盘点量/pr4.应盘点量,4)*100,'%') 盘点率
+    ,seal.应该集包包裹量
+    ,seal.应集包且实际集包的总包裹量 实际集包量
+    ,seal.集包率 集包率
+from
+    (
+        select
+            *
+        from `ph_staging`.`sys_store` ss
+        where
+            ss.category in (8,12)
+    ) ss
+left join `ph_staging`.`sys_manage_region` smr on smr.`id`  =ss.`manage_region`
+left join `ph_staging`.`sys_manage_piece` smp on smp.`id`  =ss.`manage_piece`
+left join
+    (
+        select #出勤
+            hi.`sys_store_id`
+            ,count(distinct(if(v2.`job_title` in (13,110,807,1000),v2.`staff_info_id`,null))) 出勤收派员人数
+            ,count(distinct(if(v2.`job_title` in (37),v2.`staff_info_id`,null))) 出勤仓管人数
+            ,count(distinct(if(v2.`job_title` in (16,272),v2.`staff_info_id`,null))) 出勤主管人数
+        from `ph_bi`.`attendance_data_v2` v2
+        left join `ph_bi`.`hr_staff_info` hi on hi.`staff_info_id` =v2.`staff_info_id`
+        where
+            v2.`stat_date`=date_sub(curdate(),interval 1 day)
+            and
+                (v2.`attendance_started_at` is not null or v2.`attendance_end_at` is not null)
+        group by 1
+    )v2 on v2.`sys_store_id`=ss.`id`
+left join
+    (
+        select #妥投
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 妥投量
+        from `ph_staging`.`parcel_route` pr
+        where
+            pr.`route_action` in ('DELIVERY_CONFIRM')
+            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
+        group by 1
+    )pr on pr.`store_id`=ss.`id`
+LEFT JOIN
+    (
+        select #应到
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 应到量
+        from `ph_staging`.`parcel_route` pr
+        where
+            pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
+            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
+        group by 1
+    )pr1 on pr1.`store_id`=ss.`id`
+left join
+    (
+        select #实到
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 实到量
+        from
+            (
+                select #车货关联到港
+                    pr.`pno`
+                    ,pr.`store_id`
+                    ,pr.`routed_at`
+                from `ph_staging`.`parcel_route` pr
+                where
+                    pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
+                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
+            )pr
+        join
+            (
+                select #有效路由
+                    pr.`pno`
+                    ,pr.store_id
+                    ,pr.`routed_at`
+                    ,pr.route_action
+                    ,pr.store_name
+                    ,pr.staff_info_id
+                    ,pr.staff_info_phone
+                    ,pr.staff_info_name
+                    ,pr.extra_value
+                from `ph_staging`.`parcel_route` pr
+                where
+                    pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
+                                       'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
+                                       'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
+                                       'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
+                                       'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
+                                       'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
+                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') >= date_sub(curdate(),interval 1 day)
+            ) pr1 on pr1.pno = pr.`pno`
+        where
+            pr1.store_id=pr.store_id
+            and pr1.`routed_at`<= date_add(pr.`routed_at`,interval 4 hour)
+        group by 1
+    )pr2 on  pr2.`store_id`=ss.`id`
+left join
+    (
+        select #应派
+            dc.`store_id`
+            ,count(distinct(dc.`pno`)) 应派量
+        from `ph_bi`.`dc_should_delivery_today` dc
+        where
+            dc.`stat_date`= date_sub(curdate(),interval 1 day)
+        group by 1
+    ) dc on dc.`store_id`=ss.`id`
+left join
+    (
+        select #交接
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 交接量
+        from `ph_staging`.`parcel_route` pr
+        where
+            pr.`route_action` in ('DELIVERY_TICKET_CREATION_SCAN')
+            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y-%m-%d')=date_sub(curdate(),interval 1 day)
+        group by 1
+    )pr3 on pr3.`store_id`=ss.`id`
+left join
+    (
+        select #应盘
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 应盘点量
+        from
+            (
+                select #最后一条有效路由
+                    pr.`pno`
+                    ,pr.store_id
+                    ,pr.`state`
+                    ,pr.`routed_at`
+                from
+                    (
+                        select
+                             pr.`pno`
+                             ,pr.store_id
+                             ,pr.`state`
+                             ,pr.`routed_at`
+                             ,row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
+                        from `ph_staging`.`parcel_route` pr
+                        where
+                            DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
+                            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
+                            and   pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
+                                                           'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
+                                                           'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
+                                                           'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
+                                                           'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
+                                                           'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
+                     ) pr
+                where pr.rn = 1
+            ) pr
+            left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
+            left join
+                (
+                    select #车货关联出港
+                        pr.`pno`
+                        ,pr.`store_id`
+                        ,pr.`routed_at`
+                    from `ph_staging`.`parcel_route` pr
+                    where
+                        pr.`route_action` in ( 'DEPARTURE_GOODS_VAN_CK_SCAN')
+                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
+                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
+                )pr1 on pr.pno=pr1.pno and pr.`store_id` =pr1.`store_id` and pr1.`routed_at`> pr.`routed_at`
+        where
+            pr1.pno is null
+            and pi.state in (1,2,3,4,6)
+        group by 1
+    )pr4 on pr4.`store_id`=ss.`id`
+left join
+    (
+        select #实际盘点
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 实际盘点量
+        from `ph_staging`.`parcel_route` pr
+        where
+            pr.`route_action` in ('INVENTORY','DETAIN_WAREHOUSE','DISTRIBUTION_INVENTORY','SORTING_SCAN')
+            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
+        GROUP BY 1
+    )pr5 on pr5.`store_id`=ss.`id`
+left join
+    (
+        SELECT
+            a.store_id
+            ,date(a.van_arrive_phtime) AS '到港日期'
+            ,SUM(a.hub_should_seal) AS '应该集包包裹量'
+            ,SUM(IF (a.hub_should_seal = 1 AND a.seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
+            ,SUM(IF (a.hub_should_seal = 1  AND a.seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
+        FROM
+            (
+                SELECT
+                    pi.pno
+                    , pss.store_name AS 'hub_name'
+                    ,pss.store_id
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
+                            8 HOUR) AS 'van_arrive_phtime'
+                    , pss.arrival_pack_no
+                    , pack.es_unseal_store_name
+                    ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
+            -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
+                         AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
+                    , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
+                FROM ph_staging.parcel_info pi
+                JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
+                    AND pi.pno = pss.pno
+                    AND pss.store_category IN (8, 12)
+                    AND pss.store_name != '66 BAG_HUB_Maynila'
+                    AND pss.store_name NOT REGEXP '^Air|^SEA'
+                LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
+                WHERE
+                    1 = 1
+                    AND pi.state < 9
+                    AND pi.returned = 0
+            ) a
+        GROUP BY 1, 2
+        ORDER BY 1, 2
+    ) seal on seal.store_id = ss.id
+group by 1,2,3,4
+order by 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from ph_bi.abnormal_customer_complaint acc
+where
+    acc.work_id is not null
+limit 20;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,case
+        when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+        when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+        when hsi.`state`=2 then '离职'
+        when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,convert_tz(mw.created_at,'+00:00','+08:00') created_at
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+        ,ROW_NUMBER ()over(partition by hsi.staff_info_id order by mw.created_at ) rn
+        ,count(mw.id) over (partition by hsi.staff_info_id) ct
+    from
+    (
+             select
+                mw.staff_info_id
+            from ph_backyard.message_warning mw
+            where
+                mw.type_code = 'warning_27'
+                and mw.operator_id = 87166
+#             and mw.created_at >=convert_tz('2023-04-13','+08:00','+00:00')
+            group by 1
+    )ws
+    join ph_bi.hr_staff_info hsi  on ws.staff_info_id=hsi.staff_info_id
+    left join  ph_backyard.message_warning mw on hsi.staff_info_id =mw.staff_info_id and  mw.is_delete =0
+    left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+    left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+    left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+    where
+        hsi.state <> 2
+)
+
+select 
+    t.staff_info_id 员工id
+    ,t. 在职状态
+    ,t.所属网点
+    ,t.大区
+    ,t.片区
+    ,t.ct 警告次数
+    ,t.created_at 第一次警告信时间
+    ,t.警告原因 第一次警告原因
+    ,t.警告类型 第一次警告类型
+    ,t2.created_at 第二次警告信时间
+    ,t2.警告原因 第二次警告原因
+    ,t2.警告类型 第二次警告类型
+    ,t3.created_at 第三次警告信时间
+    ,t3.警告原因 第三次警告原因
+    ,t3.警告类型 第三次警告类型
+    ,t4.created_at 第四次警告信时间
+    ,t4.警告原因 第四次警告原因
+    ,t4.警告类型 第四次警告类型
+    ,t5.created_at 第五次警告信时间
+    ,t5.警告原因 第五次警告原因
+    ,t5.警告类型 第五次警告类型
+from t 
+left join t t2 on t.staff_info_id=t2.staff_info_id and t2.rn=2
+left join t t3 on t.staff_info_id=t3.staff_info_id and t3.rn=3
+left join t t4 on t.staff_info_id=t4.staff_info_id and t4.rn=4
+left join t t5 on t.staff_info_id=t5.staff_info_id and t5.rn=5
+where
+    t.rn=1;
+;-- -. . -..- - / . -. - .-. -.--
+select DATE_SUB(CURDATE(), INTERVAL 1 MONTH);
+;-- -. . -..- - / . -. - .-. -.--
+select  DATE_ADD(curdate(),interval -day(curdate())+1 day);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    swm.date_at
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+        when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+        when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+        when hsi.`state`=2 then '离职'
+        when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join  ph_backyard.message_warning mw on hsi.staff_info_id =mw.staff_info_id and  mw.is_delete =0
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+    mw.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+    and mw.type_code = 'warning_27';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join  ph_backyard.message_warning mw on hsi.staff_info_id =mw.staff_info_id and  mw.is_delete =0
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+    mw.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+    and mw.type_code = 'warning_27';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+    mw.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+    and mw.type_code = 'warning_27'
+    and mw.is_delete = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+    mw.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+    and mw.type_code = 'warning_27'
+    and mw.is_delete = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,swm.date_at 违规日期
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+left join ph_backyard.staff_warning_message swm on swm.id = mw.staff_warning_message_id
+left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+    swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+    and mw.type_code = 'warning_27'
+    and mw.is_delete = 0;
+;-- -. . -..- - / . -. - .-. -.--
+SELECT wo.`order_no` `工单编号`,
+case wo.status
+     when 1 then '未阅读'
+     when 2 then '已经阅读'
+     when 3 then '已回复'
+     when 4 then '已关闭'
+     end '工单状态',
+pi.`client_id`  '客户ID',
+wo.`pnos` '运单号',
+case wo.order_type
+          when 1 then '查找运单'
+          when 2 then '加快处理'
+          when 3 then '调查员工'
+          when 4 then '其他'
+          when 5 then '网点信息维护提醒'
+          when 6 then '培训指导'
+          when 7 then '异常业务询问'
+          when 8 then '包裹丢失'
+          when 9 then '包裹破损'
+          when 10 then '货物短少'
+          when 11 then '催单'
+          when 12 then '有发无到'
+          when 13 then '上报包裹不在集包里'
+          when 16 then '漏揽收'
+          when 50 then '虚假撤销'
+          when 17 then '已签收未收到'
+          when 18 then '客户投诉'
+          when 19 then '修改包裹信息'
+          when 20 then '修改 COD 金额'
+          when 21 then '解锁包裹'
+          when 22 then '申请索赔'
+          when 23 then 'MS 问题反馈'
+          when 24 then 'FBI 问题反馈'
+          when 25 then 'KA System 问题反馈'
+          when 26 then 'App 问题反馈'
+          when 27 then 'KIT 问题反馈'
+          when 28 then 'Backyard 问题反馈'
+          when 29 then 'BS/FH 问题反馈'
+          when 30 then '系统建议'
+          when 31 then '申诉罚款'
+          else wo.order_type
+          end  '工单类型',
+wo.`title` `工单标题`,
+wo.`created_at` `工单创建时长`,
+wor.`工单回复时间` `工单回复时间`,
+wo.`created_staff_info_id` `发起人`,
+wo.`closed_at` `工单关闭时间`,
+wor.staff_info_id `回复人`,
+ss1.name `创建网点名称`,
+case
+when ss1.`category` in (1,2,10,13) then 'sp'
+              when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`created_store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`created_store_id`= '12' then 'QA&QC'
+              when wo.`created_store_id`= '18' then 'Flash Home客服中心'
+              when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`created_store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `创建网点/部门 `,
+ss.name `受理网点名称`,
+case when ss.`category` in (1,2,10,13) then 'sp'
+              when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`store_id`= '12' then 'QA&QC'
+              when wo.`store_id`= '18' then 'Flash Home客服中心'
+              when wo.`store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `受理网点/部门 `,
+pi. `last_cn_route_action` `最后一步有效路由`,
+pi.last_route_time `操作时间`,
+pi.last_store_name `操作网点`,
+pi.last_staff_info_id `操作人员`
+
+from `ph_bi`.`work_order` wo
+left join dwm.dwd_ex_ph_parcel_details pi
+on wo.`pnos` =pi.`pno` and  pick_date>=date_sub(curdate(),interval 2 month)
+left join
+    (select order_id,staff_info_id ,max(created_at) `工单回复时间`
+     from `ph_bi`.`work_order_reply`
+     group by 1,2) wor
+on  wor.`order_id`=wo.`id`
+
+left join   `ph_bi`.`sys_store`  ss on ss.`id` =wo.`store_id`
+left join   `ph_bi`.`sys_store`  ss1 on ss1.`id` =wo.`created_store_id`
+where month(wo.`created_at`) =month(CURDATE());
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+    date_sub(curdate(),interval 1 day) 日期
+    ,ss.`name` 网点名称
+    ,smr.`name` 大区
+    ,smp.`name` 片区
+    ,v2.出勤收派员人数
+    ,v2.出勤仓管人数
+    ,v2.出勤主管人数
+    ,pr.妥投量
+    ,pr1.应到量
+    ,pr2.实到量
+    ,concat(round(pr2.实到量/pr1.应到量,4)*100,'%') 到件入仓率
+    ,dc.应派量
+    ,pr3.交接量
+    ,concat(round(pr3.交接量/dc.应派量,4)*100,'%') 交接率
+    ,pr4.应盘点量
+    ,pr5.实际盘点量
+    ,pr4.应盘点量- pr5.实际盘点量 未盘点量
+    ,concat(round(pr5.实际盘点量/pr4.应盘点量,4)*100,'%') 盘点率
+    ,seal.应该集包包裹量
+    ,seal.应集包且实际集包的总包裹量 实际集包量
+    ,seal.集包率 集包率
+from
+    (
+        select
+            *
+        from `ph_staging`.`sys_store` ss
+        where
+            ss.category in (8,12)
+    ) ss
+left join `ph_staging`.`sys_manage_region` smr on smr.`id`  =ss.`manage_region`
+left join `ph_staging`.`sys_manage_piece` smp on smp.`id`  =ss.`manage_piece`
+left join
+    (
+        select #出勤
+            hi.`sys_store_id`
+            ,count(distinct(if(v2.`job_title` in (13,110,807,1000),v2.`staff_info_id`,null))) 出勤收派员人数
+            ,count(distinct(if(v2.`job_title` in (37),v2.`staff_info_id`,null))) 出勤仓管人数
+            ,count(distinct(if(v2.`job_title` in (16,272),v2.`staff_info_id`,null))) 出勤主管人数
+        from `ph_bi`.`attendance_data_v2` v2
+        left join `ph_bi`.`hr_staff_info` hi on hi.`staff_info_id` =v2.`staff_info_id`
+        join ph_staging.sys_store ss on ss.id = hi.sys_store_id and ss.category in (8,12)
+        where
+            v2.`stat_date`=date_sub(curdate(),interval 1 day)
+            and
+                (v2.`attendance_started_at` is not null or v2.`attendance_end_at` is not null)
+        group by 1
+    )v2 on v2.`sys_store_id`=ss.`id`
+left join
+    (
+        select #妥投
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 妥投量
+        from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+        where
+            pr.`route_action` in ('DELIVERY_CONFIRM')
+            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
+        group by 1
+    )pr on pr.`store_id`=ss.`id`
+LEFT JOIN
+    (
+        select #应到
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 应到量
+        from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+        where
+            pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
+            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
+        group by 1
+    )pr1 on pr1.`store_id`=ss.`id`
+left join
+    (
+        select #实到
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 实到量
+        from
+            (
+                select #车货关联到港
+                    pr.`pno`
+                    ,pr.`store_id`
+                    ,pr.`routed_at`
+                from `ph_staging`.`parcel_route` pr
+                join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+                where
+                    pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
+                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
+            )pr
+        join
+            (
+                select #有效路由
+                    pr.`pno`
+                    ,pr.store_id
+                    ,pr.`routed_at`
+                    ,pr.route_action
+                    ,pr.store_name
+                    ,pr.staff_info_id
+                    ,pr.staff_info_phone
+                    ,pr.staff_info_name
+                    ,pr.extra_value
+                from `ph_staging`.`parcel_route` pr
+                join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+                where
+                    pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
+                                       'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
+                                       'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
+                                       'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
+                                       'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
+                                       'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
+                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') >= date_sub(curdate(),interval 1 day)
+            ) pr1 on pr1.pno = pr.`pno`
+        where
+            pr1.store_id=pr.store_id
+            and pr1.`routed_at`<= date_add(pr.`routed_at`,interval 4 hour)
+        group by 1
+    )pr2 on  pr2.`store_id`=ss.`id`
+left join
+    (
+        select #应派
+            dc.`store_id`
+            ,count(distinct(dc.`pno`)) 应派量
+        from `ph_bi`.`dc_should_delivery_today` dc
+        join ph_staging.sys_store ss on ss.id = dc.store_id and ss.category in (8,12)
+        where
+            dc.`stat_date`= date_sub(curdate(),interval 1 day)
+        group by 1
+    ) dc on dc.`store_id`=ss.`id`
+left join
+    (
+        select #交接
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 交接量
+        from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+        where
+            pr.`route_action` in ('DELIVERY_TICKET_CREATION_SCAN')
+            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y-%m-%d')=date_sub(curdate(),interval 1 day)
+        group by 1
+    )pr3 on pr3.`store_id`=ss.`id`
+left join
+    (
+        select #应盘
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 应盘点量
+        from
+            (
+                select #最后一条有效路由
+                    pr.`pno`
+                    ,pr.store_id
+                    ,pr.`state`
+                    ,pr.`routed_at`
+                from
+                    (
+                        select
+                             pr.`pno`
+                             ,pr.store_id
+                             ,pr.`state`
+                             ,pr.`routed_at`
+                             ,row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
+                        from `ph_staging`.`parcel_route` pr
+                        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+                        where
+                            DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
+                            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
+                            and   pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
+                                                           'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
+                                                           'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
+                                                           'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
+                                                           'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
+                                                           'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
+                     ) pr
+                where pr.rn = 1
+            ) pr
+            left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
+            left join
+                (
+                    select #车货关联出港
+                        pr.`pno`
+                        ,pr.`store_id`
+                        ,pr.`routed_at`
+                    from `ph_staging`.`parcel_route` pr
+                    join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+                    where
+                        pr.`route_action` in ( 'DEPARTURE_GOODS_VAN_CK_SCAN')
+                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
+                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
+                )pr1 on pr.pno=pr1.pno and pr.`store_id` =pr1.`store_id` and pr1.`routed_at`> pr.`routed_at`
+        where
+            pr1.pno is null
+            and pi.state in (1,2,3,4,6)
+        group by 1
+    )pr4 on pr4.`store_id`=ss.`id`
+left join
+    (
+        select #实际盘点
+            pr.`store_id`
+            ,count(distinct(pr.`pno`)) 实际盘点量
+        from `ph_staging`.`parcel_route` pr
+        join ph_staging.sys_store ss on ss.id = pr.store_id and ss.category in (8,12)
+        where
+            pr.`route_action` in ('INVENTORY','DETAIN_WAREHOUSE','DISTRIBUTION_INVENTORY','SORTING_SCAN')
+            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
+        GROUP BY 1
+    )pr5 on pr5.`store_id`=ss.`id`
+left join
+    (
+        SELECT
+            a.store_id
+            ,date(a.van_arrive_phtime) AS '到港日期'
+            ,SUM(a.hub_should_seal) AS '应该集包包裹量'
+            ,SUM(IF (a.hub_should_seal = 1 AND a.seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
+            ,SUM(IF (a.hub_should_seal = 1  AND a.seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
+        FROM
+            (
+                SELECT
+                    pi.pno
+                    , pss.store_name AS 'hub_name'
+                    ,pss.store_id
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
+                            8 HOUR) AS 'van_arrive_phtime'
+                    , pss.arrival_pack_no
+                    , pack.es_unseal_store_name
+                    ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
+            -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
+                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
+                         AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
+                    , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
+                FROM ph_staging.parcel_info pi
+                JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
+                    AND pi.pno = pss.pno
+                    AND pss.store_category IN (8, 12)
+                    AND pss.store_name != '66 BAG_HUB_Maynila'
+                    AND pss.store_name NOT REGEXP '^Air|^SEA'
+                LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
+                WHERE
+                    1 = 1
+                    AND pi.state < 9
+                    AND pi.returned = 0
+            ) a
+        GROUP BY 1, 2
+        ORDER BY 1, 2
+    ) seal on seal.store_id = ss.id
+group by 1,2,3,4
+order by 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.date_ats
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.date_ats
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and mw.date_ats >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    swm.date_at
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    swm.date_at
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct if(swm.hr_fix_status = 0, swm.id, null)) 未处理量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+SELECT wo.`order_no` `工单编号`,
+case wo.status
+     when 1 then '未阅读'
+     when 2 then '已经阅读'
+     when 3 then '已回复'
+     when 4 then '已关闭'
+     end '工单状态',
+pi.`client_id`  '客户ID',
+wo.`pnos` '运单号',
+case wo.order_type
+          when 1 then '查找运单'
+          when 2 then '加快处理'
+          when 3 then '调查员工'
+          when 4 then '其他'
+          when 5 then '网点信息维护提醒'
+          when 6 then '培训指导'
+          when 7 then '异常业务询问'
+          when 8 then '包裹丢失'
+          when 9 then '包裹破损'
+          when 10 then '货物短少'
+          when 11 then '催单'
+          when 12 then '有发无到'
+          when 13 then '上报包裹不在集包里'
+          when 16 then '漏揽收'
+          when 50 then '虚假撤销'
+          when 17 then '已签收未收到'
+          when 18 then '客户投诉'
+          when 19 then '修改包裹信息'
+          when 20 then '修改 COD 金额'
+          when 21 then '解锁包裹'
+          when 22 then '申请索赔'
+          when 23 then 'MS 问题反馈'
+          when 24 then 'FBI 问题反馈'
+          when 25 then 'KA System 问题反馈'
+          when 26 then 'App 问题反馈'
+          when 27 then 'KIT 问题反馈'
+          when 28 then 'Backyard 问题反馈'
+          when 29 then 'BS/FH 问题反馈'
+          when 30 then '系统建议'
+          when 31 then '申诉罚款'
+          else wo.order_type
+          end  '工单类型',
+wo.`title` `工单标题`,
+wo.`created_at` `工单创建时长`,
+wor.`工单回复时间` `工单回复时间`,
+wo.`created_staff_info_id` `发起人`,
+wo.`closed_at` `工单关闭时间`,
+wor.staff_info_id `回复人`,
+ss1.name `创建网点名称`,
+case
+when ss1.`category` in (1,2,10,13) then 'sp'
+              when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`created_store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`created_store_id`= '12' then 'QA&QC'
+              when wo.`created_store_id`= '18' then 'Flash Home客服中心'
+              when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`created_store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `创建网点/部门 `,
+ss.name `受理网点名称`,
+case when ss.`category` in (1,2,10,13) then 'sp'
+              when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`store_id`= '12' then 'QA&QC'
+              when wo.`store_id`= '18' then 'Flash Home客服中心'
+              when wo.`store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `受理网点/部门 `,
+pi. `last_cn_route_action` `最后一步有效路由`,
+pi.last_route_time `操作时间`,
+pi.last_store_name `操作网点`,
+pi.last_staff_info_id `操作人员`
+
+from `ph_bi`.`work_order` wo
+left join dwm.dwd_ex_ph_parcel_details pi
+on wo.`pnos` =pi.`pno` and  pick_date>=date_sub(curdate(),interval 2 month)
+left join
+    (select order_id,staff_info_id ,max(created_at) `工单回复时间`
+     from `ph_bi`.`work_order_reply`
+     group by 1,2) wor
+on  wor.`order_id`=wo.`id`
+
+left join   `ph_bi`.`sys_store`  ss on ss.`id` =wo.`store_id`
+left join   `ph_bi`.`sys_store`  ss1 on ss1.`id` =wo.`created_store_id`
+where wo.`created_at` >= date_add(curdate(),interval -day(curdate()) + 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+SELECT wo.`order_no` `工单编号`,
+case wo.status
+     when 1 then '未阅读'
+     when 2 then '已经阅读'
+     when 3 then '已回复'
+     when 4 then '已关闭'
+     end '工单状态',
+pi.`client_id`  '客户ID',
+wo.`pnos` '运单号',
+case wo.order_type
+          when 1 then '查找运单'
+          when 2 then '加快处理'
+          when 3 then '调查员工'
+          when 4 then '其他'
+          when 5 then '网点信息维护提醒'
+          when 6 then '培训指导'
+          when 7 then '异常业务询问'
+          when 8 then '包裹丢失'
+          when 9 then '包裹破损'
+          when 10 then '货物短少'
+          when 11 then '催单'
+          when 12 then '有发无到'
+          when 13 then '上报包裹不在集包里'
+          when 16 then '漏揽收'
+          when 50 then '虚假撤销'
+          when 17 then '已签收未收到'
+          when 18 then '客户投诉'
+          when 19 then '修改包裹信息'
+          when 20 then '修改 COD 金额'
+          when 21 then '解锁包裹'
+          when 22 then '申请索赔'
+          when 23 then 'MS 问题反馈'
+          when 24 then 'FBI 问题反馈'
+          when 25 then 'KA System 问题反馈'
+          when 26 then 'App 问题反馈'
+          when 27 then 'KIT 问题反馈'
+          when 28 then 'Backyard 问题反馈'
+          when 29 then 'BS/FH 问题反馈'
+          when 30 then '系统建议'
+          when 31 then '申诉罚款'
+          else wo.order_type
+          end  '工单类型',
+wo.`title` `工单标题`,
+wo.`created_at` `工单创建时长`,
+wor.`工单回复时间` `工单回复时间`,
+wo.`created_staff_info_id` `发起人`,
+wo.`closed_at` `工单关闭时间`,
+wor.staff_info_id `回复人`,
+ss1.name `创建网点名称`,
+case
+when ss1.`category` in (1,2,10,13) then 'sp'
+              when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`created_store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`created_store_id`= '12' then 'QA&QC'
+              when wo.`created_store_id`= '18' then 'Flash Home客服中心'
+              when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`created_store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `创建网点/部门 `,
+ss.name `受理网点名称`,
+case when ss.`category` in (1,2,10,13) then 'sp'
+              when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`store_id`= '12' then 'QA&QC'
+              when wo.`store_id`= '18' then 'Flash Home客服中心'
+              when wo.`store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `受理网点/部门 `,
+pi. `last_cn_route_action` `最后一步有效路由`,
+pi.last_route_time `操作时间`,
+pi.last_store_name `操作网点`,
+pi.last_staff_info_id `操作人员`
+
+from `ph_bi`.`work_order` wo
+left join dwm.dwd_ex_ph_parcel_details pi
+on wo.`pnos` =pi.`pno` and  pick_date>=date_sub(curdate(),interval 2 month)
+left join
+    (select order_id,staff_info_id ,max(created_at) `工单回复时间`
+     from `ph_bi`.`work_order_reply`
+     group by 1,2) wor
+on  wor.`order_id`=wo.`id`
+
+left join   `ph_bi`.`sys_store`  ss on ss.`id` =wo.`store_id`
+left join   `ph_bi`.`sys_store`  ss1 on ss1.`id` =wo.`created_store_id`
+where wo.`created_at` >= date_sub(curdate() , interval 31 day);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(swm.created_at) 录入日期
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct if(swm.hr_fix_status = 0, swm.id, null)) 未处理量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(swm.created_at) 录入日期
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct if(swm.hr_fix_status = 0, swm.id, null)) HRBP未处理量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,swm.date_at 违规日期
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+left join ph_backyard.staff_warning_message swm on swm.id = mw.staff_warning_message_id
+left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+#     swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+#     and mw.type_code = 'warning_27'
+    mw.created_at >= '2023-03-01'
+    and mw.created_at < '2023-04-01'
+    and mw.is_delete = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,mw.date_ats 违规日期
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+#     swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+#     and mw.type_code = 'warning_27'
+    mw.created_at >= '2023-03-01'
+    and mw.created_at < '2023-04-01'
+    and mw.is_delete = 0;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        hsi.staff_info_id
+        ,case
+        when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+        when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+        when hsi.`state`=2 then '离职'
+        when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,convert_tz(mw.created_at,'+00:00','+08:00') created_at
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+        ,ROW_NUMBER ()over(partition by hsi.staff_info_id order by mw.created_at ) rn
+        ,count(mw.id) over (partition by hsi.staff_info_id) ct
+    from
+    (
+             select
+                mw.staff_info_id
+            from ph_backyard.message_warning mw
+            where
+                mw.type_code = 'warning_27'
+                and mw.operator_id = 87166
+                and mw.is_delete = 0
+#             and mw.created_at >=convert_tz('2023-04-13','+08:00','+00:00')
+            group by 1
+    )ws
+    join ph_bi.hr_staff_info hsi  on ws.staff_info_id=hsi.staff_info_id
+    left join  ph_backyard.message_warning mw on hsi.staff_info_id =mw.staff_info_id and  mw.is_delete =0
+    left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+    left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+    left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+    where
+        hsi.state <> 2
+)
+
+select 
+    t.staff_info_id 员工id
+    ,t. 在职状态
+    ,t.所属网点
+    ,t.大区
+    ,t.片区
+    ,t.ct 警告次数
+    ,t.created_at 第一次警告信时间
+    ,t.警告原因 第一次警告原因
+    ,t.警告类型 第一次警告类型
+    ,t2.created_at 第二次警告信时间
+    ,t2.警告原因 第二次警告原因
+    ,t2.警告类型 第二次警告类型
+    ,t3.created_at 第三次警告信时间
+    ,t3.警告原因 第三次警告原因
+    ,t3.警告类型 第三次警告类型
+    ,t4.created_at 第四次警告信时间
+    ,t4.警告原因 第四次警告原因
+    ,t4.警告类型 第四次警告类型
+    ,t5.created_at 第五次警告信时间
+    ,t5.警告原因 第五次警告原因
+    ,t5.警告类型 第五次警告类型
+from t 
+left join t t2 on t.staff_info_id=t2.staff_info_id and t2.rn=2
+left join t t3 on t.staff_info_id=t3.staff_info_id and t3.rn=3
+left join t t4 on t.staff_info_id=t4.staff_info_id and t4.rn=4
+left join t t5 on t.staff_info_id=t5.staff_info_id and t5.rn=5
+where
+    t.rn=1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(swm.created_at) 录入日期
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct if(swm.hr_fix_status = 0, swm.id, null)) HRBP未处理量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1
+order by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,mw.date_ats 违规日期
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+#     swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+    mw.created_at >= date_add(curdate(), interval -day(curdate()) + 1 day)
+    and mw.type_code = 'warning_27'
+#     mw.created_at >= '2023-03-01'
+#     and mw.created_at < '2023-04-01'
+    and mw.is_delete = 0;

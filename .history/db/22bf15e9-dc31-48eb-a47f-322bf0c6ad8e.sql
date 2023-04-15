@@ -15390,3 +15390,294 @@ where
 group by 1,3
 order by 1,3
 )tt;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ftr.force_take_photos_type
+from fle_staging.force_take_photo_record ftr
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with pl AS
+(
+    select
+        pl.*
+    from
+    (
+        select
+            pl.pno
+            ,pl.state
+            ,pl.duty_result
+            ,pl.operator_id
+            ,pl.created_at
+            ,pl.updated_at
+            ,pl.source
+            ,row_number()over(partition by pl.pno order by pl.created_at) rn
+        from bi_pro.parcel_lose_task pl
+        where pl.created_at>='2023-02-01'
+        and pl.created_at<'2023-03-01'
+        and pl.source=12
+    )pl where pl.rn=1
+)
+
+select
+pl.pno
+,pl.created_at
+,pr.min_at
+,pr.max_at
+,forceTakePhotoCategory
+from pl
+join fle_staging.parcel_info pi
+on pl.pno=pi.pno and pi.cod_enabled=1
+left join
+(
+    select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+    and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO'
+   -- and pr.pno='TH01033UK8PZ1C'
+)pr on pl.pno=pr.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with pl AS
+(
+    select
+        pl.*
+    from
+    (
+        select
+            pl.pno
+            ,pl.state
+            ,pl.duty_result
+            ,pl.operator_id
+            ,pl.created_at
+            ,pl.updated_at
+            ,pl.source
+            ,row_number()over(partition by pl.pno order by pl.created_at) rn
+        from bi_pro.parcel_lose_task pl
+        where pl.created_at>='2023-02-01'
+        and pl.created_at<'2023-03-01'
+        and pl.source=12
+        and pl.pno = 'TH20013U4VGY5M'
+    )pl where pl.rn=1
+)
+
+select
+pl.pno
+,pl.created_at
+,pr.min_at
+,pr.max_at
+,pr.forceTakePhotoCategory
+from pl
+join fle_staging.parcel_info pi
+on pl.pno=pi.pno and pi.cod_enabled=1
+left join
+(
+    select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+    and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO'
+    and pr.pno='TH20013U4VGY5M'
+)pr on pl.pno=pr.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with pl AS
+(
+    select
+        pl.*
+    from
+    (
+        select
+            pl.pno
+            ,pl.state
+            ,pl.duty_result
+            ,pl.operator_id
+            ,pl.created_at
+            ,pl.updated_at
+            ,pl.source
+            ,row_number()over(partition by pl.pno order by pl.created_at) rn
+        from bi_pro.parcel_lose_task pl
+        where pl.created_at>='2023-02-01'
+        and pl.created_at<'2023-03-01'
+        and pl.source=12
+        and pl.pno = 'TH20013U4VGY5M'
+    )pl where pl.rn=1
+)
+
+select
+pl.pno
+,pl.created_at
+,pr.min_at
+,pr.max_at
+,pr.forceTakePhotoCategory
+from pl
+join fle_staging.parcel_info pi
+on pl.pno=pi.pno and pi.cod_enabled=1
+left join
+(
+    select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+    and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO'
+#     and pr.pno='TH20013U4VGY5M'
+)pr on pl.pno=pr.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with pl AS
+(
+    select
+        pl.*
+    from
+    (
+        select
+            pl.pno
+            ,pl.state
+            ,pl.duty_result
+            ,pl.operator_id
+            ,pl.created_at
+            ,pl.updated_at
+            ,pl.source
+            ,row_number()over(partition by pl.pno order by pl.created_at) rn
+        from bi_pro.parcel_lose_task pl
+        where pl.created_at>='2023-02-01'
+        and pl.created_at<'2023-03-01'
+        and pl.source=12
+#         and pl.pno = 'TH20013U4VGY5M'
+    )pl where pl.rn=1
+)
+
+select
+pl.pno
+,pl.created_at
+,pr.min_at
+,pr.max_at
+,pr.forceTakePhotoCategory
+from pl
+join fle_staging.parcel_info pi
+on pl.pno=pi.pno and pi.cod_enabled=1
+left join
+(
+    select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+    and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO'
+#     and pr.pno='TH20013U4VGY5M'
+)pr on pl.pno=pr.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+    and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO';
+;-- -. . -..- - / . -. - .-. -.--
+with pl AS
+(
+    select
+        pl.*
+    from
+    (
+        select
+            pl.pno
+            ,pl.state
+            ,pl.duty_result
+            ,pl.operator_id
+            ,pl.created_at
+            ,pl.updated_at
+            ,pl.source
+            ,row_number()over(partition by pl.pno order by pl.created_at) rn
+        from bi_pro.parcel_lose_task pl
+        where pl.created_at>='2023-02-01'
+        and pl.created_at<'2023-03-01'
+        and pl.source=12
+#         and pl.pno = 'TH20013U4VGY5M'
+    )pl where pl.rn=1
+)
+
+# select
+#     pl.pno
+#     ,pl.created_at
+#     ,pr.min_at
+#     ,pr.max_at
+#     ,pr.forceTakePhotoCategory
+# from pl
+# join fle_staging.parcel_info pi on pl.pno=pi.pno and pi.cod_enabled=1
+# left join
+# (
+    select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+    and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO';
+;-- -. . -..- - / . -. - .-. -.--
+with pl AS
+(
+    select
+        pl.*
+    from
+    (
+        select
+            pl.pno
+            ,pl.state
+            ,pl.duty_result
+            ,pl.operator_id
+            ,pl.created_at
+            ,pl.updated_at
+            ,pl.source
+            ,row_number()over(partition by pl.pno order by pl.created_at) rn
+        from bi_pro.parcel_lose_task pl
+        where pl.created_at>='2023-04-01'
+#         and pl.created_at<'2023-03-01'
+        and pl.source=12
+#         and pl.pno = 'TH20013U4VGY5M'
+    )pl where pl.rn=1
+)
+
+# select
+#     pl.pno
+#     ,pl.created_at
+#     ,pr.min_at
+#     ,pr.max_at
+#     ,pr.forceTakePhotoCategory
+# from pl
+# join fle_staging.parcel_info pi on pl.pno=pi.pno and pi.cod_enabled=1
+# left join
+# (
+    select
+        pr.pno
+        ,convert_tz(min(pr.routed_at),'+00:00','+07:00') min_at
+        ,convert_tz(max(pr.routed_at),'+00:00','+07:00') max_at
+        ,json_extract(pr.extra_value,'$.forceTakePhotoCategory') forceTakePhotoCategory
+    from rot_pro.parcel_route pr
+    join pl on pr.pno=pl.pno
+    where pr.routed_at>='2023-01-25'
+#     and pr.routed_at<'2023-03-05'
+    and pr.route_action='TAKE_PHOTO';

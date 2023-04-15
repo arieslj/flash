@@ -754,6 +754,51 @@ left join
     ) bef on bef.pno = t.merge_column and bef.rn = 1
 left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
 group by 1
+;
 
-：
 
+
+select
+      pi.pno
+      ,pi.ticket_pickup_store_id
+      ,ss.name
+      ,ss1.name
+      ,ss1.ancestry
+ from ph_staging.parcel_info pi
+ join ph_staging.sys_store ss on pi.ticket_pickup_store_id=ss.id
+ join ph_staging.sys_store ss1 on pi.dst_store_id=ss1.id
+ left join ph_staging.sys_store ss2 on substring_index(ss1.ancestry, '/', 1)=ss2.id
+ where pi.client_id in('AA0131','AA0132')
+ and date(convert_tz(pi.created_at, '+00:00', '+08:00'))>date_sub(current_date,interval 1 day)
+ and date(convert_tz(pi.created_at, '+00:00', '+08:00'))<current_date
+ and ss.category=14
+ and ss2.name ='99 AGS-Mini HUB'
+
+;
+
+select
+    a.日期
+    ,a.揽收网点
+    ,count(distinct if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
+    ,count(distinct if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
+from
+    (
+        select
+            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
+            ,pi.pno
+            ,ss3.name 揽收网点
+            ,pr.next_store_name 揽收网点下一站
+            ,pr.next_store_id
+        from ph_staging.parcel_info pi
+        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
+        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
+        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
+        where
+            pi.created_at >= convert_tz('${date1}', '+08:00', '+00:00')
+            and pi.created_at < convert_tz('${date2}', '+08:00', '+00:00')
+            and ss2.id = 'PH14160302'  -- 99hub
+            and ss3.category = 14 -- PDC
+            and pr.pno is not null
+    ) a
+group by 1,2

@@ -54,7 +54,7 @@ LEFT JOIN
     SELECT *
      FROM
            (
-                 SELECT pct.`pno`
+                 SELECT pct.出勤主管人数`pno`
                                ,pct.`id`
                     ,pct.`finance_updated_at`
                              ,pct.`state`
@@ -367,8 +367,7 @@ select
     a.unload_period
     ,a.submit_store_id
     ,a.hno
-    ,b.area
-    ,b.num
+    ,max(b.num) max_num
 from
     (
         select
@@ -400,11 +399,11 @@ left join
     (
         select
             sh.store_id
-#             ,case  sh.parcel_type
-#                 when 0 then 'A'
-#                 when 1 then 'B'
-#                 when 2 then 'C'
-#             end area
+            ,case  sh.parcel_type
+                when 0 then 'A'
+                when 1 then 'B'
+                when 2 then 'C'
+            end area
             ,sh.unload_period
             ,count(distinct sh.pno) num
         from ph_nbd.suspected_headless_parcel_detail_v1 sh
@@ -412,10 +411,241 @@ left join
             sh.arrival_date = '${date}'
         group by 1,2
     ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-
+group by 1,2,3
 ;
 
 # select * from ph_nbd.suspected_headless_parcel_detail_v1 sh where  sh.store_id = 'PH19280F01' and sh.arrival_date = '2023-03-29'
 #
 # ;
 # select * from ph_staging.parcel_headless ph where date(convert_tz(ph.created_at,'+00:00', '+08:00')) = '2023-04-02' and ph.submit_store_id = 'PH19280F01';
+;
+
+
+
+
+
+
+
+
+
+
+--
+
+select
+    acc.id
+    ,case acc.`channel_type`
+        when 1 then 'APP揽件任务'
+        when 2 then 'APP派件任务'
+        when 3 then 'APP投诉'
+        when 4 then '短信揽件投诉'
+        when 5 then '短信派件投诉'
+        when 6 then '短信妥投投诉'
+        when 7 then 'MS问题记录本'
+        when 8 then '新增处罚记录'
+        when 9 then 'KA投诉'
+        when 10 then '官网投诉'
+        when 12 then 'BS问题记录本'
+     end as '投诉渠道'
+    ,case acc.`complaints_type`
+        when 6 then '服务态度类投诉 1级'
+        when 2 then '虚假揽件改约时间/取消揽件任务 2级'
+        when 1 then '虚假妥投 3级'
+        when 3 then '派件虚假留仓件/问题件 4级'
+        when 7 then '操作规范类投诉 5级'
+        when 5 then '其他 6级'
+        when 4 then '普通客诉 已弃用，仅供展示历史'
+    end as 投诉大类
+    ,case acc.complaints_sub_type
+        when 1 then '业务不熟练'
+        when 2 then '虚假签收'
+        when 3 then '以不礼貌的态度对待客户'
+        when 4   then '揽/派件动作慢'
+        when 5 then '未经客户同意投递他处'
+        when 6   then '未经客户同意改约时间'
+        when 7 then '不接客户电话'
+        when 8   then '包裹丢失 没有数据'
+        when 9 then '改约的时间和客户沟通的时间不一致'
+        when 10   then '未提前电话联系客户'
+        when 11   then '包裹破损 没有数据'
+        when 12   then '未按照改约时间派件'
+        when 13    then '未按订单带包装'
+        when 14   then '不找零钱'
+        when 15    then '客户通话记录内未看到员工电话'
+        when 16    then '未经客户允许取消揽件任务'
+        when 17   then '未给客户回执'
+        when 18   then '拨打电话时间太短，客户来不及接电话'
+        when 19   then '未经客户允许退件'
+        when 20    then '没有上门'
+        when 21    then '其他'
+        when 22   then '未经客户同意改约揽件时间'
+        when 23    then '改约的揽件时间和客户要求的时间不一致'
+        when 24    then '没有按照改约时间揽件'
+        when 25    then '揽件前未提前联系客户'
+        when 26    then '答应客户揽件，但最终没有揽'
+        when 27    then '很晚才打电话联系客户'
+        when 28    then '货物多/体积大，因骑摩托而拒绝上门揽收'
+        when 29    then '因为超过当日截单时间，要求客户取消'
+        when 30    then '声称不是自己负责的区域，要求客户取消'
+        when 31    then '拨打电话时间太短，客户来不及接电话'
+        when 32    then '不接听客户回复的电话'
+        when 33    then '答应客户今天上门，但最终没有揽收'
+        when 34    then '没有上门揽件，也没有打电话联系客户'
+        when 35    then '货物不属于超大件/违禁品'
+        when 36    then '没有收到包裹，且快递员没有联系客户'
+        when 37    then '快递员拒绝上门派送'
+        when 38    then '快递员擅自将包裹放在门口或他处'
+        when 39    then '快递员没有按约定的时间派送'
+        when 40    then '代替客户签收包裹'
+        when   41   then '快说话不礼貌/没有礼貌/不愿意服务'
+        when 42    then '说话不礼貌/没有礼貌/不愿意服务'
+        when   43    then '快递员抛包裹'
+        when   44    then '报复/骚扰客户'
+        when 45   then '快递员收错COD金额'
+        when   46   then '虚假妥投'
+        when   47    then '派件虚假留仓件/问题件'
+        when 48   then '虚假揽件改约时间/取消揽件任务'
+        when   49   then '抛客户包裹'
+        when 50    then '录入客户信息不正确'
+        when 51    then '送货前未电话联系'
+        when 52    then '未在约定时间上门'
+        when   53    then '上门前不电话联系'
+        when   54    then '以不礼貌的态度对待客户'
+        when   55    then '录入客户信息不正确'
+        when   56    then '与客户发生肢体接触'
+        when   57    then '辱骂客户'
+        when   58    then '威胁客户'
+        when   59    then '上门揽件慢'
+        when   60    then '快递员拒绝上门揽件'
+        when 61    then '未经客户同意标记收件人拒收'
+        when 62    then '未按照系统地址送货导致收件人拒收'
+        when 63 then '情况不属实，快递员虚假标记'
+        when 64 then '情况不属实，快递员诱导客户改约时间'
+        when 65 then '包裹长时间未派送'
+        when 66 then '未经同意拒收包裹'
+        when 67 then '已交费仍索要COD'
+        when 68 then '投递时要求开箱'
+        when 69 then '不当场扫描揽收'
+        when 70 then '揽派件速度慢'
+    end as '投诉原因'
+    ,case acc.`qaqc_callback_result`
+        when 0 then '待回访'
+        when 1 then '多次未联系上客户'
+        when 2 then '误投诉'
+        when 3 then '真实投诉，后接受道歉'
+        when 4 then '真实投诉，后不接受道歉'
+        when 5 then '真实投诉，后受到骚扰/威胁'
+        when 6 then '没有快递员联系客户道歉'
+        when 7 then '客户投诉回访结果'
+        when 8 then '确认网点已联系客户道歉'
+    end as '回访结果'
+    ,case acc.callback_state
+        when 0 then '待网点处理'
+        when 1 then '待回访'
+        when 2 then '已回访'
+        when 3 then '沟通中'
+        when 4 then '多次未联系上客户'
+        when 20 then '未联系上'
+    end 回访处理状态
+from ph_bi.abnormal_customer_complaint acc
+left join ph_bi.abnormal_message am on acc.abnormal_message_id = am.id
+left join ph_staging.parcel_info pi on pi.pno = am.merge_column
+left join ph_staging.ticket_pickup tp on tp.id = am.merge_column
+join dwm.dwd_dim_bigClient bc on bc.client_id = coalesce(pi.client_id, tp.client_id) and bc.client_name = 'tiktok'
+where
+    acc.created_at >= '2023-03-01'
+
+
+
+;
+
+
+SELECT wo.`order_no` `工单编号`,
+case wo.status
+     when 1 then '未阅读'
+     when 2 then '已经阅读'
+     when 3 then '已回复'
+     when 4 then '已关闭'
+     end '工单状态',
+pi.`client_id`  '客户ID',
+wo.`pnos` '运单号',
+case wo.order_type
+          when 1 then '查找运单'
+          when 2 then '加快处理'
+          when 3 then '调查员工'
+          when 4 then '其他'
+          when 5 then '网点信息维护提醒'
+          when 6 then '培训指导'
+          when 7 then '异常业务询问'
+          when 8 then '包裹丢失'
+          when 9 then '包裹破损'
+          when 10 then '货物短少'
+          when 11 then '催单'
+          when 12 then '有发无到'
+          when 13 then '上报包裹不在集包里'
+          when 16 then '漏揽收'
+          when 50 then '虚假撤销'
+          when 17 then '已签收未收到'
+          when 18 then '客户投诉'
+          when 19 then '修改包裹信息'
+          when 20 then '修改 COD 金额'
+          when 21 then '解锁包裹'
+          when 22 then '申请索赔'
+          when 23 then 'MS 问题反馈'
+          when 24 then 'FBI 问题反馈'
+          when 25 then 'KA System 问题反馈'
+          when 26 then 'App 问题反馈'
+          when 27 then 'KIT 问题反馈'
+          when 28 then 'Backyard 问题反馈'
+          when 29 then 'BS/FH 问题反馈'
+          when 30 then '系统建议'
+          when 31 then '申诉罚款'
+          else wo.order_type
+          end  '工单类型',
+wo.`title` `工单标题`,
+wo.`created_at` `工单创建时长`,
+wor.`工单回复时间` `工单回复时间`,
+wo.`created_staff_info_id` `发起人`,
+wo.`closed_at` `工单关闭时间`,
+wor.staff_info_id `回复人`,
+ss1.name `创建网点名称`,
+case
+when ss1.`category` in (1,2,10,13) then 'sp'
+              when ss1.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss1.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss1.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`created_store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`created_store_id`= '12' then 'QA&QC'
+              when wo.`created_store_id`= '18' then 'Flash Home客服中心'
+              when wo.`created_store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`created_store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `创建网点/部门 `,
+ss.name `受理网点名称`,
+case when ss.`category` in (1,2,10,13) then 'sp'
+              when ss.`category` in (8,9,12) then 'HUB/BHUB/OS'
+              when ss.`category` IN (4,5,7) then 'SHOP/ushop'
+              when ss.`category` IN (6)  then 'FH'when wo.`store_id` = '22' then 'kam客服中心'
+              when wo.`store_id` in (3,'customer_manger') then  '总部客服中心'
+              when wo.`store_id`= '12' then 'QA&QC'
+              when wo.`store_id`= '18' then 'Flash Home客服中心'
+              when wo.`store_id` = '22' and wo.`client_id` IN ('AA0302','AA0413','AA0472','AA0545','BF9675','BF9690','CA5901' ) then 'FFM'
+              when wo.`store_id` = '20' then 'PRODUCT'
+              else '客服中心'
+              end `受理网点/部门 `,
+pi. `last_cn_route_action` `最后一步有效路由`,
+pi.last_route_time `操作时间`,
+pi.last_store_name `操作网点`,
+pi.last_staff_info_id `操作人员`
+
+from `ph_bi`.`work_order` wo
+left join dwm.dwd_ex_ph_parcel_details pi
+on wo.`pnos` =pi.`pno` and  pick_date>=date_sub(curdate(),interval 2 month)
+left join
+    (select order_id,staff_info_id ,max(created_at) `工单回复时间`
+     from `ph_bi`.`work_order_reply`
+     group by 1,2) wor
+on  wor.`order_id`=wo.`id`
+
+left join   `ph_bi`.`sys_store`  ss on ss.`id` =wo.`store_id`
+left join   `ph_bi`.`sys_store`  ss1 on ss1.`id` =wo.`created_store_id`
+where wo.`created_at` >= date_sub(curdate() , interval 31 day)
