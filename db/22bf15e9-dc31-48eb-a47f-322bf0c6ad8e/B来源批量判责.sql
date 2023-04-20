@@ -14,6 +14,7 @@ with t1 as
 )
 ,t as
 (
+
     select
         wo.id
         ,wo.loseparcel_task_id
@@ -21,7 +22,7 @@ with t1 as
         ,wor.content wor_content
         ,woi.object_key
         ,row_number() over (partition by wo.loseparcel_task_id order by wo.created_at) r1
-        ,row_number() over (partition by wo.id order by wor.created_at desc ) r2
+        ,dense_rank() over (partition by wo.loseparcel_task_id order by wor.created_at) r2
     from bi_pro.work_order wo
     join t1 on t1.id = wo.loseparcel_task_id
     left join bi_pro.work_order_reply wor on wor.order_id = wo.id
@@ -155,19 +156,27 @@ select
     ,if(noduty.pno is null, '否', '是') 是否无需追责过
     ,pi.dst_phone  收件人电话
     ,num.num 创建工单次数
-    ,1st.order_creat_at 第一次创建工单时间
+    ,fo.order_creat_at 第一次创建工单时间
     ,fir.created_at 第一次全组织发工单时间
     ,lst.content 最后一次全组织工单回复内容
     ,1st.wor_content 第一次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',1st.object_key) 第一次回复附件
+    ,1st.extra_file 第一次回复附件
     ,2nd.wor_content 第二次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',2nd.object_key) 第二次回复附件
+    ,2nd.extra_file 第二次回复附件
     ,3rd.wor_content 第三次回复内容
-    ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',3rd.object_key) 第三次回复附件
+    ,3rd.extra_file 第三次回复附件
     ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa1.object_key) 签收凭证
     ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',sa2.object_key) 其他凭证
-from t1
-left join fle_staging.parcel_info pi on pi.pno = t1.pno
+from fle_staging.parcel_info pi
+join t1 on pi.pno = t1.pno
+left join
+    (
+        select
+            t.loseparcel_task_id
+            ,min(t.order_creat_at) order_creat_at
+        from t
+        group by 1
+    ) fo on fo.loseparcel_task_id = t1.id
 left join fle_staging.sys_store dst_ss on dst_ss.id = pi.dst_store_id
 left join fle_staging.sys_store del_ss on del_ss.id = pi.ticket_delivery_store_id
 left join fle_staging.sys_store ss_valid on ss_valid.id = t1.last_valid_store_id
@@ -236,29 +245,38 @@ left join
 left join
     (
         select
-            *
+            t.loseparcel_task_id
+            ,t.id
+            ,t.wor_content
+            ,group_concat(concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',t.object_key)) extra_file
         from t
         where
-            t.r1 = 1
-            and t.r2 = 1
+            t.r2 = 1
+        group by 1
     ) 1st on 1st.loseparcel_task_id = t1.id
 left join
     (
         select
-            *
+            t.loseparcel_task_id
+            ,t.id
+            ,t.wor_content
+            ,group_concat(concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',t.object_key)) extra_file
         from t
         where
-            t.r2 = 1
-            and t.r1 = 2
+            t.r2 = 2
+        group by 1
     ) 2nd on 2nd.loseparcel_task_id = t1.id
 left join
     (
         select
-            *
+            t.loseparcel_task_id
+            ,t.id
+            ,t.wor_content
+            ,group_concat(concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',t.object_key)) extra_file
         from t
         where
-            t.r2 = 1
-            and t.r1 = 3
+            t.r2 = 2
+        group by 1
     ) 3rd on 3rd.loseparcel_task_id = t1.id
 left join t2 fir on fir.pnos = t1.pno and fir.rn = 1
 left join
@@ -278,6 +296,10 @@ left join
         select
             plt2.pno
         from bi_pro.parcel_lose_task plt2
+        join
+            (
+                select t1.pno from t1 group by 1
+            )t1 on t1.pno = plt2.pno
         where
             plt2.state = 5
             and plt2.source = 2
@@ -285,3 +307,7 @@ left join
     ) noduty on noduty.pno = t1.pno
 left join fle_staging.sys_attachment sa1 on sa1.oss_bucket_key = t1.pno and sa1.oss_bucket_type = 'DELIVERY_CONFIRM'
 left join fle_staging.sys_attachment sa2 on sa2.oss_bucket_key = t1.pno and sa2.oss_bucket_type = 'DELIVERY_CONFIRM_OTHER'
+
+
+;
+

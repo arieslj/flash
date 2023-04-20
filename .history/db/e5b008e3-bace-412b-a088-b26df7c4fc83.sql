@@ -1,2008 +1,4 @@
 select
-    tdm.*
-from ph_staging.ticket_delivery_marker tdm
-left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
-where
-    td.staff_info_id = '146865'
-    and tdm.created_at > '2023-03-06 16:00:00'
-    and tdm.created_at < '2023-03-07 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    tdm.*
-    ,td.pno
-from ph_staging.ticket_delivery_marker tdm
-left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
-where
-    td.staff_info_id = '146865'
-    and tdm.created_at > '2023-03-06 16:00:00'
-    and tdm.created_at < '2023-03-07 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    tdm.*
-    ,td.pno
-from ph_staging.ticket_delivery_marker tdm
-left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
-where
-    td.staff_info_id = '146865'
-    and tdm.created_at > '2023-03-07 16:00:00'
-    and tdm.created_at < '2023-03-08 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    tdm.*
-    ,td.pno
-from ph_staging.ticket_delivery_marker tdm
-left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
-where
-    td.staff_info_id = '143836'
-    and tdm.created_at > '2023-03-07 16:00:00'
-    and tdm.created_at < '2023-03-08 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    tdm.marker_id
-    ,td.delivery_at 改约时间
-    ,td.pno
-    ,convert_tz(tdm.created_at, '+00:00', '+07:00') 标记时间
-from ph_staging.ticket_delivery_marker tdm
-left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
-where
-    td.staff_info_id = '143836'
-    and tdm.created_at > '2023-03-06 16:00:00'
-    and tdm.created_at < '2023-03-07 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case tdm.marker_id # 标记ID
-         when 1 then '客户不在家/电话无人接听'
-         when 2 then '收件人拒收'
-         when 3 then '快件分错网点'
-         when 4 then '外包装破损'
-         when 5 then '货物破损'
-         when 6 then '货物短少'
-         when 7 then '货物丢失'
-         when 8 then '电话联系不上'
-         when 9 then '客户改约时间'
-         when 10 then '客户不在'
-         when 11 then '客户取消任务'
-         when 12 then '无人签收'
-         when 13 then '客户周末或假期不收货'
-         when 14 then '客户改约时间'
-         when 15 then '当日运力不足，无法派送'
-         when 16 then '联系不上收件人'
-         when 17 then '收件人拒收'
-         when 18 then '快件分错网点'
-         when 19 then '外包装破损'
-         when 20 then '货物破损'
-         when 21 then '货物短少'
-         when 22 then '货物丢失'
-         when 23 then '收件人/地址不清晰或不正确'
-         when 24 then '收件地址已废弃或不存在'
-         when 25 then '收件人电话号码错误'
-         when 26 then 'cod金额不正确'
-         when 27 then '无实际包裹'
-         when 28 then '已妥投未交接'
-         when 29 then '收件人电话号码是空号'
-         when 30 then '快件分错网点-地址正确'
-         when 31 then '快件分错网点-地址错误'
-         when 32 then '禁运品'
-         when 33 then '严重破损（丢弃）'
-         when 34 then '退件两次尝试派送失败'
-         when 35 then '不能打开locker'
-         when 36 then 'locker不能使用'
-         when 37 then '该地址找不到lockerstation'
-         when 38 then '一票多件'
-         when 39 then '多次尝试派件失败'
-         when 40 then '客户不在家/电话无人接听'
-         when 41 then '错过班车时间'
-         when 42 then '目的地是偏远地区,留仓待次日派送'
-         when 43 then '目的地是岛屿,留仓待次日派送'
-         when 44 then '企业/机构当天已下班'
-         when 45 then '子母件包裹未全部到达网点'
-         when 46 then '不可抗力原因留仓(台风)'
-         when 47 then '虚假包裹'
-         when 50 then '客户取消寄件'
-         when 51 then '信息录入错误'
-         when 52 then '客户取消寄件'
-         when 69 then '禁运品'
-         when 70 then '客户改约时间'
-         when 71 then '当日运力不足，无法派送'
-         when 72 then '客户周末或假期不收货'
-         when 73 then '收件人/地址不清晰或不正确'
-         when 74 then '收件地址已废弃或不存在'
-         when 75 then '收件人电话号码错误'
-         when 76 then 'cod金额不正确'
-         when 77 then '企业/机构当天已下班'
-         when 78 then '收件人电话号码是空号'
-         when 79 then '快件分错网点-地址错误'
-         when 80 then '客户取消任务'
-         when 81 then '重复下单'
-         when 82 then '已完成揽件'
-         when 83 then '联系不上客户'
-         when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-         when 85 then '寄件人电话号码是空号'
-         when 86 then '包裹不符合揽收条件超大件'
-         when 87 then '包裹不符合揽收条件违禁品'
-         when 88 then '寄件人地址为岛屿'
-         when 89 then '运力短缺，跟客户协商推迟揽收'
-         when 90 then '包裹未准备好推迟揽收'
-         when 91 then '包裹包装不符合运输标准'
-         when 92 then '无交接文件/交接文件不清晰'
-         when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-         when 94 then '无包裹/取消寄件'
-         when 95 then '车辆/人力短缺推迟揽收'
-         when 96 then '遗漏揽收'
-         when 97 then '子母件(一个单号多个包裹)'
-         when 98 then '地址错误addresserror'
-         when 99 then '包裹不符合揽收条件：超大件'
-         when 100 then '包裹不符合揽收条件：违禁品'
-         when 101 then '包裹包装不符合运输标准'
-         when 102 then '包裹未准备好'
-         when 103 then '运力短缺，跟客户协商推迟揽收'
-         when 104 then '子母件(一个单号多个包裹)'
-         when 105 then '破损包裹'
-         when 106 then '空包裹'
-         when 107 then '不能打开locker(密码错误)'
-         when 108 then 'locker不能使用'
-         when 109 then 'locker找不到'
-         when 110 then '运单号与实际包裹的单号不一致'
-         when 111 then 'box客户取消任务'
-         when 112 then '不能打开locker(密码错误)'
-         when 113 then 'locker不能使用'
-         when 114 then 'locker找不到'
-         when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-         when 116 then '客户仓库关闭'
-         when 117 then '客户仓库关闭'
-        end 标记
-    ,td.delivery_at 改约后时间
-    ,td.pno
-    ,convert_tz(tdm.created_at, '+00:00', '+07:00') 标记时间
-from ph_staging.ticket_delivery_marker tdm
-left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
-where
-    td.staff_info_id = '143836'
-    and tdm.created_at > '2023-03-06 16:00:00'
-    and tdm.created_at < '2023-03-07 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case tdm.marker_id # 标记ID
-         when 1 then '客户不在家/电话无人接听'
-         when 2 then '收件人拒收'
-         when 3 then '快件分错网点'
-         when 4 then '外包装破损'
-         when 5 then '货物破损'
-         when 6 then '货物短少'
-         when 7 then '货物丢失'
-         when 8 then '电话联系不上'
-         when 9 then '客户改约时间'
-         when 10 then '客户不在'
-         when 11 then '客户取消任务'
-         when 12 then '无人签收'
-         when 13 then '客户周末或假期不收货'
-         when 14 then '客户改约时间'
-         when 15 then '当日运力不足，无法派送'
-         when 16 then '联系不上收件人'
-         when 17 then '收件人拒收'
-         when 18 then '快件分错网点'
-         when 19 then '外包装破损'
-         when 20 then '货物破损'
-         when 21 then '货物短少'
-         when 22 then '货物丢失'
-         when 23 then '收件人/地址不清晰或不正确'
-         when 24 then '收件地址已废弃或不存在'
-         when 25 then '收件人电话号码错误'
-         when 26 then 'cod金额不正确'
-         when 27 then '无实际包裹'
-         when 28 then '已妥投未交接'
-         when 29 then '收件人电话号码是空号'
-         when 30 then '快件分错网点-地址正确'
-         when 31 then '快件分错网点-地址错误'
-         when 32 then '禁运品'
-         when 33 then '严重破损（丢弃）'
-         when 34 then '退件两次尝试派送失败'
-         when 35 then '不能打开locker'
-         when 36 then 'locker不能使用'
-         when 37 then '该地址找不到lockerstation'
-         when 38 then '一票多件'
-         when 39 then '多次尝试派件失败'
-         when 40 then '客户不在家/电话无人接听'
-         when 41 then '错过班车时间'
-         when 42 then '目的地是偏远地区,留仓待次日派送'
-         when 43 then '目的地是岛屿,留仓待次日派送'
-         when 44 then '企业/机构当天已下班'
-         when 45 then '子母件包裹未全部到达网点'
-         when 46 then '不可抗力原因留仓(台风)'
-         when 47 then '虚假包裹'
-         when 50 then '客户取消寄件'
-         when 51 then '信息录入错误'
-         when 52 then '客户取消寄件'
-         when 69 then '禁运品'
-         when 70 then '客户改约时间'
-         when 71 then '当日运力不足，无法派送'
-         when 72 then '客户周末或假期不收货'
-         when 73 then '收件人/地址不清晰或不正确'
-         when 74 then '收件地址已废弃或不存在'
-         when 75 then '收件人电话号码错误'
-         when 76 then 'cod金额不正确'
-         when 77 then '企业/机构当天已下班'
-         when 78 then '收件人电话号码是空号'
-         when 79 then '快件分错网点-地址错误'
-         when 80 then '客户取消任务'
-         when 81 then '重复下单'
-         when 82 then '已完成揽件'
-         when 83 then '联系不上客户'
-         when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-         when 85 then '寄件人电话号码是空号'
-         when 86 then '包裹不符合揽收条件超大件'
-         when 87 then '包裹不符合揽收条件违禁品'
-         when 88 then '寄件人地址为岛屿'
-         when 89 then '运力短缺，跟客户协商推迟揽收'
-         when 90 then '包裹未准备好推迟揽收'
-         when 91 then '包裹包装不符合运输标准'
-         when 92 then '无交接文件/交接文件不清晰'
-         when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-         when 94 then '无包裹/取消寄件'
-         when 95 then '车辆/人力短缺推迟揽收'
-         when 96 then '遗漏揽收'
-         when 97 then '子母件(一个单号多个包裹)'
-         when 98 then '地址错误addresserror'
-         when 99 then '包裹不符合揽收条件：超大件'
-         when 100 then '包裹不符合揽收条件：违禁品'
-         when 101 then '包裹包装不符合运输标准'
-         when 102 then '包裹未准备好'
-         when 103 then '运力短缺，跟客户协商推迟揽收'
-         when 104 then '子母件(一个单号多个包裹)'
-         when 105 then '破损包裹'
-         when 106 then '空包裹'
-         when 107 then '不能打开locker(密码错误)'
-         when 108 then 'locker不能使用'
-         when 109 then 'locker找不到'
-         when 110 then '运单号与实际包裹的单号不一致'
-         when 111 then 'box客户取消任务'
-         when 112 then '不能打开locker(密码错误)'
-         when 113 then 'locker不能使用'
-         when 114 then 'locker找不到'
-         when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-         when 116 then '客户仓库关闭'
-         when 117 then '客户仓库关闭'
-        end 标记
-    ,tdm.desired_at 改约后时间
-    ,td.pno
-    ,convert_tz(tdm.created_at, '+00:00', '+07:00') 标记时间
-from ph_staging.ticket_delivery_marker tdm
-left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
-where
-    td.staff_info_id = '143836'
-    and tdm.created_at > '2023-03-06 16:00:00'
-    and tdm.created_at < '2023-03-07 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    ce.*
-from ph_drds.courier_equipment ce
-where
-    ce.created_at >= '2023-03-01 00:00:00'
-    and ce.created_at < '2023-03-09 00:00:00'
-    and ce.staff_info_id in ('146865','143836');
-;-- -. . -..- - / . -. - .-. -.--
-select ce.*
-from ph_drds.courier_equipment ce
-where ce.created_at >= '2023-01-01 00:00:00'
-  and ce.created_at < '2023-03-09 00:00:00'
-  and ce.staff_info_id in ('146865', '143836');
-;-- -. . -..- - / . -. - .-. -.--
-select *
-from ph_staging.customer_group cg
-where cg.id = 1;
-;-- -. . -..- - / . -. - .-. -.--
-select *
-from (select pr.pno
-           , pr.dst_name
-           , CONCAT('`', pr.dst_phone)
-           , pr.client_id
-           , date (pr.标记时间) 标记日期
-   , pr.标记时间
-   , case when hour(pr.标记时间)>= 8 and hour(pr.标记时间)<10 then '8点-10点前'
-          when hour(pr.标记时间)>= 10 and hour(pr.标记时间)<12 then '10点-12点前'
-          when hour(pr.标记时间)>= 12 and hour(pr.标记时间)<14 then '12点-14点前'
-          when hour(pr.标记时间)>= 14 and hour(pr.标记时间)<16 then '14点-16点前'
-         when hour(pr.标记时间)>= 16 and hour(pr.标记时间)<18 then '16点-18点前'
-         when hour(pr.标记时间)>= 18 and hour(pr.标记时间)<20 then '18点-20点前'
-         when hour(pr.标记时间)>= 20 and hour(pr.标记时间)<22 then '20点-22点前'
-         when hour(pr.标记时间)>= 22 and hour(pr.标记时间)<24 then '22点-24点前'
-         when hour(pr.标记时间)>= 0 and hour(pr.标记时间)<2 then '0点-2点前'
-         when hour(pr.标记时间)>= 2 and hour(pr.标记时间)<4 then '2点-4点前'
-         when hour(pr.标记时间)>= 4 and hour(pr.标记时间)<6 then '4点-6点前'
-          when hour(pr.标记时间)>= 6 and hour(pr.标记时间)<8 then '6点-8点前'
-        end as '标记时间段'
-         ,prpf.电话时间 首次电话时间
-         ,prp.电话时间
-         ,prj.交接扫描时间
-         ,ifnull(timestampdiff(second,prp.电话时间,pr.标记时间),0) 电话到标记时间差
-         ,ifnull(timestampdiff(second,prpf.电话时间,pr.标记时间),0) 首次电话到标记时间差
-          ,ifnull(timestampdiff(second,prj.交接扫描时间,pr.标记时间),0) 交接到标记时间差
-         ,CASE di.rejection_category
-         when 1 then '未购买商品'
-         WHEN 2 then '商品不满意'
-         WHEN 3 then '不想买了'
-         WHEN 4 then '物流不满意'
-         WHEN 5 then '理赔不满意'
-         WHEN 6 then '外包装破损'
-         WHEN 7 then '卖家问题拒收'
-         WHEN 8 then '包裹破损'
-         WHEN 9 then '包裹短少'
-         WHEN 10 then '收件人不接受理赔(废弃)'
-         WHEN 11 then '其中'
-         end as '三级子原因'
-         ,pr.标记类型
-         ,pr.拒收类型
-         ,pr.是否COD
-         ,pr.网点名称
-         ,pr.网点ID
-         ,pr.`大区`
-         ,pr.`片区`
-         ,pr.网点类型
-         ,pr.标记员工ID
-         ,hjt.job_name as '快递员职位'
-         ,pr.mark_lat
-         ,pr.mark_lng
-         ,prpf.call_lat first_call_lat
-         ,prpf.call_lng first_call_lng
-         ,prp.call_lat call_lat
-         ,prp.call_lng call_lng
-         ,pr.store_lat
-         ,pr.store_lng
-         ,prpf.callDuration
-         ,ifnull(prpf.callDuration,0) '第一次通话时长'
-         ,ifnull(prp.callDuration,0) '离标记最近的通话的时长'
-         ,round(st_distance_sphere(point(prpf.call_lng,prpf.call_lat), point(pr.store_lng,pr.store_lat)),0) '第一次通话时距离'
-         ,round(st_distance_sphere(point(prp.call_lng,prp.call_lat), point(pr.store_lng,pr.store_lat)),0) '离标记最近的通话时的距离'
-         ,round(st_distance_sphere(point(pr.mark_lng,pr.mark_lat), point(pr.store_lng,pr.store_lat)),0) '标记时离网点的距离'
-         ,rank() over(partition by pr.pno order by ifnull(timestampdiff(second,prp.电话时间,pr.标记时间),0)) rk
-         ,rank() over(partition by pr.pno order by ifnull(timestampdiff(second,prpf.电话时间,pr.标记时间),0) desc) rkf
-         ,rank() over(partition by pr.pno order by ifnull(timestampdiff(second,prj.交接扫描时间,pr.标记时间),0) desc)rkj
-         ,min(pr_phone.电话时间)  离交接时间最近一次打电话的时间
-         ,ifnull(timestampdiff(second,prj.交接扫描时间,min(pr_phone.电话时间)),0) 交接时间和最近一次电话的时间差
-         -- ,case when dy.pno is not null then '延误' else '非延误' end 是否延误判责
-     from
-         (
-          select
-          pr.pno pno,pi.dst_name,pi.dst_phone
-          ,pi.client_id
-          ,convert_tz(pr.routed_at,'+00:00','+08:00') 标记时间
-          ,case when pr.marker_category in (2,17) then '客户拒收'
-                when pr.marker_category in (9,14,70) then '客户改约时间'
-                else '异常情况' end 标记类型
-          ,case when json_extract(pr.extra_value, '$.rejectionModeCategory') = 1 then '当面拒收'
-                when json_extract(pr.extra_value, '$.rejectionModeCategory') = 2 then '电话拒收'
-                else '客户改约时间' end 拒收类型
-          ,pr.store_id 网点ID
-          ,case when pi.cod_enabled = 1 then 'COD' else '非COD' end 是否COD
-          ,ss.name 网点名称
-          ,case when pr.store_category = 1  then 'SP'
-             when pr.store_category = 10 then 'BDC'
-             else 'other' end 网点类型
-          ,pr.staff_info_id 标记员工ID
-          ,json_extract(pr.extra_value, '$.lat') mark_lat
-          ,json_extract(pr.extra_value, '$.lng') mark_lng
-          ,ss.lat store_lat
-          ,ss.lng store_lng
-          ,ss.province_code
-          ,ss.city_code
-          ,ss.district_code
-          ,mr.`name` '大区',mp.`name` '片区'
-          ,row_number() over(partition by pr.pno order by pr.routed_at ) rk
-          from `ph_staging`.parcel_route pr
-          join `ph_staging`.sys_store ss on pr.store_id = ss.id
-          left join `ph_staging`.parcel_info pi  on pr.pno = pi.pno
-            LEFT JOIN `ph_staging`.`sys_manage_region` mr on mr.`id` =ss.`manage_region`
-                LEFT JOIN `ph_staging`.`sys_manage_piece` mp on mp.`id` =ss.`manage_piece`
-          where 1 = 1
-          and pr.marker_category in (2,17,9,14,70)
-          and pr.route_action = 'DELIVERY_MARKER'
-          and pr.routed_at >= convert_tz(date_sub(CURRENT_DATE ,interval 1 day),'+08:00','+00:00')
-          and pr.routed_at < convert_tz(CURRENT_DATE,'+08:00','+00:00')
-          and pi.created_at >= convert_tz(date_sub(CURRENT_DATE ,interval 30 day),'+08:00','+00:00')
-
-         ) pr
-         LEFT JOIN `ph_bi`.hr_staff_info hsi on hsi.staff_info_id  =pr.标记员工ID
-         LEFT JOIN ph_bi.hr_job_title hjt on hsi.job_title =hjt.id
-         left join
-
-         (
-          select
-          pr.pno pno
-          ,convert_tz(pr.routed_at,'+00:00','+08:00') 电话时间
-          ,pr.store_id 网点ID
-          ,pr.staff_info_id 标记员工ID
-          ,json_extract(pr.extra_value, '$.lat') call_lat
-          ,json_extract(pr.extra_value, '$.lng') call_lng
-          ,json_extract(pr.extra_value, '$.callDuration') callDuration
-          from `ph_staging`.parcel_route pr
-          where 1 = 1
-          and pr.route_action in('PHONE','INCOMING_CALL') -- DELIVERY_TICKET_CREATION_SCAN
-          and pr.routed_at >= convert_tz(date_sub(CURRENT_DATE ,interval 1 day),'+08:00','+00:00')
-          and pr.routed_at <= convert_tz(CURRENT_DATE,'+08:00','+00:00')
-         ) prp
-         on pr.pno = prp.pno
-         and prp.电话时间 < pr.标记时间
-         and date(prp.电话时间) = date(pr.标记时间)
-
-         left join
-
-         (
-          select
-          pr.pno pno
-          ,convert_tz(pr.routed_at,'+00:00','+08:00') 电话时间
-          ,pr.store_id 网点ID
-          ,pr.staff_info_id 标记员工ID
-          ,json_extract(pr.extra_value, '$.lat') call_lat
-          ,json_extract(pr.extra_value, '$.lng') call_lng
-          ,json_extract(pr.extra_value, '$.callDuration') callDuration
-          from `ph_staging`.parcel_route pr
-          where 1 = 1
-          and pr.route_action in('PHONE','INCOMING_CALL')
-          and pr.routed_at >= convert_tz(date_sub(CURRENT_DATE ,interval 1 day),'+08:00','+00:00')
-          and pr.routed_at <= convert_tz(CURRENT_DATE,'+08:00','+00:00')
-         ) prpf
-         on pr.pno = prpf.pno
-         and prpf.电话时间 < pr.标记时间
-         and date(prpf.电话时间) = date(pr.标记时间)
-
-         LEFT JOIN
-         (
-             select pr.pno,convert_tz(pr.routed_at,'+00:00','+08:00') '交接扫描时间'
-          from `ph_staging`.parcel_route pr
-          where 1 = 1
-          and pr.route_action in('DELIVERY_TICKET_CREATION_SCAN')
-          and pr.routed_at >= convert_tz(date_sub(CURRENT_DATE ,interval 1 day),'+08:00','+00:00')
-          and pr.routed_at <= convert_tz(CURRENT_DATE,'+08:00','+00:00')
-            )prj on prj.pno=pr.pno
-
-        -- 新增加部分
-        left join        (
-          select
-          pr.pno pno
-          ,convert_tz(pr.routed_at,'+00:00','+08:00') 电话时间
-          ,pr.store_id 网点ID
-          ,pr.staff_info_id 标记员工ID
-          ,json_extract(pr.extra_value, '$.lat') call_lat
-          ,json_extract(pr.extra_value, '$.lng') call_lng
-          ,json_extract(pr.extra_value, '$.callDuration') callDuration
-          from `ph_staging`.parcel_route pr
-          where 1 = 1
-          and pr.route_action in('PHONE','INCOMING_CALL')
-          and pr.routed_at >= convert_tz(date_sub(CURRENT_DATE ,interval 1 day),'+08:00','+00:00')
-          and pr.routed_at <= convert_tz(CURRENT_DATE,'+08:00','+00:00')
-         ) pr_phone
-         on pr.pno = pr_phone.pno
-         and pr_phone.电话时间 >= prj.交接扫描时间
-
-        -- --
-
-            LEFT JOIN `ph_staging`.diff_info di on di.pno =pr.pno
-         where pr.rk = 1 -- AND prp.标记员工ID=pr.标记员工ID -- AND date(pr.标记时间)  date(pr.交接扫描时间)
-          group by 1,2,3,4,5,6,7,8,9,10,11,12
-) tt
-where 1=1
-    and tt.rk = 1
-    and tt.rkf = 1
-    AND tt.rkj=1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-                    pcd.pno
-                    ,ss.name
-                    ,ss1.name name1
-                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
-                from ph_staging.parcel_change_detail pcd
-                left join ph_bi.sys_store ss on ss.id=pcd.old_value
-                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
-                where
-                    pcd.created_at>=CURRENT_DATE()-interval 30 day
-                    and pcd.field_name = 'dst_store_id';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        di.pno
-    from ph_staging.diff_info di
-    where
-        di.created_at < date_sub(curdate(), interval 8 hour)
-        and di.created_at >= date_sub(curdate(), interval 32 hour)
-        and di.diff_marker_category in (30,31)
-    group by 1
-)
-
-select
-    a.pno
-    ,di.num '上报错分次数'
-    ,ss.name '妥投网点'
-    ,pcd. '初始目的地网点/修改信息网点1'
-    ,pcd.'修改后目的地网点1'
-    ,pcd.'修改信息网点2'
-    ,pcd.'修改后目的地网点2'
-    ,pcd.'修改信息网点3'
-    ,pcd.'修改后目的地网点3'
-    ,pcd.'修改信息网点4'
-    ,pcd.'修改后目的地网点4'
-    ,pcd.'修改信息网点5'
-    ,pcd.'修改后目的地网点5'
-    ,pcd.'修改信息网点6'
-    ,pcd.'修改后目的地网点6'
-    ,pcd.'修改信息网点7'
-    ,pcd.'修改后目的地网点7'
-    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
-    ,a.dst_postal_code '最终邮编'
-    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
-    ,case
-        when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
-        when pcd1.old_value is null then 'HUB错分'
-        when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
-    end '责任归属'
-    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
-    ,a.dst_detail_address '最终详细地址'
-from ph_staging.parcel_info a
-join t on a.pno = t.pno
-left join ph_bi.sys_store ss on a.ticket_delivery_store_id=ss.id
-left join
-    (
-        select
-            pcd.pno
-            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
-            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
-            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
-            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
-            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
-            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
-            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
-            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
-            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
-            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
-            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
-            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
-            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
-            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
-        from
-            (
-                select
-                    pcd.pno
-                    ,ss.name
-                    ,ss1.name name1
-                    ,row_number()over(partition by pcd.pno order by pcd.created_at) rank
-                from ph_staging.parcel_change_detail pcd
-                left join ph_bi.sys_store ss on ss.id=pcd.old_value
-                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
-                where
-                    pcd.created_at>=CURRENT_DATE()-interval 30 day
-                    and pcd.field_name = 'dst_store_id'
-            )pcd
-        group by 1
-    )pcd on pcd.pno = a.pno
-left join
-    (
-        select
-            di.pno
-            ,count(di.pno) num
-        from ph_staging.diff_info di
-        where
-            di.created_at>=CURRENT_DATE()-interval 30 day
-            and di.diff_marker_category in (30,31)
-        group by 1
-    )di on di.pno=a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at >= CURRENT_DATE()-interval 30 day
-            and pcd.field_name = 'dst_postal_code'
-    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
-left join
-    (
-        select
-            pi.pno
-            ,pi.dst_postal_code
-            ,pi.dst_detail_address
-        from ph_staging.parcel_info pi
-        where
-            pi.created_at >= CURRENT_DATE()-interval 40 day
-    )pi1 on pi1.pno=a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at )rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name = 'dst_detail_address'
-    )pcd2 on a.pno=pcd2.pno and pcd2.rank=  1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.pno
-    ,di.num '上报错分次数'
-    ,ss.name '妥投网点'
-    ,pcd. '初始目的地网点/修改信息网点1'
-    ,pcd.'修改后目的地网点1'
-    ,pcd.'修改信息网点2'
-    ,pcd.'修改后目的地网点2'
-    ,pcd.'修改信息网点3'
-    ,pcd.'修改后目的地网点3'
-    ,pcd.'修改信息网点4'
-    ,pcd.'修改后目的地网点4'
-    ,pcd.'修改信息网点5'
-    ,pcd.'修改后目的地网点5'
-    ,pcd.'修改信息网点6'
-    ,pcd.'修改后目的地网点6'
-    ,pcd.'修改信息网点7'
-    ,pcd.'修改后目的地网点7'
-    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
-    ,a.dst_postal_code '最终邮编'
-    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
-    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
-    when pcd1.old_value is null then 'HUB错分'
-    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
-    end '责任归属'
-    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
-    ,a.dst_detail_address '最终详细地址'
-from
-    (
-        select
-            distinct
-            dd.pno
-        from ph_staging.diff_info dd
-        where
-            dd.created_at>='2023-03-01'
-            and dd.diff_marker_category='31'
-    )dd
-join ph_staging.parcel_info a on dd.pno = a.pno
-left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
-left join
-    (
-        select
-            pcd.pno
-            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
-            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
-            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
-            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
-            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
-            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
-            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
-            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
-            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
-            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
-            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
-            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
-            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
-            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
-        from
-            (
-                select
-                    pcd.pno
-                    ,ss.name
-                    ,ss1.name name1
-                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
-                from ph_staging.parcel_change_detail pcd
-                left join ph_bi.sys_store ss on ss.id=pcd.old_value
-                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
-                where
-                    pcd.created_at>=CURRENT_DATE()-interval 30 day
-                    and pcd.field_name='dst_store_id'
-            )pcd
-        group by 1
-    )pcd on pcd.pno = a.pno
-left join
-    (
-        select
-            di.pno
-            ,count(di.pno) num
-        from ph_staging.diff_info di
-        where
-            di.created_at>=CURRENT_DATE()-interval 30 day
-            and di.diff_marker_category in (30,31)
-        group by 1
-    )di on di.pno=a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_postal_code'
-    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
-left join
-    (
-        select
-            pi.pno
-            ,pi.dst_postal_code
-            ,pi.dst_detail_address
-        from ph_staging.parcel_info pi
-        where
-            pi.created_at>=CURRENT_DATE()-interval 40 day
-    )pi1 on pi1.pno = a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_detail_address'
-    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
-where
-    pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.pno
-    ,di.num '上报错分次数'
-    ,ss.name '妥投网点'
-    ,pcd. '初始目的地网点/修改信息网点1'
-    ,pcd.'修改后目的地网点1'
-    ,pcd.'修改信息网点2'
-    ,pcd.'修改后目的地网点2'
-    ,pcd.'修改信息网点3'
-    ,pcd.'修改后目的地网点3'
-    ,pcd.'修改信息网点4'
-    ,pcd.'修改后目的地网点4'
-    ,pcd.'修改信息网点5'
-    ,pcd.'修改后目的地网点5'
-    ,pcd.'修改信息网点6'
-    ,pcd.'修改后目的地网点6'
-    ,pcd.'修改信息网点7'
-    ,pcd.'修改后目的地网点7'
-    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
-    ,a.dst_postal_code '最终邮编'
-    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
-    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
-    when pcd1.old_value is null then 'HUB错分'
-    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
-    end '责任归属'
-    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
-    ,a.dst_detail_address '最终详细地址'
-from
-    (
-        select
-            distinct
-            dd.pno
-        from ph_staging.diff_info dd
-        where
-            dd.created_at>='2023-03-01'
-            and dd.diff_marker_category='31'
-    )dd
-join ph_staging.parcel_info a on dd.pno = a.pno
-left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
-left join
-    (
-        select
-            pcd.pno
-            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
-            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
-            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
-            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
-            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
-            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
-            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
-            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
-            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
-            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
-            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
-            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
-            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
-            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
-        from
-            (
-                select
-                    pcd.pno
-                    ,ss.name
-                    ,ss1.name name1
-                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
-                from ph_staging.parcel_change_detail pcd
-                left join ph_bi.sys_store ss on ss.id=pcd.old_value
-                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
-                where
-                    pcd.created_at>=CURRENT_DATE()-interval 30 day
-                    and pcd.field_name='dst_store_id'
-            )pcd
-        group by 1
-    )pcd on pcd.pno = a.pno
-left join
-    (
-        select
-            di.pno
-            ,count(di.pno) num
-        from ph_staging.diff_info di
-        where
-            di.created_at>=CURRENT_DATE()-interval 30 day
-            and di.diff_marker_category in (30,31)
-        group by 1
-    )di on di.pno=a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_postal_code'
-    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
-left join
-    (
-        select
-            pi.pno
-            ,pi.dst_postal_code
-            ,pi.dst_detail_address
-        from ph_staging.parcel_info pi
-        where
-            pi.created_at>=CURRENT_DATE()-interval 40 day
-    )pi1 on pi1.pno = a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_detail_address'
-    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
-where
-    a.ticket_delivery_store_id =pcd.`初始目的地网点/修改信息网点1`;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.pno
-    ,di.num '上报错分次数'
-    ,ss.name '妥投网点'
-    ,pcd. '初始目的地网点/修改信息网点1'
-    ,pcd.'修改后目的地网点1'
-    ,pcd.'修改信息网点2'
-    ,pcd.'修改后目的地网点2'
-    ,pcd.'修改信息网点3'
-    ,pcd.'修改后目的地网点3'
-    ,pcd.'修改信息网点4'
-    ,pcd.'修改后目的地网点4'
-    ,pcd.'修改信息网点5'
-    ,pcd.'修改后目的地网点5'
-    ,pcd.'修改信息网点6'
-    ,pcd.'修改后目的地网点6'
-    ,pcd.'修改信息网点7'
-    ,pcd.'修改后目的地网点7'
-    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
-    ,a.dst_postal_code '最终邮编'
-    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
-    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
-    when pcd1.old_value is null then 'HUB错分'
-    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
-    end '责任归属'
-    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
-    ,a.dst_detail_address '最终详细地址'
-from
-    (
-        select
-            distinct
-            dd.pno
-        from ph_staging.diff_info dd
-        where
-            dd.created_at>='2023-03-01'
-            and dd.diff_marker_category='31'
-    )dd
-join ph_staging.parcel_info a on dd.pno = a.pno
-left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
-left join
-    (
-        select
-            pcd.pno
-            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
-            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
-            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
-            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
-            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
-            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
-            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
-            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
-            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
-            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
-            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
-            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
-            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
-            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
-        from
-            (
-                select
-                    pcd.pno
-                    ,ss.name
-                    ,ss1.name name1
-                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
-                from ph_staging.parcel_change_detail pcd
-                left join ph_bi.sys_store ss on ss.id=pcd.old_value
-                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
-                where
-                    pcd.created_at>=CURRENT_DATE()-interval 30 day
-                    and pcd.field_name='dst_store_id'
-            )pcd
-        group by 1
-    )pcd on pcd.pno = a.pno
-left join
-    (
-        select
-            di.pno
-            ,count(di.pno) num
-        from ph_staging.diff_info di
-        where
-            di.created_at>=CURRENT_DATE()-interval 30 day
-            and di.diff_marker_category in (30,31)
-        group by 1
-    )di on di.pno=a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_postal_code'
-    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
-left join
-    (
-        select
-            pi.pno
-            ,pi.dst_postal_code
-            ,pi.dst_detail_address
-        from ph_staging.parcel_info pi
-        where
-            pi.created_at>=CURRENT_DATE()-interval 40 day
-    )pi1 on pi1.pno = a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_detail_address'
-    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
-where
-    ss.name =pcd.`初始目的地网点/修改信息网点1`;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.pno
-    ,di.num '上报错分次数'
-    ,ss.name '妥投网点'
-    ,pcd. '初始目的地网点/修改信息网点1'
-    ,pcd.'修改后目的地网点1' 第一次修改后网点
-    ,pcd.'修改信息网点2' 第2次修改前网点
-    ,pcd.'修改后目的地网点2' 第2次修改后网点
-    ,pcd.'修改信息网点3' 第3次修改前网点
-    ,pcd.'修改后目的地网点3' 第3次修改后网点
-    ,pcd.'修改信息网点4' 第4次修改前网点
-    ,pcd.'修改后目的地网点4' 第4次修改后网点
-    ,pcd.'修改信息网点5' 第5次修改前网点
-    ,pcd.'修改后目的地网点5' 第5次修改后网点
-    ,pcd.'修改信息网点6' 第6次修改前网点
-    ,pcd.'修改后目的地网点6' 第6次修改后网点
-    ,pcd.'修改信息网点7' 第7次修改前网点
-    ,pcd.'修改后目的地网点7' 第7次修改后网点
-    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
-    ,a.dst_postal_code '最终邮编'
-    ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
-    ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
-    when pcd1.old_value is null then 'HUB错分'
-    when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
-    end '责任归属'
-    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
-    ,a.dst_detail_address '最终详细地址'
-from
-    (
-        select
-            distinct
-            dd.pno
-        from ph_staging.diff_info dd
-        where
-            dd.created_at>='2023-03-01'
-            and dd.diff_marker_category='31'
-    )dd
-join ph_staging.parcel_info a on dd.pno = a.pno
-left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
-left join
-    (
-        select
-            pcd.pno
-            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
-            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
-            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
-            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
-            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
-            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
-            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
-            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
-            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
-            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
-            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
-            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
-            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
-            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
-        from
-            (
-                select
-                    pcd.pno
-                    ,ss.name
-                    ,ss1.name name1
-                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
-                from ph_staging.parcel_change_detail pcd
-                left join ph_bi.sys_store ss on ss.id=pcd.old_value
-                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
-                where
-                    pcd.created_at>=CURRENT_DATE()-interval 30 day
-                    and pcd.field_name='dst_store_id'
-            )pcd
-        group by 1
-    )pcd on pcd.pno = a.pno
-left join
-    (
-        select
-            di.pno
-            ,count(di.pno) num
-        from ph_staging.diff_info di
-        where
-            di.created_at>=CURRENT_DATE()-interval 30 day
-            and di.diff_marker_category in (30,31)
-        group by 1
-    )di on di.pno=a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_postal_code'
-    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
-left join
-    (
-        select
-            pi.pno
-            ,pi.dst_postal_code
-            ,pi.dst_detail_address
-        from ph_staging.parcel_info pi
-        where
-            pi.created_at>=CURRENT_DATE()-interval 40 day
-    )pi1 on pi1.pno = a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_detail_address'
-    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
-where
-    ss.name =pcd.`初始目的地网点/修改信息网点1`;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.pno
-    ,di.num '上报错分次数'
-    ,ss.name '妥投网点'
-    ,pcd. '初始目的地网点/修改信息网点1'
-    ,pcd.'修改后目的地网点1' 第一次修改后网点
-    ,pcd.'修改信息网点2' 第2次修改前网点
-    ,pcd.'修改后目的地网点2' 第2次修改后网点
-    ,pcd.'修改信息网点3' 第3次修改前网点
-    ,pcd.'修改后目的地网点3' 第3次修改后网点
-    ,pcd.'修改信息网点4' 第4次修改前网点
-    ,pcd.'修改后目的地网点4' 第4次修改后网点
-    ,pcd.'修改信息网点5' 第5次修改前网点
-    ,pcd.'修改后目的地网点5' 第5次修改后网点
-    ,pcd.'修改信息网点6' 第6次修改前网点
-    ,pcd.'修改后目的地网点6' 第6次修改后网点
-    ,pcd.'修改信息网点7' 第7次修改前网点
-    ,pcd.'修改后目的地网点7' 第7次修改后网点
-    ,ifnull(pcd1.old_value,'未修改邮编') '初始邮编'
-    ,a.dst_postal_code '最终邮编'
-#     ,if(pcd1.old_value is null or pcd1.old_value=pi1.dst_postal_code,'是','否')'初始邮编和最终邮编是否相同'
-#     ,case when a.dst_postal_code<>pcd1.old_value and pcd1.old_value is not null then '客户原因-目的地邮编有误'
-#     when pcd1.old_value is null then 'HUB错分'
-#     when pcd1.old_value=a.dst_postal_code and pcd1.old_value is not null then 'flash原因'
-#     end '责任归属'
-    ,ifnull(pcd2.old_value,'未修改详细地址') '初始详细地址'
-    ,a.dst_detail_address '最终详细地址'
-from
-    (
-        select
-            distinct
-            dd.pno
-        from ph_staging.diff_info dd
-        where
-            dd.created_at>='2023-03-01'
-            and dd.diff_marker_category='31'
-    )dd
-join ph_staging.parcel_info a on dd.pno = a.pno
-left join ph_bi.sys_store ss on a.ticket_delivery_store_id = ss.id
-left join
-    (
-        select
-            pcd.pno
-            ,max(if(pcd.rank=1,pcd.name,null)) '初始目的地网点/修改信息网点1'
-            ,max(if(pcd.rank=1,pcd.name1,null)) '修改后目的地网点1'
-            ,max(if(pcd.rank=2,pcd.name,null)) '修改信息网点2'
-            ,max(if(pcd.rank=2,pcd.name1,null)) '修改后目的地网点2'
-            ,max(if(pcd.rank=3,pcd.name,null)) '修改信息网点3'
-            ,max(if(pcd.rank=3,pcd.name1,null)) '修改后目的地网点3'
-            ,max(if(pcd.rank=4,pcd.name,null)) '修改信息网点4'
-            ,max(if(pcd.rank=4,pcd.name1,null)) '修改后目的地网点4'
-            ,max(if(pcd.rank=5,pcd.name,null)) '修改信息网点5'
-            ,max(if(pcd.rank=5,pcd.name1,null)) '修改后目的地网点5'
-            ,max(if(pcd.rank=6,pcd.name,null)) '修改信息网点6'
-            ,max(if(pcd.rank=6,pcd.name1,null)) '修改后目的地网点6'
-            ,max(if(pcd.rank=7,pcd.name,null)) '修改信息网点7'
-            ,max(if(pcd.rank=7,pcd.name1,null)) '修改后目的地网点7'
-        from
-            (
-                select
-                    pcd.pno
-                    ,ss.name
-                    ,ss1.name name1
-                    ,row_number()over(partition by pcd.pno order by pcd.created_at asc) rank
-                from ph_staging.parcel_change_detail pcd
-                left join ph_bi.sys_store ss on ss.id=pcd.old_value
-                left join ph_bi.sys_store ss1 on ss1.id=pcd.new_value
-                where
-                    pcd.created_at>=CURRENT_DATE()-interval 30 day
-                    and pcd.field_name='dst_store_id'
-            )pcd
-        group by 1
-    )pcd on pcd.pno = a.pno
-left join
-    (
-        select
-            di.pno
-            ,count(di.pno) num
-        from ph_staging.diff_info di
-        where
-            di.created_at>=CURRENT_DATE()-interval 30 day
-            and di.diff_marker_category in (30,31)
-        group by 1
-    )di on di.pno=a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_postal_code'
-    )pcd1 on a.pno=pcd1.pno and pcd1.rank = 1
-left join
-    (
-        select
-            pi.pno
-            ,pi.dst_postal_code
-            ,pi.dst_detail_address
-        from ph_staging.parcel_info pi
-        where
-            pi.created_at>=CURRENT_DATE()-interval 40 day
-    )pi1 on pi1.pno = a.pno
-left join
-    (
-        select
-            pcd.pno
-            ,pcd.old_value
-            ,row_number()over(partition by pcd.pno order by pcd.created_at asc)rank
-        from ph_staging.parcel_change_detail pcd
-        where
-            pcd.created_at>=CURRENT_DATE()-interval 30 day
-            and pcd.field_name='dst_detail_address'
-    )pcd2 on a.pno=pcd2.pno and pcd2.rank = 1
-where
-    ss.name =pcd.`初始目的地网点/修改信息网点1`;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-from t
-left join
-    ( -- 交接数
-        select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-        group by 1,2
-    ) scan on scan.staff_info_id = t.staff_info_id
-left join
-    (
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-        group by 1,2
-    ) fin on fin.staff_info_id = t.staff_info_id
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-            and pr.staff_info_id = '136400'
-        group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-#         join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-            and pr.staff_info_id = '136400'
-        group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-        and hsi.staff_info_id = '136400'
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-from t
-left join
-    ( -- 交接数
-        select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2
-    ) scan on scan.staff_info_id = t.staff_info_id
-left join
-    (
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-        group by 1,2
-    ) fin on fin.staff_info_id = t.staff_info_id
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-        and hsi.staff_info_id = '136400'
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,count(distinct scan.date_d)
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-from t
-left join
-    ( -- 交接数
-        select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2
-    ) scan on scan.staff_info_id = t.staff_info_id
-left join
-    (
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-        group by 1,2
-    ) fin on fin.staff_info_id = t.staff_info_id
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-        and hsi.staff_info_id = '136400'
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,count(distinct scan.date_d)
-    ,sum(scan.num)
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-from t
-left join
-    ( -- 交接数
-        select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2
-    ) scan on scan.staff_info_id = t.staff_info_id
-left join
-    (
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-        group by 1,2
-    ) fin on fin.staff_info_id = t.staff_info_id
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-        and hsi.staff_info_id = '136400'
-);
-;-- -. . -..- - / . -. - .-. -.--
-select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-        and hsi.staff_info_id = '136400';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-        and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-        group by 1,2
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-from
-    (
-        select
-            total.staff_info_id
-            ,total.date_d
-        from total
-        group by 1,2
-    ) t
-left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
-left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-        and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,t.ss_name
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2,3,4
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.ss_name
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-        group by 1,2,3,4
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-from
-    (
-        select
-            total.staff_info_id
-            ,total.date_d
-            ,total.ss_name
-        from total
-        group by 1,2,3
-    ) t
-left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
-left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-#         and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,t.ss_name
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2,3,4
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.ss_name
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 25 day), interval 8 hour)
-        group by 1,2,3,4
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-from
-    (
-        select
-            total.staff_info_id
-            ,total.date_d
-            ,total.ss_name
-        from total
-        group by 1,2,3
-    ) t
-left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
-left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-#         and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,t.ss_name
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pr.route_at < date_sub(curdate(), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2,3,4
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.ss_name
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pi.finished_at <
-        group by 1,2,3,4
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,count(distinct scan.date_d) 近30天交接天数
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-    ,count(distinct fin.date_d) 近30天妥投天数
-from
-    (
-        select
-            total.staff_info_id
-            ,total.date_d
-            ,total.ss_name
-        from total
-        group by 1,2,3
-    ) t
-left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
-left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-#         and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,t.ss_name
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pr.route_at < date_sub(curdate(), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2,3,4
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.ss_name
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pi.finished_at < date_sub(curdate(), interval 8 hour)
-        group by 1,2,3,4
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,count(distinct scan.date_d) 近30天交接天数
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-    ,count(distinct fin.date_d) 近30天妥投天数
-from
-    (
-        select
-            total.staff_info_id
-            ,total.date_d
-            ,total.ss_name
-        from total
-        group by 1,2,3
-    ) t
-left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
-left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-#         and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,t.ss_name
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pr.routed_at < date_sub(curdate(), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2,3,4
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.ss_name
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pi.finished_at < date_sub(curdate(), interval 8 hour)
-        group by 1,2,3,4
-)
-select
-    t.ss_name 网点
-    ,t.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,count(distinct scan.date_d) 近30天交接天数
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-    ,count(distinct fin.date_d) 近30天妥投天数
-from
-    (
-        select
-            total.staff_info_id
-            ,total.date_d
-            ,total.ss_name
-        from total
-        group by 1,2,3
-    ) t
-left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
-left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-#         and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,t.ss_name
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pr.routed_at < date_sub(curdate(), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2,3,4
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.ss_name
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pi.finished_at < date_sub(curdate(), interval 8 hour)
-        group by 1,2,3,4
-)
-select
-    a.ss_name 网点
-    ,a.staff_info_id 员工ID
-    ,sum(scan.num)/count(distinct scan.date_d) 日均交接量
-    ,count(distinct scan.date_d) 近30天交接天数
-    ,sum(fin.num)/count(distinct fin.date_d) 日均妥投量
-    ,count(distinct fin.date_d) 近30天妥投天数
-from t a
-left join
-    (
-        select
-            total.staff_info_id
-            ,total.date_d
-            ,total.ss_name
-        from total
-        group by 1,2,3
-    ) t on t.staff_info_id = a.staff_info_id and t.ss_name = a.ss_name
-left join total scan on scan.staff_info_id = t.staff_info_id and scan.date_d = t.date_d and scan.type = 'scan'
-left join total fin on fin.staff_info_id = t.staff_info_id and fin.date_d = t.date_d and fin.type = 'fin'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,ss.name ss_name
-        ,ss.id ss_id
-    from ph_bi.hr_staff_info hsi
-    left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id
-    where
-        ss.name in ('ABL_SP', 'ABY_SP', 'AGN_SP', 'AGO_SP', 'AGS_SP', 'AMD_SP', 'ANG_SP', 'ART_SP', 'ATQ_SP', 'AUR_SP', 'BAG_SP', 'BAH_SP', 'BAI_SP', 'BAT_SP', 'BAU_SP', 'BAY_SP', 'BCE_SP', 'BCP_SP', 'BCR_SP', 'BGO_SP', 'BGS_SP', 'BLC_SP', 'BLM_SP', 'BLN_SP', 'BLR_SP', 'BMG_SP', 'BOG_SP', 'BOH_SP', 'BTC_SP', 'BTG_SP', 'BUG_SP', 'BUS_SP', 'BYB_SP', 'BYY_SP', 'CAB_SP', 'CAD_SP', 'CAS_SP', 'CBA_SP', 'CBL_SP', 'CBO_SP', 'CBT_SP', 'CBY_SP', 'CDS_SP', 'CLN_SP', 'CLO_SP', 'CLS_SP', 'CMD_SP', 'CPG_SP', 'CUP_SP', 'CYZ_SP', 'DAA_SP', 'DEN_SP', 'DET_SP', 'DLM_SP', 'DMB_SP', 'DMT_SP', 'DOL_SP', 'FLR_SP', 'GAN_SP', 'GAP_SP', 'GAT_SP', 'GBA_SP', 'GOA_SP', 'GUM_SP', 'HOL_SP', 'HOT_SP', 'IBC_SP', 'IFT_SP', 'ILA_SP', 'IRG_SP', 'JUA_SP', 'KAV_SP', 'KBL_SP', 'KLB_SP', 'KLM_SP', 'KLS_SP', 'LAG_SP', 'LAM_SP', 'LAR_SP', 'LAU_SP', 'LBN_SP', 'LBO_SP', 'LBS_SP', 'LEY_SP', 'LGA_SP', 'LGN_SP', 'LGP_SP', 'LLI_SP', 'LMA_SP', 'LPZ_SP', 'LSA_SP', 'LUN_SP', 'LUT_SP', 'MAO_SP', 'MAR_SP', 'MAS_SP', 'MBA_SP', 'MBL_SP', 'MBR_SP', 'MBS_SP', 'MBT_SP', 'MIL_SP', 'MLG_SP', 'MLO_SP', 'MON_SP', 'MOZ_SP', 'MRA_SP', 'MRD_SP', 'MRN_SP', 'MTI_SP', 'MTS_SP', 'MUS_SP', 'NAG_SP', 'NAR_SP', 'NAU_SP', 'NBC_SP', 'NJU_SP', 'NOA_SP', 'NOV_SP', 'NUE_SP', 'OLP_SP', 'OMC_SP', 'PAL_SP', 'PAS_SP', 'PDC_SP', 'PIL_SP', 'PLA_SP', 'PLW_SP', 'PLY_SP', 'PMY_SP', 'PPA_SP', 'PSC_SP', 'PSG_SP', 'PSK_SP', 'PSP_SP', 'PSS_SP', 'PST_SP', 'PUT_SP', 'QUN_SP', 'RBL_SP', 'RIZ_SP', 'ROS_SP', 'ROX_SP', 'RZZ_SP', 'SAN_SP', 'SAY_SP', 'SBG_SP', 'SCZ_SP', 'SDS_SP', 'SEL_SP', 'SJS_SP', 'SMB_SP', 'SML_SP', 'SMN_SP', 'SNA_SP', 'SOL_SP', 'SPB_SP', 'SSG_SP', 'SSP_SP', 'STC_SP', 'STG_SP', 'STS_SP', 'STZ_SP', 'SUB_SP', 'TAA_SP', 'TAB_SP', 'TAL_SP', 'TAN_SP', 'TAU_SP', 'TBC_SP', 'TBK_SP', 'TCL_SP', 'TJY_SP', 'TNA_SP', 'TOO_SP', 'TTB_SP', 'TUA_SP', 'TUG_SP', 'TUM_SP', 'TYZ_SP', 'UDA_SP', 'UDS_SP', 'VZA_SP', 'WAK_SP', 'WTB_SP', 'WTG_SP')
-        and hsi.state = 1
-        and hsi.job_title in (13,110,1000)  -- 快递员
-#         and hsi.staff_info_id = '136400'
-)
-, total as
-(
-    select
-            date(date_add(pr.routed_at , interval 8 hour)) date_d
-            ,'scan' type
-            ,t.ss_name
-            ,pr.staff_info_id
-            ,count(distinct pr.pno) num
-        from ph_staging.parcel_route pr
-        join t on pr.staff_info_id = t.staff_info_id
-        where
-            pr.routed_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pr.routed_at < date_sub(curdate(), interval 8 hour)
-            and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN' -- 交接扫描
-#             and pr.staff_info_id = '136400'
-        group by 1,2,3,4
-
-        union all
-
-        select
-            date(date_add(pi.finished_at , interval 8 hour)) date_d
-            ,'fin' type
-            ,t.ss_name
-            ,t.staff_info_id
-            ,count(distinct pi.pno) num
-        from ph_staging.parcel_info pi
-        join t on pi.ticket_delivery_staff_info_id = t.staff_info_id
-        where
-            pi.state = 5
-            and pi.finished_at >= date_sub(date_sub(curdate(), interval 30 day), interval 8 hour)
-            and pi.finished_at < date_sub(curdate(), interval 8 hour)
-        group by 1,2,3,4
-)
-select
-    *
-from total;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    hsi.staff_info_id
-    ,hsi.hire_date
-from ph_bi.hr_staff_info hsi
-where
-    hsi.staff_info_id in ('119999', '121776', '125595', '127320', '144914', '126471', '129577', '143552', '128544', '130629', '139340', '142684', '121517', '124245', '122849', '147026', '129478', '139564', '138995', '132638', '142468', '142398', '121959', '147204', '140513', '141731', '119363', '143365', '146200', '131902', '146662', '136717', '141425', '147700', '123315', '143644', '146887', '146301', '146973', '147313', '132704', '119263', '129450', '143836', '138168', '126277', '126820', '132318', '127738', '143159', '142878', '120650', '142461', '145659', '137498', '137552', '138000', '123831', '138684', '146078', '147338', '136411', '138850', '148502', '147271', '121614', '137223', '141200', '144392', '146816', '147626', '146985', '147117', '145885', '147910', '126985', '138674', '145092', '147716', '141582', '143109', '144085', '146844', '120671', '132576', '131210', '141791', '145706', '146910', '148060', '148693', '143813', '144606', '144713', '147202', '121549', '136363', '141386', '141151', '143837', '145412', '146858', '135396', '136414', '136979', '146185', '141935', '146629', '135674', '124103', '137645', '141549', '146865', '133938', '139445', '142106', '142674', '145900', '137230', '145800', '146031', '147246', '121500', '124751', '139759', '144557', '145803', '146810', '146970', '147001', '144886', '146472', '123868', '143519', '146076', '146737', '147083', '148413', '133321', '138572', '139911', '143055', '143674', '147333', '147929', '120718', '128919', '147316', '147780', '147828', '148073');
-;-- -. . -..- - / . -. - .-. -.--
-select
-    *
-from ph_staging.parcel_headless ph
-where
-    ph.created_at >= '2021-12-31 16:00:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    *
-from ph_staging.parcel_headless ph
-where
-    ph.created_at >= '2021-12-31 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    t.*
-    ,ss.name
-from tmpale.tmpale.tmp_th_1_0318 t
-left join ph_bi.hr_staff_info hsi on t.staff_info = hsi.staff_info_id
-left join ph_staging.sys_store ss on ss.id = hsi.sys_store_id;
-;-- -. . -..- - / . -. - .-. -.--
-select
     t.*
     ,ss.name
 from tmpale.tmp_ph_1_0318 t
@@ -12653,6 +10649,822 @@ where
     and mw.created_at < '2023-04-01'
     and mw.is_delete = 0;
 ;-- -. . -..- - / . -. - .-. -.--
+select
+    date(swm.created_at) 录入日期
+    ,count(distinct swm.id) 录入警告通知量
+    ,count(distinct if(swm.hr_fix_status = 0, swm.id, null)) HRBP未处理量
+    ,count(distinct mw.id) 发警告书量
+    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
+from ph_backyard.staff_warning_message swm
+left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+where
+    swm.type = 1 -- 派件低效
+    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
+group by 1
+order by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsi.staff_info_id
+        ,hsi.name 姓名
+        ,hjt.job_name 职位
+        ,case
+            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
+            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
+            when hsi.`state`=2 then '离职'
+            when hsi.`state`=3 then '停职'
+        end as 在职状态
+        ,ss.name 所属网点
+        ,smr.name  大区
+        ,smp.name  片区
+        ,mw.date_ats 违规日期
+        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
+        ,case mw.type_code
+            when 'warning_1'  then '迟到早退'
+            when 'warning_29' then '贪污包裹'
+            when 'warning_30' then '偷盗公司财物'
+            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+            when 'warning_9'  then '腐败/滥用职权'
+            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
+            when 'warning_5'  then '持有或吸食毒品'
+            when 'warning_4'  then '工作时间或工作地点饮酒'
+            when 'warning_10' then '玩忽职守'
+            when 'warning_2'  then '无故连续旷工3天'
+            when 'warning_3'  then '贪污'
+            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
+            when 'warning_7'  then '通过社会媒体污蔑公司'
+            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+            when 'warning_26' then 'Fake POD'
+            when 'warning_25' then 'Fake Status'
+            when 'warning_24' then '不接受或不配合公司的调查'
+            when 'warning_23' then '损害公司名誉'
+            when 'warning_22' then '失职'
+            when 'warning_28' then '贪污钱'
+            when 'warning_21' then '煽动/挑衅/损害公司利益'
+            when 'warning_20' then '谎报里程'
+            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+            when 'warning_19' then '未按照网点规定的时间回款'
+            when 'warning_17' then '伪造证件'
+            when 'warning_12' then '未告知上级或无故旷工'
+            when 'warning_13' then '上级没有同意请假'
+            when 'warning_14' then '没有通过系统请假'
+            when 'warning_15' then '未按时上下班'
+            when 'warning_16' then '不配合公司的吸毒检查'
+            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+            else mw.`type_code`
+        end as '警告原因'
+        ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+        end as 警告类型
+from ph_backyard.message_warning mw
+left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
+left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
+left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+where
+#     swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
+    mw.created_at >= date_add(curdate(), interval -day(curdate()) + 1 day)
+    and mw.type_code = 'warning_27'
+#     mw.created_at >= '2023-03-01'
+#     and mw.created_at < '2023-04-01'
+    and mw.is_delete = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    'shopee' client_name
+    ,pi.pno
+from ph_staging.parcel_info pi
+join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('shopee')
+left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = pi.pno
+where
+    pi.state not in (5,7,8,9) -- 未达终态
+    and pi.returned = 0
+    and ds.end_date < curdate()
+
+union all
+
+select
+    'lazada' client_name
+    ,pi.pno
+from ph_staging.parcel_info pi
+join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = pi.pno
+where
+    pi.state not in (5,7,8,9) -- 未达终态
+    and pi.returned = 0
+    and dl.delievey_end_date < curdate()
+
+union all
+
+select
+    'lazada' client_name
+    ,pi.pno
+from ph_staging.parcel_info pi
+join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = pi.pno
+where
+    pi.state not in (5,7,8,9) -- 未达终态
+    and pi.returned = 0
+    and dt.end_date < curdate();
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        'shopee' client_name
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('shopee')
+    left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and ds.end_date < curdate()
+
+    union all
+
+    select
+        'lazada' client_name
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dl.delievey_end_date < curdate()
+
+    union all
+
+    select
+        'lazada' client_name
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dt.end_date < curdate()
+
+)
+select
+    t.pno
+    ,count(pcd.id) num
+from ph_staging.parcel_change_detail pcd
+join t on pcd.pno = t.pno
+where
+    pcd.field_name = 'dst_detail_address'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        'shopee' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,ds.end_date del_date
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('shopee')
+    left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and ds.end_date < curdate()
+
+    union all
+
+    select
+        'lazada' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dl.delievey_end_date del_date
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dl.delievey_end_date < curdate()
+
+    union all
+
+    select
+        'tiktok' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dt.end_date del_date
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dt.end_date < curdate()
+
+)
+select
+    t.pno
+    ,t.client_name 客户
+    ,t.pick_time 揽收时间
+    ,t.del_date 派送时效
+    ,count(pcd.id) 修改收件人地址次数
+from ph_staging.parcel_change_detail pcd
+join t on pcd.pno = t.pno
+where
+    pcd.field_name = 'dst_detail_address'
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        'shopee' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,ds.end_date del_date
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('shopee')
+    left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and ds.end_date < curdate()
+
+    union all
+
+    select
+        'lazada' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dl.delievey_end_date del_date
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dl.delievey_end_date < curdate()
+
+    union all
+
+    select
+        'tiktok' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dt.end_date del_date
+        ,pi.pno
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dt.end_date < curdate()
+
+)
+select
+    t.pno
+    ,t.client_name 客户
+    ,t.pick_time 揽收时间
+    ,t.del_date 派送时效
+    ,count(pcd.id) 修改收件人地址次数
+from ph_staging.parcel_change_detail pcd
+join t on pcd.pno = t.pno
+where
+    pcd.field_name = 'dst_detail_address'
+    and t.pick_time > '2023-01-01'
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        'shopee' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,ds.end_date del_date
+        ,pi.pno
+        ,pi.state
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('shopee')
+    left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and ds.end_date < curdate()
+
+    union all
+
+    select
+        'lazada' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dl.delievey_end_date del_date
+        ,pi.pno
+        ,pi.state
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dl.delievey_end_date < curdate()
+
+    union all
+
+    select
+        'tiktok' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dt.end_date del_date
+        ,pi.pno
+        ,pi.state
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dt.end_date < curdate()
+
+)
+select
+    t.pno
+    ,t.client_name 客户
+    ,t.pick_time 揽收时间
+    ,t.del_date 派送时效
+    ,case t.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,count(pcd.id) 修改收件人地址次数
+from ph_staging.parcel_change_detail pcd
+join t on pcd.pno = t.pno
+where
+    pcd.field_name = 'dst_detail_address'
+    and t.pick_time > '2023-01-01'
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        'shopee' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,ds.end_date del_date
+        ,pi.pno
+        ,pi.state
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('shopee')
+    left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and ds.end_date < curdate()
+
+    union all
+
+    select
+        'lazada' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dl.delievey_end_date del_date
+        ,pi.pno
+        ,pi.state
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dl.delievey_end_date < curdate()
+
+    union all
+
+    select
+        'tiktok' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dt.end_date del_date
+        ,pi.pno
+        ,pi.state
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dt.end_date < curdate()
+
+)
+select
+    t.pno
+    ,t.client_name 客户
+    ,t.pick_time 揽收时间
+    ,t.del_date 派送时效
+    ,case t.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,count(pcd.id) 修改收件人地址次数
+from ph_staging.parcel_change_detail pcd
+join t on pcd.pno = t.pno
+where
+    pcd.field_name = 'dst_detail_address'
+#     and t.pick_time > '2023-01-01'
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        'shopee' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,ds.end_date del_date
+        ,pi.pno
+        ,pi.state
+        ,pi.dst_store_id
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('shopee')
+    left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and ds.end_date < curdate()
+
+    union all
+
+    select
+        'lazada' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dl.delievey_end_date del_date
+        ,pi.pno
+        ,pi.state
+        ,pi.dst_store_id
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dl.delievey_end_date < curdate()
+
+    union all
+
+    select
+        'tiktok' client_name
+        ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+        ,dt.end_date del_date
+        ,pi.pno
+        ,pi.state
+        ,pi.dst_store_id
+    from ph_staging.parcel_info pi
+    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada')
+    left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = pi.pno
+    where
+        pi.state not in (5,7,8,9) -- 未达终态
+        and pi.returned = 0
+        and dt.end_date < curdate()
+
+)
+select
+    t.pno
+    ,t.client_name 客户
+    ,t.pick_time 揽收时间
+    ,t.del_date 派送时效
+    ,case t.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,ss.name 目的地网点
+    ,count(pcd.id) 修改收件人地址次数
+from ph_staging.parcel_change_detail pcd
+join t on pcd.pno = t.pno
+left join ph_staging.sys_store ss on ss.id = t.dst_store_id
+where
+    pcd.field_name = 'dst_detail_address'
+#     and t.pick_time > '2023-01-01'
+group by 1,2,3,4,5;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    tdm.marker_id
+from ph_staging.ticket_delivery_marker tdm
+        left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
+where
+    td.pno = 'PT61251TUYJ1AJ';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.pno
+from t
+join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+            ,json_extract(pr.extra_value, '$.callDuration') callDuration
+        from ph_staging.parcel_route pr
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on pr.pno = t1.pno
+        where
+            pr.route_action in ('PHONE', 'INCOMING_CALL')
+#             and pr.routed_at < date_sub(curdate(), interval 8 hour)
+            and pr.routed_at >= date_sub('2023-03-01', interval 32 hour)
+            and json_extract(pr.extra_value, '$.callDuration') > 0
+    ) cal on cal.pno = t.pno and cal.routed_at < t.created_at and cal.date_d = t.date_d
+left join
+    (
+        select
+            td.pno
+            ,tdm.created_at
+            ,date(convert_tz(tdm.created_at, '+00:00', '+08:00')) date_d
+        from ph_staging.ticket_delivery_marker tdm
+        left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on td.pno = t1.pno
+        where
+            tdm.created_at >= date_sub('2023-03-01', interval 8 hour)
+            and tdm.marker_id in (1)
+    ) mak on mak.pno = t.pno and mak.date_d = t.date_d
+where
+    mak.created_at > cal.routed_at
+    and mak.created_at < t.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        di.pno
+        ,di.created_at
+        ,date(convert_tz(di.created_at, '+00:00', '+08:00')) date_d
+    from ph_staging.diff_info di
+    where
+        di.created_at >= date_sub('2023-03-01', interval 8 hour)
+        and di.diff_marker_category in (31)
+)
+select
+    t.pno
+from t
+join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+            ,json_extract(pr.extra_value, '$.callDuration') callDuration
+        from ph_staging.parcel_route pr
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on pr.pno = t1.pno
+        where
+            pr.route_action in ('PHONE', 'INCOMING_CALL')
+#             and pr.routed_at < date_sub(curdate(), interval 8 hour)
+            and pr.routed_at >= date_sub('2023-03-01', interval 32 hour)
+            and json_extract(pr.extra_value, '$.callDuration') > 0
+    ) cal on cal.pno = t.pno and cal.routed_at < t.created_at and cal.date_d = t.date_d
+left join
+    (
+        select
+            td.pno
+            ,tdm.created_at
+            ,date(convert_tz(tdm.created_at, '+00:00', '+08:00')) date_d
+        from ph_staging.ticket_delivery_marker tdm
+        left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on td.pno = t1.pno
+        where
+            tdm.created_at >= date_sub('2023-03-01', interval 8 hour)
+            and tdm.marker_id in (1)
+    ) mak on mak.pno = t.pno and mak.date_d = t.date_d
+where
+    mak.created_at > cal.routed_at
+    and mak.created_at < t.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        di.pno
+        ,di.created_at
+        ,date(convert_tz(di.created_at, '+00:00', '+08:00')) date_d
+    from ph_staging.diff_info di
+    where
+        di.created_at >= date_sub('2023-03-01', interval 8 hour)
+        and di.diff_marker_category in (31)
+)
+select
+    t.*
+from t
+join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+            ,json_extract(pr.extra_value, '$.callDuration') callDuration
+        from ph_staging.parcel_route pr
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on pr.pno = t1.pno
+        where
+            pr.route_action in ('PHONE', 'INCOMING_CALL')
+#             and pr.routed_at < date_sub(curdate(), interval 8 hour)
+            and pr.routed_at >= date_sub('2023-03-01', interval 32 hour)
+            and json_extract(pr.extra_value, '$.callDuration') > 0
+    ) cal on cal.pno = t.pno and cal.routed_at < t.created_at and cal.date_d = t.date_d
+left join
+    (
+        select
+            td.pno
+            ,tdm.created_at
+            ,date(convert_tz(tdm.created_at, '+00:00', '+08:00')) date_d
+        from ph_staging.ticket_delivery_marker tdm
+        left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on td.pno = t1.pno
+        where
+            tdm.created_at >= date_sub('2023-03-01', interval 8 hour)
+            and tdm.marker_id in (1)
+    ) mak on mak.pno = t.pno and mak.date_d = t.date_d
+where
+    mak.created_at > cal.routed_at
+    and mak.created_at < t.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        di.pno
+        ,di.created_at
+        ,date(convert_tz(di.created_at, '+00:00', '+08:00')) date_d
+    from ph_staging.diff_info di
+    where
+        di.created_at >= date_sub('2023-03-01', interval 8 hour)
+        and di.diff_marker_category in (31)
+)
+select
+    t.pno
+    ,t.date_d 提交疑难件日期
+    ,convert_tz(t.created_at, '+00:00', '+08:00') 错分疑难件交接时间
+    ,convert_tz(cal.routed_at, '+00:00', '+08:00') 有通话时长通话时间
+    ,cal.callDuration 通话时长
+    ,convert_tz(mak.created_at, '+00:00', '+08:00') 标记联系不上时间
+from t
+join
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+            ,json_extract(pr.extra_value, '$.callDuration') callDuration
+        from ph_staging.parcel_route pr
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on pr.pno = t1.pno
+        where
+            pr.route_action in ('PHONE', 'INCOMING_CALL')
+#             and pr.routed_at < date_sub(curdate(), interval 8 hour)
+            and pr.routed_at >= date_sub('2023-03-01', interval 32 hour)
+            and json_extract(pr.extra_value, '$.callDuration') > 0
+    ) cal on cal.pno = t.pno and cal.routed_at < t.created_at and cal.date_d = t.date_d
+left join
+    (
+        select
+            td.pno
+            ,tdm.created_at
+            ,date(convert_tz(tdm.created_at, '+00:00', '+08:00')) date_d
+        from ph_staging.ticket_delivery_marker tdm
+        left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
+        join
+            (
+                select t.pno from t group by 1
+            ) t1 on td.pno = t1.pno
+        where
+            tdm.created_at >= date_sub('2023-03-01', interval 8 hour)
+            and tdm.marker_id in (1)
+    ) mak on mak.pno = t.pno and mak.date_d = t.date_d
+where
+    mak.created_at > cal.routed_at
+    and mak.created_at < t.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno 输入单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 COD金额
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_0417 t on pi.pno = t.pno
+left join ph_staging.parcel_info pi2 on if(pi.returned = 0, pi.pno, pi.customary_pno) = pi2.pno
+left join ph_staging.order_info oi on oi.pno = pi2.pno
+left join ph_staging.ka_profile kp on kp.id = pi2.client_id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = pi2.client_id
+
+union
+
+select
+    t.pno 输入单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 COD金额
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_0417 t on pi.recent_pno = t.pno
+left join ph_staging.parcel_info pi2 on if(pi.returned = 0, pi.pno, pi.customary_pno) = pi2.pno
+left join ph_staging.order_info oi on oi.pno = pi2.pno
+left join ph_staging.ka_profile kp on kp.id = pi2.client_id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = pi2.client_id
+
+union
+
+select
+    t.pno 输入单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 COD金额
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_0417 t on pi.pno = t.pno
+left join ph_staging.parcel_info pi2 on if(pi.returned = 0, pi.pno, pi.customary_pno) = pi2.pno
+left join ph_staging.order_info oi on oi.pno = pi2.pno
+left join ph_staging.ka_profile kp on kp.id = pi2.client_id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = pi2.client_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    de.pno
+    ,if(bc.client_name is not null , bc.client_name, 'ka&c') client_name
+    ,datediff(curdate(), de.dst_routed_at) days
+from dwm.dwd_ex_ph_parcel_details de
+left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+where
+    de.parcel_state not in (5,7,8,9)
+    and de.dst_routed_at is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t1.dst_store
+    ,count(t1.pno) 在仓包裹数
+    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 在仓COD包裹数
+    ,count(if(t1.days <= 3, t1.pno, null)) 3日内滞留
+    ,count(if(t1.days <= 3 and t1.cod_enabled = 1, t1.pno, null)) 3日内COD滞留
+    ,count(if(t1.days <= 5, t1.pno, null)) 5日内滞留
+    ,count(if(t1.days <= 5 and t1.cod_enabled = 1, t1.pno, null)) 5日内COD滞留
+    ,count(if(t1.days <= 7, t1.pno, null)) 7日内滞留
+    ,count(if(t1.days <= 7 and t1.cod_enabled = 1, t1.pno, null)) 7日内COD滞留
+    ,count(if(t1.client_name = 'lazada', t1.pno, null)) lazada在仓
+    ,count(if(t1.client_name = 'lazada' and t1.cod_enabled = 1, t1.pno, null)) lazadaCOD在仓
+    ,count(if(t1.client_name = 'shopee', t1.pno, null)) shopee在仓
+    ,count(if(t1.client_name = 'shopee' and t1.cod_enabled = 1, t1.pno, null)) shopeeCOD在仓
+    ,count(if(t1.client_name = 'tiktok', t1.pno, null)) tt在仓
+    ,count(if(t1.client_name = 'tiktok' and t1.cod_enabled = 1, t1.pno, null)) ttCOD在仓
+    ,count(if(t1.client_name = 'ka&c', t1.pno, null)) 'KA&小C在仓'
+    ,count(if(t1.client_name = 'ka&c' and t1.cod_enabled = 1, t1.pno, null)) 'KA&小CCOD在仓'
+from
+    (
+        select
+            de.pno
+            ,de.dst_store_id
+            ,de.dst_store
+            ,if(bc.client_name is not null , bc.client_name, 'ka&c') client_name
+            ,datediff(curdate(), de.dst_routed_at) days
+            ,de.cod_enabled
+        from dwm.dwd_ex_ph_parcel_details de
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        where
+            de.parcel_state not in (5,7,8,9)
+            and de.dst_routed_at is not null
+    ) t1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
 with t as
 (
     select
@@ -12761,84 +11573,2201 @@ where
     t.rn=1;
 ;-- -. . -..- - / . -. - .-. -.--
 select
-    date(swm.created_at) 录入日期
-    ,count(distinct swm.id) 录入警告通知量
-    ,count(distinct if(swm.hr_fix_status = 0, swm.id, null)) HRBP未处理量
-    ,count(distinct mw.id) 发警告书量
-    ,count(distinct mw.id)/count(distinct swm.id) 警告占比
-from ph_backyard.staff_warning_message swm
-left join ph_backyard.message_warning mw on mw.staff_warning_message_id = swm.id
+    pi.pno 输入单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 COD金额
+from ph_staging.parcel_info pi
+left join ph_staging.parcel_info pi2 on if(pi.returned = 0, pi.pno, pi.customary_pno) = pi2.pno
+left join ph_staging.order_info oi on oi.pno = pi2.pno
+left join ph_staging.ka_profile kp on kp.id = pi2.client_id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = pi2.client_id
 where
-    swm.type = 1 -- 派件低效
-    and swm.date_at >= date_add(curdate(),interval -day(curdate()) + 1 day)
-group by 1
-order by 1;
+    pi.recent_pno in ('P35511D0J3BAG');
 ;-- -. . -..- - / . -. - .-. -.--
 select
-        hsi.staff_info_id
-        ,hsi.name 姓名
-        ,hjt.job_name 职位
-        ,case
-            when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
-            when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
-            when hsi.`state`=2 then '离职'
-            when hsi.`state`=3 then '停职'
-        end as 在职状态
-        ,ss.name 所属网点
-        ,smr.name  大区
-        ,smp.name  片区
-        ,mw.date_ats 违规日期
-        ,convert_tz(mw.created_at,'+00:00','+08:00') 警告信发放时间
-        ,case mw.type_code
-            when 'warning_1'  then '迟到早退'
-            when 'warning_29' then '贪污包裹'
-            when 'warning_30' then '偷盗公司财物'
-            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
-            when 'warning_9'  then '腐败/滥用职权'
-            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
-            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
-            when 'warning_5'  then '持有或吸食毒品'
-            when 'warning_4'  then '工作时间或工作地点饮酒'
-            when 'warning_10' then '玩忽职守'
-            when 'warning_2'  then '无故连续旷工3天'
-            when 'warning_3'  then '贪污'
-            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
-            when 'warning_7'  then '通过社会媒体污蔑公司'
-            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
-            when 'warning_26' then 'Fake POD'
-            when 'warning_25' then 'Fake Status'
-            when 'warning_24' then '不接受或不配合公司的调查'
-            when 'warning_23' then '损害公司名誉'
-            when 'warning_22' then '失职'
-            when 'warning_28' then '贪污钱'
-            when 'warning_21' then '煽动/挑衅/损害公司利益'
-            when 'warning_20' then '谎报里程'
-            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
-            when 'warning_19' then '未按照网点规定的时间回款'
-            when 'warning_17' then '伪造证件'
-            when 'warning_12' then '未告知上级或无故旷工'
-            when 'warning_13' then '上级没有同意请假'
-            when 'warning_14' then '没有通过系统请假'
-            when 'warning_15' then '未按时上下班'
-            when 'warning_16' then '不配合公司的吸毒检查'
-            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
-            else mw.`type_code`
-        end as '警告原因'
-        ,case mw.`warning_type`
-        when 1 then '口述警告'
-        when 2 then '书面警告'
-        when 3 then '末次书面警告'
-        end as 警告类型
-from ph_backyard.message_warning mw
-left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
-left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
-left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
-left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
-left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
+    pi.pno 输入单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 COD金额
+from ph_staging.parcel_info pi
+left join ph_staging.parcel_info pi2 on if(pi.returned = 0, pi.pno, pi.customary_pno) = pi2.pno
+left join ph_staging.order_info oi on oi.pno = pi2.pno
+left join ph_staging.ka_profile kp on kp.id = pi2.client_id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = pi2.client_id
 where
-#     swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
-    mw.created_at >= date_add(curdate(), interval -day(curdate()) + 1 day)
-    and mw.type_code = 'warning_27'
-#     mw.created_at >= '2023-03-01'
-#     and mw.created_at < '2023-04-01'
-    and mw.is_delete = 0;
+    pi.pno in ('P35511D0J3BAG');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.cod_amount
+    ,pi.insure_declare_value
+from ph_staging.parcel_info pi
+where
+    pi.pno = 'P35511D0J3BAG';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    oi.cod_amount
+    ,oi.insure_declare_value
+    ,oi.cogs_amount
+from ph_staging.order_info oi
+where
+    oi.pno = 'P35511D0J3BAG';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    oi.cod_amount
+    ,oi.insure_declare_value
+    ,oi.cogs_amount
+    ,oi.cod_enabled
+from ph_staging.order_info oi
+where
+    oi.pno = 'P35511D0J3BAG';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    oi.cod_amount
+    ,oi.insure_declare_value
+#     ,oi.cogs_amount
+    ,oi.cod_enabled
+from ph_staging.parcel_info  oi
+where
+    oi.pno = 'P35511D0J3BAG';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ppl.replace_pno 输入单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,loi.item_name 产品名称
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 COD金额
+from ph_staging.parcel_pno_log ppl
+left join ph_staging.parcel_info pi on pi.pno = ppl.initial_pno
+left join ph_staging.parcel_info pi2 on if(pi.returned = 0, pi.pno, pi.customary_pno) = pi2.pno
+left join ph_drds.lazada_order_info_d loi on loi.pno = pi2.pno
+left join ph_staging.order_info oi on oi.pno = pi2.pno
+left join ph_staging.ka_profile kp on kp.id = pi2.client_id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = pi2.client_id
+where
+    ppl.replace_pno in ('${SUBSTITUTE(SUBSTITUTE(p2,"\n",","),",","','")}')
+
+union all
+
+select
+    pi.pno 输入单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,loi.item_name 产品名称
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 COD金额
+from ph_staging.parcel_info pi
+left join ph_staging.parcel_info pi2 on if(pi.returned = 0, pi.pno, pi.customary_pno) = pi2.pno
+left join ph_drds.lazada_order_info_d loi on loi.pno = pi2.pno
+left join ph_staging.order_info oi on oi.pno = pi2.pno
+left join ph_staging.ka_profile kp on kp.id = pi2.client_id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = pi2.client_id
+where
+    pi.pno in ('${SUBSTITUTE(SUBSTITUTE(p2,"\n",","),",","','")}');
+;-- -. . -..- - / . -. - .-. -.--
+select  date_sub(curdate(), interval 3 day);
+;-- -. . -..- - / . -. - .-. -.--
+select
+            de.dst_store_id
+            ,de.dst_store
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null)) over_7day_num
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null))/count(de.pno) over_7day_rate
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.cod_enabled = 1
+            and de.parcel_state < 9
+            and
+                (
+                    ( de.parcel_state not in (5,7,8,9) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                    or ( de.parcel_state in (5,7,8) and de.updated_at > date_sub(date_sub(curdate(), interval 7 day) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour), interval 8 hour)  )
+                )
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            de.dst_store_id
+            ,de.dst_store
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null)) over_7day_num
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null))/count(de.pno) over_7day_rate
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.cod_enabled = 1
+            and de.parcel_state < 9;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            de.dst_store_id
+            ,de.dst_store
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null)) over_7day_num
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null))/count(de.pno) over_7day_rate
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.cod_enabled = 1
+            and de.parcel_state < 9
+            and
+                (
+                    ( de.parcel_state not in (5,7,8,9) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                    or ( de.parcel_state in (5,7,8) and de.updated_at > date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                )
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            de.dst_store_id
+            ,de.dst_store
+            ,count(de.pno) sh_num
+            ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_5_7day_num
+            ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_5_7day_rate
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.cod_enabled = 1
+            and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) -- 3天前到达
+            and de.dst_routed_at < date_add(date_sub(curdate(), interval 7 day), interval 16 hour) -- 3天前到达
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            de.dst_store_id
+            ,de.dst_store
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null)) over_7day_num
+            ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null))/count(de.pno) over_7day_rate
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.cod_enabled = 'YES'
+            and de.parcel_state < 9
+            and
+                (
+                    ( de.parcel_state not in (5,7,8,9) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                    or ( de.parcel_state in (5,7,8) and de.updated_at > date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                )
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    de.dst_store_id
+    ,de.dst_store
+    ,count(t.pno) shre_num
+    ,count(if(de.cod_enabled = 'YES', de.pno, null)) cod_shre_num
+    ,count(if(de.return_time is not null, de.pno, null)) realre_num
+    ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null)) cod_ralre_num
+    ,count(if(de.return_time is not null, de.pno, null))/count(t.pno) re_rate
+    ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null))/count(if(de.cod_enabled = 'YES', de.pno, null)) cod_re_rate
+from
+    (
+        select
+            pr.pno
+            ,pr.store_id
+        from ph_staging.parcel_route pr
+        where
+            pr.routed_at > date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'PENDING_RETURN' -- 待退件
+        group by 1,2
+    ) t
+join dwm.dwd_ex_ph_parcel_details de on t.pno = de.pno and t.store_id = de.dst_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    de.dst_store_id
+    ,de.dst_store
+    ,count(t.pno) shre_num
+    ,count(if(de.cod_enabled = 'YES', de.pno, null)) cod_shre_num
+    ,count(if(de.return_time is not null, de.pno, null)) realre_num
+    ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null)) cod_ralre_num
+    ,count(if(de.return_time is not null, de.pno, null))/count(t.pno) re_rate
+    ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null))/count(if(de.cod_enabled = 'YES', de.pno, null)) cod_re_rate
+from
+    (
+        select
+            pr.pno
+            ,pr.store_id
+        from ph_staging.parcel_route pr
+        where
+            pr.routed_at > date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'PENDING_RETURN' -- 待退件
+        group by 1,2
+    ) t
+join dwm.dwd_ex_ph_parcel_details de on t.pno = de.pno and t.store_id = de.dst_store_id
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            pr.pno
+            ,pr.store_id
+        from ph_staging.parcel_route pr
+        where
+            pr.routed_at > date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'PENDING_RETURN' -- 待退件
+        group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    de.dst_store_id
+    ,de.dst_store
+    ,count(t.pno) shre_num
+    ,count(if(de.cod_enabled = 'YES', de.pno, null)) cod_shre_num
+    ,count(if(de.return_time is not null, de.pno, null)) realre_num
+    ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null)) cod_ralre_num
+    ,count(if(de.return_time is not null, de.pno, null))/count(t.pno) re_rate
+    ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null))/count(if(de.cod_enabled = 'YES', de.pno, null)) cod_re_rate
+from
+    (
+        select
+            pr.pno
+        from ph_staging.parcel_route pr
+        where
+            pr.routed_at > date_sub(curdate(), interval 8 hour)
+            and pr.route_action = 'PENDING_RETURN' -- 待退件
+        group by 1
+    ) t
+join dwm.dwd_ex_ph_parcel_details de on t.pno = de.pno
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with s1 as
+(
+    select
+        t1.dst_store_id store_id
+        ,t1.dst_store store_name
+        ,count(t1.pno) 在仓包裹数
+        ,count(if(t1.cod_enabled = 'YES', t1.pno, null)) 在仓COD包裹数
+        ,count(if(t1.days <= 3, t1.pno, null)) 3日内滞留
+        ,count(if(t1.days <= 3 and t1.cod_enabled = 'YES', t1.pno, null)) 3日内COD滞留
+        ,count(if(t1.days <= 5, t1.pno, null)) 5日内滞留
+        ,count(if(t1.days <= 5 and t1.cod_enabled = 'YES', t1.pno, null)) 5日内COD滞留
+        ,count(if(t1.days <= 7, t1.pno, null)) 7日内滞留
+        ,count(if(t1.days <= 7 and t1.cod_enabled = 'YES', t1.pno, null)) 7日内COD滞留
+        ,count(if(t1.days > 7, t1.pno, null)) 超7天滞留
+        ,count(if(t1.days > 7 and t1.cod_enabled = 'YES', t1.pno, null)) 超7天COD滞留
+        ,count(if(t1.client_name = 'lazada', t1.pno, null)) lazada在仓
+        ,count(if(t1.client_name = 'lazada' and t1.cod_enabled = 'YES', t1.pno, null)) lazadaCOD在仓
+        ,count(if(t1.client_name = 'shopee', t1.pno, null)) shopee在仓
+        ,count(if(t1.client_name = 'shopee' and t1.cod_enabled = 'YES', t1.pno, null)) shopeeCOD在仓
+        ,count(if(t1.client_name = 'tiktok', t1.pno, null)) tt在仓
+        ,count(if(t1.client_name = 'tiktok' and t1.cod_enabled = 'YES', t1.pno, null)) ttCOD在仓
+        ,count(if(t1.client_name = 'ka&c', t1.pno, null)) 'KA&小C在仓'
+        ,count(if(t1.client_name = 'ka&c' and t1.cod_enabled = 'YES', t1.pno, null)) 'KA&小CCOD在仓'
+    from
+        (
+            select
+                de.pno
+                ,de.dst_store_id
+                ,de.dst_store
+                ,if(bc.client_name is not null , bc.client_name, 'ka&c') client_name
+                ,datediff(curdate(), de.dst_routed_at) days
+                ,de.cod_enabled
+            from dwm.dwd_ex_ph_parcel_details de
+            left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+            where
+                de.parcel_state not in (5,7,8,9)
+                and de.dst_routed_at is not null
+        ) t1
+    group by 1
+)
+,s2 as
+(
+    select
+        a1.dst_store_id store_id
+        ,a1.dst_store store_name
+        ,a1.num 当日到达COD包裹
+        ,a2.num 当日交接COD包裹
+        ,a3.num 当日妥投COD包裹
+        ,a3.num/a1.num 当日到站COD妥投率
+        ,a4.last_3day_num 3日内COD妥投包裹
+        ,a4.last_3day_rate 3日COD妥投率
+        ,a5.last_3_5day_num 5日COD妥投包裹
+        ,a5.last_3_5day_rate 5日COD妥投率
+        ,a6.last_5_7day_num 7日内COD包裹妥投数
+        ,a6.last_5_7day_rate 7日COD妥投率
+        ,a7.over_7day_num 超7日COD包裹妥投数
+        ,a7.over_7day_rate 超7日COD妥投率
+    from
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a1
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.first_scan_time >= date_sub(curdate(), interval 8 hour )
+                and de.first_scan_time < date_add(curdate(), interval 16 hour)
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a2  on a2.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.finished_date = curdate()
+                and de.parcel_state = 5
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a3 on a3.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_3day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_3day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 3 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 3 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+         ) a4 on a4.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_3_5day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_3_5day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 5 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 5 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+        ) a5 on a5.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_5_7day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_5_7day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 7 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+        ) a6 on a6.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null)) over_7day_num
+                ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null))/count(de.pno) over_7day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.parcel_state < 9
+                and
+                    (
+                        ( de.parcel_state not in (5,7,8,9) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                        or ( de.parcel_state in (5,7,8) and de.updated_at > date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                    )
+            group by 1,2
+        ) a7 on a7.dst_store_id = a1.dst_store_id
+)
+,s3 as
+-- 应退件
+(
+    select
+        de.dst_store_id store_id
+        ,de.dst_store  store_name
+        ,count(t.pno)  应退件包裹
+        ,count(if(de.cod_enabled = 'YES', de.pno, null)) 应退件COD包裹
+        ,count(if(de.return_time is not null, de.pno, null)) 实际退件包裹
+        ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null)) 实际退件COD包裹
+        ,count(if(de.return_time is not null, de.pno, null))/count(t.pno) 退件操作完成率
+        ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null))/count(if(de.cod_enabled = 'YES', de.pno, null)) COD退件操作完成率
+    from
+        (
+            select
+                pr.pno
+            from ph_staging.parcel_route pr
+            where
+                pr.routed_at > date_sub(curdate(), interval 8 hour)
+                and pr.route_action = 'PENDING_RETURN' -- 待退件
+            group by 1
+        ) t
+    join dwm.dwd_ex_ph_parcel_details de on t.pno = de.pno
+    group by 1,2
+)
+,s4 as
+(
+    select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id and pr.routed_at > date_sub(curdate(), interval 8 hour) and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+    group by 1,2
+)
+select
+    ss.store_id
+    ,ss.store_name
+    ,s1.在仓包裹数, s1.在仓COD包裹数, s1.`3日内滞留`, s1.`3日内COD滞留`, s1.`5日内滞留`, s1.`5日内COD滞留`, s1.`7日内滞留`, s1.`7日内COD滞留`, s1.超7天滞留, s1.超7天COD滞留, s1.lazada在仓, s1.lazadaCOD在仓, s1.shopee在仓, s1.shopeeCOD在仓, s1.tt在仓, s1.ttCOD在仓, s1.`KA&小C在仓`, s1.`KA&小CCOD在仓`
+    ,s2.当日到达COD包裹, s2.当日交接COD包裹, s2.当日妥投COD包裹, s2.当日到站COD妥投率, s2.`3日内COD妥投包裹`, s2.`3日COD妥投率`, s2.`5日COD妥投包裹`, s2.`5日COD妥投率`, s2.`7日内COD包裹妥投数`, s2.`7日COD妥投率`, s2.超7日COD包裹妥投数, s2.超7日COD妥投率
+    ,s3.应退件包裹, s3.应退件COD包裹, s3.实际退件包裹, s3.实际退件COD包裹, s3.退件操作完成率, s3.COD退件操作完成率
+    ,s4.应到退件包裹, s4.应到退件COD包裹, s4.实到退件包裹, s4.实到退件COD包裹, s4.退件妥投包裹, s4.退件妥投COD包裹, s4.退件妥投完成率, s4.COD退件妥投完成率
+from
+    (
+        select s1.store_id,s1.store_name from s1 group by 1,2
+        union all
+        select s2.store_id,s2.store_name from s2 group by 1,2
+        union all
+        select s3.store_id,s3.store_name from s3 group by 1,2
+        union all
+        select s4.store_id,s4.store_name from s4 group by 1,2
+    ) ss
+left join s1 on s1.store_id = ss.store_id
+left join s2 on s2.store_id = ss.store_id
+left join s3 on s3.store_id = ss.store_id
+left join s4 on s4.store_id = ss.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+#     left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id and pr.routed_at > date_sub(curdate(), interval 8 hour) and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+        and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+        and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+#         ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+#         ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+#     left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+#         and pss.van_plan_arrived_at > curdate()
+#         and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+#         and pss.next_store_id = pi.dst_store_id
+#         and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+#         ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+#         ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on pr.pno = pi.pno and pr.store_id = pss.next_store_id
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on pr.pno = pi.pno and pr.store_id = pss.next_store_id
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on pr.pno = pi.pno and pr.store_id = pi.dst_store_id
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour);
+;-- -. . -..- - / . -. - .-. -.--
+select
+                pi.state
+                ,pss.pno
+                ,pi2.cod_enabled
+                ,pss.next_store_id
+                ,pss.next_store_name
+            from dw_dmd.parcel_store_stage_new pss
+            join ph_staging.parcel_info pi on pss.pno = pi.pno
+            left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+            where
+                pi.returned = 1
+                and pss.next_store_id = pi.dst_store_id
+                and pss.van_left_at is not null
+                and pss.van_plan_arrived_at >= curdate()
+                and pss.next_store_id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.next_store_id store_id
+        ,a.next_store_name store_name
+        ,count(distinct a.pno) 应到退件包裹
+        ,count(distinct (a.cod_enabled = 1, a.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , a.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) 实到退件COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null)) 退件妥投包裹
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null))/count(distinct if(pr.pno is not null , a.pno, null)) 退件妥投完成率
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno, null))/count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) COD退件妥投完成率
+    from
+        (
+            select
+                pi.state
+                ,pss.pno
+                ,pi2.cod_enabled
+                ,pss.next_store_id
+                ,pss.next_store_name
+            from dw_dmd.parcel_store_stage_new pss
+            join ph_staging.parcel_info pi on pss.pno = pi.pno
+            left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+            where
+                pi.returned = 1
+                and pss.next_store_id = pi.dst_store_id
+                and pss.van_left_at is not null
+                and pss.van_plan_arrived_at >= curdate()
+                and pss.next_store_id is not null
+        ) a
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on pr.pno = a.pno and pr.store_id = a.next_store_id
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.next_store_id store_id
+        ,a.next_store_name store_name
+        ,count(distinct a.pno) 应到退件包裹
+        ,count(distinct (a.cod_enabled = 1, a.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , a.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) 实到退件COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null)) 退件妥投包裹
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null))/count(distinct if(pr.pno is not null , a.pno, null)) 退件妥投完成率
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno, null))/count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) COD退件妥投完成率
+    from
+        (
+            select
+                pi.state
+                ,pss.pno
+                ,pi2.cod_enabled
+                ,pss.next_store_id
+                ,pss.next_store_name
+            from dw_dmd.parcel_store_stage_new pss
+            join ph_staging.parcel_info pi on pss.pno = pi.pno
+            left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+            where
+                pi.returned = 1
+                and pss.next_store_id = pi.dst_store_id
+                and pss.van_left_at is not null
+                and pss.van_plan_arrived_at >= curdate()
+                and pss.next_store_id is not null
+        ) a
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on pr.pno = a.pno and pr.store_id = coalesce(a.next_store_id, 0)
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour);
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.next_store_id store_id
+        ,a.next_store_name store_name
+        ,count(distinct a.pno) 应到退件包裹
+        ,count(distinct (a.cod_enabled = 1, a.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , a.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) 实到退件COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null)) 退件妥投包裹
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null))/count(distinct if(pr.pno is not null , a.pno, null)) 退件妥投完成率
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno, null))/count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) COD退件妥投完成率
+    from
+        (
+            select
+                pi.state
+                ,pss.pno
+                ,pi2.cod_enabled
+                ,pss.next_store_id
+                ,pss.next_store_name
+            from dw_dmd.parcel_store_stage_new pss
+            join ph_staging.parcel_info pi on pss.pno = pi.pno
+            left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+            where
+                pi.returned = 1
+                and pss.next_store_id = pi.dst_store_id
+                and pss.van_left_at is not null
+                and pss.van_plan_arrived_at >= curdate()
+                and pss.next_store_id is not null
+        ) a
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on pr.pno = a.pno and coalesce(a.next_store_id, 1) = coalesce(a.next_store_id, 0)
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.next_store_id store_id
+        ,a.next_store_name store_name
+        ,count(distinct a.pno) 应到退件包裹
+        ,count(distinct (a.cod_enabled = 1, a.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , a.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) 实到退件COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null)) 退件妥投包裹
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null))/count(distinct if(pr.pno is not null , a.pno, null)) 退件妥投完成率
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno, null))/count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) COD退件妥投完成率
+    from
+        (
+            select
+                pi.state
+                ,pss.pno
+                ,pi2.cod_enabled
+                ,pss.next_store_id
+                ,pss.next_store_name
+            from dw_dmd.parcel_store_stage_new pss
+            join ph_staging.parcel_info pi on pss.pno = pi.pno
+            left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+            where
+                pi.returned = 1
+                and pss.next_store_id = pi.dst_store_id
+                and pss.van_left_at is not null
+                and pss.van_plan_arrived_at >= curdate()
+                and pss.next_store_id is not null
+        ) a
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on coalesce(pr.pno,1) = coalesce(a.pno,0) and coalesce(a.next_store_id, 1) = coalesce(a.next_store_id, 0)
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.next_store_id store_id
+        ,a.next_store_name store_name
+        ,count(distinct a.pno) 应到退件包裹
+        ,count(distinct (a.cod_enabled = 1, a.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , a.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) 实到退件COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null)) 退件妥投包裹
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(a.state = 5, a.pno, null))/count(distinct if(pr.pno is not null , a.pno, null)) 退件妥投完成率
+        ,count(distinct if(a.state = 5 and a.cod_enabled = 1, a.pno, null))/count(distinct if(pr.pno is not null and a.cod_enabled = 1, a.pno, null)) COD退件妥投完成率
+    from
+        (
+            select
+                pi.state
+                ,pss.pno
+                ,pi2.cod_enabled
+                ,pss.next_store_id
+                ,pss.next_store_name
+            from dw_dmd.parcel_store_stage_new pss
+            join ph_staging.parcel_info pi on pss.pno = pi.pno
+            left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+            where
+                pi.returned = 1
+                and pss.next_store_id = pi.dst_store_id
+                and pss.van_left_at is not null
+                and pss.van_plan_arrived_at >= curdate()
+                and pss.next_store_id is not null
+        ) a
+    left join
+        (
+            select
+                pr.pno
+                ,pr.store_id
+            from ph_staging.parcel_route pr
+            join
+                (
+                    select
+                        pss.pno
+                    from dw_dmd.parcel_store_stage_new pss
+                    join ph_staging.parcel_info pi on pss.pno = pi.pno
+                    where
+                        pss.van_left_at is not null
+                        and pss.van_plan_arrived_at >= curdate()
+                        and pss.next_store_id is not null
+                        and pi.returned = 1
+                ) a on pr.pno = a.pno
+            where
+                pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+                and pr.routed_at > date_sub(curdate(), interval 8 hour)
+        ) pr on pr.pno = a.pno and a.next_store_id = a.next_store_id
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5, pss.pno and pi2.cod_enabled = 1, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno and pr.store_id = pss.next_store_id and pr.routed_at > date_sub(curdate(), interval 8 hour) and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at > curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+#         ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+#         ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+#     left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+#         ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+#         ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN' and pr.routed_at > date_sub(curdate(), interval 8 hour)
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+        and pss.pno is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    left join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    left join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pi.pno /*and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'*/
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        pss.next_store_id store_id
+        ,pss.next_store_name store_name
+        ,count(distinct pss.pno) 应到退件包裹
+        ,count(distinct (pi2.cod_enabled = 1, pss.pno, null)) 应到退件COD包裹
+        ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+        ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+        ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+        ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    from dw_dmd.parcel_store_stage_new pss
+    left join ph_staging.parcel_info pi on pss.pno = pi.pno
+    left join ph_staging.parcel_info pi2 on pi2.returned_pno = pi.pno
+    left join ph_staging.parcel_route pr on pr.pno = pss.pno /*and pr.store_id = pi.dst_store_id  and pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN'*/
+    where
+        pi.returned = 1
+        and pss.next_store_id = pi.dst_store_id
+        and pss.van_left_at is not null
+        and pss.van_plan_arrived_at >= curdate()
+        and pss.next_store_id is not null
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pr.pno
+    ,pr.store_id
+from ph_staging.parcel_route pr
+left join ph_bi.fleet_time ft on ft.proof_id = json_extract(pr.extra_value, '$.proofId') and pr.next_store_id = ft.next_store_id
+left join ph_staging.parcel_info pi on pi.pno = pr.pno
+where
+    pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+    and pr.routed_at > date_sub(curdate(), interval 5 day)
+    and ft.plan_arrive_time > date_sub(curdate(), interval 8 hour)
+    and pi.returned = 1
+    and pr.store_id = pi.dst_store_id
+limit 100;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pr.pno
+    ,pr.next_store_id
+from ph_staging.parcel_route pr
+left join ph_bi.fleet_time ft on ft.proof_id = json_extract(pr.extra_value, '$.proofId') and pr.next_store_id = ft.next_store_id
+left join ph_staging.parcel_info pi on pi.pno = pr.pno
+where
+    pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+    and pr.routed_at > date_sub(curdate(), interval 5 day)
+    and ft.plan_arrive_time > date_sub(curdate(), interval 8 hour)
+    and pi.returned = 1
+    and pr.store_id = pi.dst_store_id
+limit 100;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#         pss.next_store_id store_id
+#         ,pss.next_store_name store_name
+#         ,count(distinct pr.pno) 应到退件包裹
+#         ,count(distinct (pi2.cod_enabled = 1, pr.pno, null)) 应到退件COD包裹
+#         ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+#         ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+        pr.next_store_id
+        ,pr.next_store_name
+        ,pr.pno
+from ph_staging.parcel_route pr
+left join ph_bi.fleet_time ft on ft.proof_id = json_extract(pr.extra_value, '$.proofId') and pr.next_store_id = ft.next_store_id
+left join ph_staging.parcel_info pi on pi.pno = pr.pno
+left join ph_staging.parcel_info pi2 on  pi2.returned_pno = pi.pno
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = pr.pno
+where
+    pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+    and pr.routed_at > date_sub(curdate(), interval 5 day)
+    and ft.plan_arrive_time > date_sub(curdate(), interval 8 hour)
+    and pi.returned = 1
+    and pr.next_store_id = pi.dst_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#         pss.next_store_id store_id
+#         ,pss.next_store_name store_name
+#         ,count(distinct pr.pno) 应到退件包裹
+#         ,count(distinct (pi2.cod_enabled = 1, pr.pno, null)) 应到退件COD包裹
+#         ,count(distinct if(pr.pno is not null , pss.pno, null)) 实到退件包裹
+#         ,count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) 实到退件COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null)) 退件妥投包裹
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno , null)) 退件妥投COD包裹
+#         ,count(distinct if(pi.state = 5, pss.pno, null))/count(distinct if(pr.pno is not null , pss.pno, null)) 退件妥投完成率
+#         ,count(distinct if(pi.state = 5 and pi2.cod_enabled = 1, pss.pno, null))/count(distinct if(pr.pno is not null and pi2.cod_enabled = 1, pss.pno, null)) COD退件妥投完成率
+    pr.next_store_id
+    ,pr.next_store_name
+    ,count(pr.pno) 应到退件包裹
+    ,count(if(pi2.cod_enabled = 1, pr.pno, null)) 应到退件COD包裹
+    ,count(if(de.dst_routed_at is not null , pr.pno, null)) 实到退件包裹
+    ,count(if(de.dst_routed_at is not null and pi2.cod_enabled = 1, pr.pno, null)) 实到退件COD包裹
+    ,count(if(pi.state = 5, pr.pno, null)) 退件妥投包裹
+    ,count(if(pi.state = 5 and pi2.cod_enabled = 1, pr.pno, null)) 退件妥投COD包裹
+    ,count(if(pi.state = 5, pr.pno, null))/count(if(de.dst_routed_at is not null , pr.pno, null)) 退件妥投完成率
+    ,count(if(pi.state = 5 and pi2.cod_enabled = 1, pr.pno, null))/count(if(de.dst_routed_at is not null and pi2.cod_enabled = 1, pr.pno, null)) COD退件妥投完成率
+from ph_staging.parcel_route pr
+left join ph_bi.fleet_time ft on ft.proof_id = json_extract(pr.extra_value, '$.proofId') and pr.next_store_id = ft.next_store_id
+left join ph_staging.parcel_info pi on pi.pno = pr.pno
+left join ph_staging.parcel_info pi2 on  pi2.returned_pno = pi.pno
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = pr.pno
+where
+    pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+    and pr.routed_at > date_sub(curdate(), interval 5 day)
+    and ft.plan_arrive_time > date_sub(curdate(), interval 8 hour)
+    and pi.returned = 1
+    and pr.next_store_id = pi.dst_store_id
+    group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with s1 as
+(
+    select
+        t1.dst_store_id store_id
+        ,t1.dst_store store_name
+        ,count(t1.pno) 在仓包裹数
+        ,count(if(t1.cod_enabled = 'YES', t1.pno, null)) 在仓COD包裹数
+        ,count(if(t1.days <= 3, t1.pno, null)) 3日内滞留
+        ,count(if(t1.days <= 3 and t1.cod_enabled = 'YES', t1.pno, null)) 3日内COD滞留
+        ,count(if(t1.days <= 5, t1.pno, null)) 5日内滞留
+        ,count(if(t1.days <= 5 and t1.cod_enabled = 'YES', t1.pno, null)) 5日内COD滞留
+        ,count(if(t1.days <= 7, t1.pno, null)) 7日内滞留
+        ,count(if(t1.days <= 7 and t1.cod_enabled = 'YES', t1.pno, null)) 7日内COD滞留
+        ,count(if(t1.days > 7, t1.pno, null)) 超7天滞留
+        ,count(if(t1.days > 7 and t1.cod_enabled = 'YES', t1.pno, null)) 超7天COD滞留
+        ,count(if(t1.client_name = 'lazada', t1.pno, null)) lazada在仓
+        ,count(if(t1.client_name = 'lazada' and t1.cod_enabled = 'YES', t1.pno, null)) lazadaCOD在仓
+        ,count(if(t1.client_name = 'shopee', t1.pno, null)) shopee在仓
+        ,count(if(t1.client_name = 'shopee' and t1.cod_enabled = 'YES', t1.pno, null)) shopeeCOD在仓
+        ,count(if(t1.client_name = 'tiktok', t1.pno, null)) tt在仓
+        ,count(if(t1.client_name = 'tiktok' and t1.cod_enabled = 'YES', t1.pno, null)) ttCOD在仓
+        ,count(if(t1.client_name = 'ka&c', t1.pno, null)) 'KA&小C在仓'
+        ,count(if(t1.client_name = 'ka&c' and t1.cod_enabled = 'YES', t1.pno, null)) 'KA&小CCOD在仓'
+    from
+        (
+            select
+                de.pno
+                ,de.dst_store_id
+                ,de.dst_store
+                ,if(bc.client_name is not null , bc.client_name, 'ka&c') client_name
+                ,datediff(curdate(), de.dst_routed_at) days
+                ,de.cod_enabled
+            from dwm.dwd_ex_ph_parcel_details de
+            left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+            where
+                de.parcel_state not in (5,7,8,9)
+                and de.dst_routed_at is not null
+        ) t1
+    group by 1
+)
+,s2 as
+(
+    select
+        a1.dst_store_id store_id
+        ,a1.dst_store store_name
+        ,a1.num 当日到达COD包裹
+        ,a2.num 当日交接COD包裹
+        ,a3.num 当日妥投COD包裹
+        ,a3.num/a1.num 当日到站COD妥投率
+        ,a4.last_3day_num 3日内COD妥投包裹
+        ,a4.last_3day_rate 3日COD妥投率
+        ,a5.last_3_5day_num 5日COD妥投包裹
+        ,a5.last_3_5day_rate 5日COD妥投率
+        ,a6.last_5_7day_num 7日内COD包裹妥投数
+        ,a6.last_5_7day_rate 7日COD妥投率
+        ,a7.over_7day_num 超7日COD包裹妥投数
+        ,a7.over_7day_rate 超7日COD妥投率
+    from
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a1
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.first_scan_time >= date_sub(curdate(), interval 8 hour )
+                and de.first_scan_time < date_add(curdate(), interval 16 hour)
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a2  on a2.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.finished_date = curdate()
+                and de.parcel_state = 5
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a3 on a3.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_3day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_3day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 3 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 3 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+         ) a4 on a4.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_3_5day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_3_5day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 5 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 5 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+        ) a5 on a5.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_5_7day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_5_7day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 7 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+        ) a6 on a6.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null)) over_7day_num
+                ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null))/count(de.pno) over_7day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.parcel_state < 9
+                and
+                    (
+                        ( de.parcel_state not in (5,7,8,9) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                        or ( de.parcel_state in (5,7,8) and de.updated_at > date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                    )
+            group by 1,2
+        ) a7 on a7.dst_store_id = a1.dst_store_id
+)
+,s3 as
+-- 应退件
+(
+    select
+        de.dst_store_id store_id
+        ,de.dst_store  store_name
+        ,count(t.pno)  应退件包裹
+        ,count(if(de.cod_enabled = 'YES', de.pno, null)) 应退件COD包裹
+        ,count(if(de.return_time is not null, de.pno, null)) 实际退件包裹
+        ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null)) 实际退件COD包裹
+        ,count(if(de.return_time is not null, de.pno, null))/count(t.pno) 退件操作完成率
+        ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null))/count(if(de.cod_enabled = 'YES', de.pno, null)) COD退件操作完成率
+    from
+        (
+            select
+                pr.pno
+            from ph_staging.parcel_route pr
+            where
+                pr.routed_at > date_sub(curdate(), interval 8 hour)
+                and pr.route_action = 'PENDING_RETURN' -- 待退件
+            group by 1
+        ) t
+    join dwm.dwd_ex_ph_parcel_details de on t.pno = de.pno
+    group by 1,2
+)
+,s4 as
+(
+    select
+        pr.next_store_id store_id
+        ,pr.next_store_name store_name
+        ,count(pr.pno) 应到退件包裹
+        ,count(if(pi2.cod_enabled = 1, pr.pno, null)) 应到退件COD包裹
+        ,count(if(de.dst_routed_at is not null , pr.pno, null)) 实到退件包裹
+        ,count(if(de.dst_routed_at is not null and pi2.cod_enabled = 1, pr.pno, null)) 实到退件COD包裹
+        ,count(if(pi.state = 5, pr.pno, null)) 退件妥投包裹
+        ,count(if(pi.state = 5 and pi2.cod_enabled = 1, pr.pno, null)) 退件妥投COD包裹
+        ,count(if(pi.state = 5, pr.pno, null))/count(if(de.dst_routed_at is not null , pr.pno, null)) 退件妥投完成率
+        ,count(if(pi.state = 5 and pi2.cod_enabled = 1, pr.pno, null))/count(if(de.dst_routed_at is not null and pi2.cod_enabled = 1, pr.pno, null)) COD退件妥投完成率
+    from ph_staging.parcel_route pr
+    left join ph_bi.fleet_time ft on ft.proof_id = json_extract(pr.extra_value, '$.proofId') and pr.next_store_id = ft.next_store_id
+    left join ph_staging.parcel_info pi on pi.pno = pr.pno
+    left join ph_staging.parcel_info pi2 on  pi2.returned_pno = pi.pno
+    left join dwm.dwd_ex_ph_parcel_details de on de.pno = pr.pno
+    where
+        pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+        and pr.routed_at > date_sub(curdate(), interval 5 day)
+        and ft.plan_arrive_time > date_sub(curdate(), interval 8 hour)
+        and pi.returned = 1
+        and pr.next_store_id = pi.dst_store_id
+    group by 1,2
+)
+select
+    ss.store_id
+    ,ss.store_name
+    ,s1.在仓包裹数, s1.在仓COD包裹数, s1.`3日内滞留`, s1.`3日内COD滞留`, s1.`5日内滞留`, s1.`5日内COD滞留`, s1.`7日内滞留`, s1.`7日内COD滞留`, s1.超7天滞留, s1.超7天COD滞留, s1.lazada在仓, s1.lazadaCOD在仓, s1.shopee在仓, s1.shopeeCOD在仓, s1.tt在仓, s1.ttCOD在仓, s1.`KA&小C在仓`, s1.`KA&小CCOD在仓`
+    ,s2.当日到达COD包裹, s2.当日交接COD包裹, s2.当日妥投COD包裹, s2.当日到站COD妥投率, s2.`3日内COD妥投包裹`, s2.`3日COD妥投率`, s2.`5日COD妥投包裹`, s2.`5日COD妥投率`, s2.`7日内COD包裹妥投数`, s2.`7日COD妥投率`, s2.超7日COD包裹妥投数, s2.超7日COD妥投率
+    ,s3.应退件包裹, s3.应退件COD包裹, s3.实际退件包裹, s3.实际退件COD包裹, s3.退件操作完成率, s3.COD退件操作完成率
+    ,s4.应到退件包裹, s4.应到退件COD包裹, s4.实到退件包裹, s4.实到退件COD包裹, s4.退件妥投包裹, s4.退件妥投COD包裹, s4.退件妥投完成率, s4.COD退件妥投完成率
+from
+    (
+        select s1.store_id,s1.store_name from s1 group by 1,2
+        union all
+        select s2.store_id,s2.store_name from s2 group by 1,2
+        union all
+        select s3.store_id,s3.store_name from s3 group by 1,2
+        union all
+        select s4.store_id,s4.store_name from s4 group by 1,2
+    ) ss
+left join s1 on s1.store_id = ss.store_id
+left join s2 on s2.store_id = ss.store_id
+left join s3 on s3.store_id = ss.store_id
+left join s4 on s4.store_id = ss.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+with s1 as
+(
+    select
+        t1.dst_store_id store_id
+        ,t1.dst_store store_name
+        ,count(t1.pno) 在仓包裹数
+        ,count(if(t1.cod_enabled = 'YES', t1.pno, null)) 在仓COD包裹数
+        ,count(if(t1.days <= 3, t1.pno, null)) 3日内滞留
+        ,count(if(t1.days <= 3 and t1.cod_enabled = 'YES', t1.pno, null)) 3日内COD滞留
+        ,count(if(t1.days <= 5, t1.pno, null)) 5日内滞留
+        ,count(if(t1.days <= 5 and t1.cod_enabled = 'YES', t1.pno, null)) 5日内COD滞留
+        ,count(if(t1.days <= 7, t1.pno, null)) 7日内滞留
+        ,count(if(t1.days <= 7 and t1.cod_enabled = 'YES', t1.pno, null)) 7日内COD滞留
+        ,count(if(t1.days > 7, t1.pno, null)) 超7天滞留
+        ,count(if(t1.days > 7 and t1.cod_enabled = 'YES', t1.pno, null)) 超7天COD滞留
+        ,count(if(t1.client_name = 'lazada', t1.pno, null)) lazada在仓
+        ,count(if(t1.client_name = 'lazada' and t1.cod_enabled = 'YES', t1.pno, null)) lazadaCOD在仓
+        ,count(if(t1.client_name = 'shopee', t1.pno, null)) shopee在仓
+        ,count(if(t1.client_name = 'shopee' and t1.cod_enabled = 'YES', t1.pno, null)) shopeeCOD在仓
+        ,count(if(t1.client_name = 'tiktok', t1.pno, null)) tt在仓
+        ,count(if(t1.client_name = 'tiktok' and t1.cod_enabled = 'YES', t1.pno, null)) ttCOD在仓
+        ,count(if(t1.client_name = 'ka&c', t1.pno, null)) 'KA&小C在仓'
+        ,count(if(t1.client_name = 'ka&c' and t1.cod_enabled = 'YES', t1.pno, null)) 'KA&小CCOD在仓'
+    from
+        (
+            select
+                de.pno
+                ,de.dst_store_id
+                ,de.dst_store
+                ,if(bc.client_name is not null , bc.client_name, 'ka&c') client_name
+                ,datediff(curdate(), de.dst_routed_at) days
+                ,de.cod_enabled
+            from dwm.dwd_ex_ph_parcel_details de
+            left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+            where
+                de.parcel_state not in (5,7,8,9)
+                and de.dst_routed_at is not null
+        ) t1
+    group by 1
+)
+,s2 as
+(
+    select
+        a1.dst_store_id store_id
+        ,a1.dst_store store_name
+        ,a1.num 当日到达COD包裹
+        ,a2.num 当日交接COD包裹
+        ,a3.num 当日妥投COD包裹
+        ,a3.num/a1.num 当日到站COD妥投率
+        ,a4.last_3day_num 3日内COD妥投包裹
+        ,a4.last_3day_rate 3日COD妥投率
+        ,a5.last_3_5day_num 5日COD妥投包裹
+        ,a5.last_3_5day_rate 5日COD妥投率
+        ,a6.last_5_7day_num 7日内COD包裹妥投数
+        ,a6.last_5_7day_rate 7日COD妥投率
+        ,a7.over_7day_num 超7日COD包裹妥投数
+        ,a7.over_7day_rate 超7日COD妥投率
+    from
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a1
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.first_scan_time >= date_sub(curdate(), interval 8 hour )
+                and de.first_scan_time < date_add(curdate(), interval 16 hour)
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a2  on a2.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) num
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.dst_routed_at >= date_sub(curdate(), interval 8 hour )
+                and de.dst_routed_at < date_add(curdate(), interval 16 hour)
+                and de.finished_date = curdate()
+                and de.parcel_state = 5
+                and de.cod_enabled = 'YES'
+            group by 1,2
+        ) a3 on a3.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_3day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_3day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 3 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 3 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+         ) a4 on a4.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_3_5day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_3_5day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 5 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 5 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+        ) a5 on a5.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(de.pno) sh_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null)) last_5_7day_num
+                ,count(if(de.parcel_state = 5 and de.finished_date > date_sub(curdate(), interval 3 day), de.pno, null))/count(de.pno) last_5_7day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.dst_routed_at >= date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) -- 3天前到达
+                and de.dst_routed_at < date_add(date_sub(curdate(), interval 7 day), interval 16 hour) -- 3天前到达
+            group by 1,2
+        ) a6 on a6.dst_store_id = a1.dst_store_id
+    left join
+        (
+            select
+                de.dst_store_id
+                ,de.dst_store
+                ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null)) over_7day_num
+                ,count(if(de.parcel_state = 5 and datediff(de.finished_date, de.dst_routed_at) > 7 , de.pno, null))/count(de.pno) over_7day_rate
+            from dwm.dwd_ex_ph_parcel_details de
+            where
+                de.cod_enabled = 'YES'
+                and de.parcel_state < 9
+                and
+                    (
+                        ( de.parcel_state not in (5,7,8,9) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                        or ( de.parcel_state in (5,7,8) and de.updated_at > date_sub(date_sub(curdate(), interval 7 day), interval 8 hour) and de.dst_routed_at < date_sub(date_sub(curdate(), interval 7 day), interval 8 hour))
+                    )
+            group by 1,2
+        ) a7 on a7.dst_store_id = a1.dst_store_id
+)
+,s3 as
+-- 应退件
+(
+    select
+        de.dst_store_id store_id
+        ,de.dst_store  store_name
+        ,count(t.pno)  应退件包裹
+        ,count(if(de.cod_enabled = 'YES', de.pno, null)) 应退件COD包裹
+        ,count(if(de.return_time is not null, de.pno, null)) 实际退件包裹
+        ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null)) 实际退件COD包裹
+        ,count(if(de.return_time is not null, de.pno, null))/count(t.pno) 退件操作完成率
+        ,count(if(de.return_time is not null and de.cod_enabled = 'YES', de.pno, null))/count(if(de.cod_enabled = 'YES', de.pno, null)) COD退件操作完成率
+    from
+        (
+            select
+                pr.pno
+            from ph_staging.parcel_route pr
+            where
+                pr.routed_at > date_sub(curdate(), interval 8 hour)
+                and pr.route_action = 'PENDING_RETURN' -- 待退件
+            group by 1
+        ) t
+    join dwm.dwd_ex_ph_parcel_details de on t.pno = de.pno
+    group by 1,2
+)
+,s4 as
+(
+    select
+        pr.next_store_id store_id
+        ,pr.next_store_name store_name
+        ,count(pr.pno) 应到退件包裹
+        ,count(if(pi2.cod_enabled = 1, pr.pno, null)) 应到退件COD包裹
+        ,count(if(de.dst_routed_at is not null , pr.pno, null)) 实到退件包裹
+        ,count(if(de.dst_routed_at is not null and pi2.cod_enabled = 1, pr.pno, null)) 实到退件COD包裹
+        ,count(if(pi.state = 5, pr.pno, null)) 退件妥投包裹
+        ,count(if(pi.state = 5 and pi2.cod_enabled = 1, pr.pno, null)) 退件妥投COD包裹
+        ,count(if(pi.state = 5, pr.pno, null))/count(if(de.dst_routed_at is not null , pr.pno, null)) 退件妥投完成率
+        ,count(if(pi.state = 5 and pi2.cod_enabled = 1, pr.pno, null))/count(if(de.dst_routed_at is not null and pi2.cod_enabled = 1, pr.pno, null)) COD退件妥投完成率
+    from ph_staging.parcel_route pr
+    left join ph_bi.fleet_time ft on ft.proof_id = json_extract(pr.extra_value, '$.proofId') and pr.next_store_id = ft.next_store_id
+    left join ph_staging.parcel_info pi on pi.pno = pr.pno
+    left join ph_staging.parcel_info pi2 on  pi2.returned_pno = pi.pno
+    left join dwm.dwd_ex_ph_parcel_details de on de.pno = pr.pno
+    where
+        pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+        and pr.routed_at > date_sub(curdate(), interval 5 day)
+        and ft.plan_arrive_time > date_sub(curdate(), interval 8 hour)
+        and pi.returned = 1
+        and pr.next_store_id = pi.dst_store_id
+    group by 1,2
+)
+select
+    ss.store_id
+    ,ss.store_name
+    ,s1.在仓包裹数, s1.在仓COD包裹数, s1.`3日内滞留`, s1.`3日内COD滞留`, s1.`5日内滞留`, s1.`5日内COD滞留`, s1.`7日内滞留`, s1.`7日内COD滞留`, s1.超7天滞留, s1.超7天COD滞留, s1.lazada在仓, s1.lazadaCOD在仓, s1.shopee在仓, s1.shopeeCOD在仓, s1.tt在仓, s1.ttCOD在仓, s1.`KA&小C在仓`, s1.`KA&小CCOD在仓`
+    ,s2.当日到达COD包裹, s2.当日交接COD包裹, s2.当日妥投COD包裹, s2.当日到站COD妥投率, s2.`3日内COD妥投包裹`, s2.`3日COD妥投率`, s2.`5日COD妥投包裹`, s2.`5日COD妥投率`, s2.`7日内COD包裹妥投数`, s2.`7日COD妥投率`, s2.超7日COD包裹妥投数, s2.超7日COD妥投率
+    ,s3.应退件包裹, s3.应退件COD包裹, s3.实际退件包裹, s3.实际退件COD包裹, s3.退件操作完成率, s3.COD退件操作完成率
+    ,s4.应到退件包裹, s4.应到退件COD包裹, s4.实到退件包裹, s4.实到退件COD包裹, s4.退件妥投包裹, s4.退件妥投COD包裹, s4.退件妥投完成率, s4.COD退件妥投完成率
+from
+    (
+        select s1.store_id,s1.store_name from s1 group by 1,2
+        union
+        select s2.store_id,s2.store_name from s2 group by 1,2
+        union
+        select s3.store_id,s3.store_name from s3 group by 1,2
+        union
+        select s4.store_id,s4.store_name from s4 group by 1,2
+    ) ss
+left join s1 on s1.store_id = ss.store_id
+left join s2 on s2.store_id = ss.store_id
+left join s3 on s3.store_id = ss.store_id
+left join s4 on s4.store_id = ss.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_table(pre.extra_value)
+from ph_drds.parcel_route_extra pre
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.id
+from ph_drds.parcel_route_extra pre,json_table(pre.extra_value,'$[*]' ,columns(id int path '$images')) as a
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.id
+from ph_drds.parcel_route_extra pre,json_table(pre.extra_value,'$[*]' ,columns(id VARCHAR(100) path '$images')) as a
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select version();
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_extract(pre.extra_value, '$.images')
+from ph_drds.parcel_route_extra pre
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    json_unquote(json_extract(pre.extra_value, '$.images'))
+from ph_drds.parcel_route_extra pre
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    explode(json_extract(pre.extra_value, '$.images'))
+from ph_drds.parcel_route_extra pre
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    replace(json_extract(pre.extra_value, '$.images'), '"','')
+from ph_drds.parcel_route_extra pre
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '')
+from ph_drds.parcel_route_extra pre
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+     ,concat('{',job_title,'}') json_test
+     ,JSON_EXTRACT(concat('{',job_title,'}'),'$.id')
+     ,JSON_EXTRACT(concat('{',job_title,'}'),'$.driver')
+from
+    (
+    SELECT
+        id
+         , after_object
+         ,replace( REPLACE(after_object, '[{',''),'}]','') as new
+    from ph_staging.record_version_info rvi
+    where id=383553
+    )t
+    lateral VIEW posexplode ( split ( new, '},{' ) ) t AS job_title, val;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '')
+from ph_drds.parcel_route_extra pre
+
+where
+    pre.id = '14169159'
+lateral view posexplode(split, ',') as b;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '')
+from ph_drds.parcel_route_extra pre
+
+lateral view posexplode(split, ',') b as b
+
+where
+    pre.id = '14169159';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from
+    (
+        select
+            replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+        from ph_drds.parcel_route_extra pre
+        where
+            pre.id = '14169159'
+    ) a
+lateral view explode(split(a.valu, ',')) as id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    id
+from
+    (
+        select
+            replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+        from ph_drds.parcel_route_extra pre
+        where
+            pre.id = '14169159'
+    ) a
+lateral view explode(split(a.valu, ',')) as id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    id
+from
+    (
+        select
+            replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+        from ph_drds.parcel_route_extra pre
+        where
+            pre.id = '14169159'
+    ) a
+lateral view explode(split(a.valu, ',')) id as id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    id
+from
+    (
+        select
+            replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+        from ph_drds.parcel_route_extra pre
+        where
+            pre.id = '14169159'
+    ) a
+lateral view explode(split(a.valu, ',')) id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    id
+from
+    (
+        select
+            replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+        from ph_drds.parcel_route_extra pre
+        where
+            pre.id = '14169159'
+    ) a
+lateral view explode(split(a.valu, ',')) id as c;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    c
+from
+    (
+        select
+            replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+        from ph_drds.parcel_route_extra pre
+        where
+            pre.id = '14169159'
+    ) a
+lateral view explode(split(a.valu, ',')) id as c;
+;-- -. . -..- - / . -. - .-. -.--
+select
+                *
+#                     json_extract(ext_info,'$.organization_id') store_id
+#                     ,substr(fp.p_date, 1, 4) p_month
+#                     ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+#                     ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+#                     ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+#                     ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+#                     ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_ph_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                    and fp.store_id = 'PH04470200'
+                    and json_unquote(json_extract(ext_info,'$.matchResult')) = 'true';
+;-- -. . -..- - / . -. - .-. -.--
+select
+                *
+#                     json_extract(ext_info,'$.organization_id') store_id
+#                     ,substr(fp.p_date, 1, 4) p_month
+#                     ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
+#                     ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
+#                     ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
+#                     ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
+#                     ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
+                from dwm.dwd_ph_sls_pro_flash_point fp
+                where
+                    fp.p_date >= '2023-01-01'
+                    and json_extract(ext_info,'$.organization_id') = 'PH04470200'
+                    and json_unquote(json_extract(ext_info,'$.matchResult')) = 'true';
+;-- -. . -..- - / . -. - .-. -.--
+select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 4) creat_month
+                    ,ph.submit_store_name
+                    ,ph.submit_store_id
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领_待认领'
+                        when ph.state = 2 then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at < coalesce(sx.claim_time,curdate()) then '认领成功_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at >= coalesce(sx.claim_time,curdate()) then '认领失败_已失效' -- 理赔失效
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  ph_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from ph_staging.parcel_headless ph
+                        join ph_bi.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-04-01'
+                    and ph.submit_store_id = 'PH19280F01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+                    ph.hno
+                    ,substr(ph.created_at, 1, 4) creat_month
+                    ,ph.submit_store_name
+                    ,ph.submit_store_id
+                    ,ph.pno
+                    ,case
+                        when ph.state = 0 then '未认领_待认领'
+                        when ph.state in (1,2) then '认领成功'
+                        when ph.state = 3 and ph.claim_store_id is null then '未认领_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at < coalesce(sx.claim_time,curdate()) then '认领成功_已失效'
+                        when ph.state = 3 and ph.claim_store_id is not null and ph.claim_at >= coalesce(sx.claim_time,curdate()) then '认领失败_已失效' -- 理赔失效
+                    end head_state
+                    ,ph.state
+                    ,ph.claim_store_id
+                    ,ph.claim_store_name
+                    ,ph.claim_at
+                from  ph_staging.parcel_headless ph
+                left join
+                    (
+                        select
+                            ph.pno
+                            ,min(pct.created_at) claim_time
+                        from ph_staging.parcel_headless ph
+                        join ph_bi.parcel_claim_task pct on pct.pno = ph.pno
+                        where
+                            ph.state = 3 -- 时效
+                        group by 1
+                    ) sx on sx.pno = ph.pno
+                where
+                    ph.state < 4
+                    and ph.created_at >= '2023-04-01'
+                    and ph.submit_store_id = 'PH19280F01';
