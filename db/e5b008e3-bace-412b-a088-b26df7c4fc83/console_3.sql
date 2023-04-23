@@ -914,16 +914,39 @@ where
 
 
 select
-    c
+    a.pno
+    ,convert_tz(a.routed_at, '+00:00', '+08:00') 路由时间
+    ,a.store_name 操作网点
+    ,a.staff_info_id 操作员工
+    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa.object_key) 地址
 from
     (
         select
-            replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
-        from ph_drds.parcel_route_extra pre
-        where
-            pre.id = '14169159'
+            a.pno
+            ,a.routed_at
+            ,a.store_name
+            ,a.staff_info_id
+            ,link_id
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,pr.store_id
+                    ,pr.store_name
+                    ,pr.staff_info_id
+                    ,replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+                from ph_staging.parcel_route pr
+                left join ph_drds.parcel_route_extra pre on pre.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
+                where
+                    pr.route_action = 'TAKE_PHOTO'
+                    and json_extract(pr.extra_value, '$.forceTakePhotoCategory') = 3
+                    and pr.routed_at > date_sub(date_sub(curdate() ,interval 21 day), interval 8 hour )
+#                     and pr.pno = 'P35301F7J38AQ'
+            ) a
+        lateral view explode(split(a.valu, ',')) id as link_id
     ) a
-lateral view explode(split(a.valu, ',')) id as c
+left join ph_staging.sys_attachment sa on sa.id = a.link_id
     ;
 
 ;
