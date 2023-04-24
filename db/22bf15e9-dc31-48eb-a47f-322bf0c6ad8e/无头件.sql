@@ -374,3 +374,5 @@ from
 left join fle_staging.sys_store ss on ss.id = a.submit_store_id
 group by 1,2,3
 
+;
+

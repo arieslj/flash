@@ -18089,3 +18089,11 @@ from
     ) a
 left join fle_staging.sys_store ss on ss.id = a.submit_store_id
 group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ph.submit_store_name
+from fle_staging.parcel_headless ph
+where
+    ph.created_at >= '2023-04-05 17:00:00'
+    and ph.created_at < '2023-04-18 17:00:00'
+group by 1;

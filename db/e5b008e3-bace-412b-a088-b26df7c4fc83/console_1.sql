@@ -14,8 +14,8 @@ with t as
     where
         am.abnormal_object = 1 -- 集体处罚
         and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
+        and am.abnormal_time >= '2023-03-01'
+        and am.abnormal_time < '2023-05-01'
         and am.state = 1
     group by 1,2
 )
@@ -354,8 +354,8 @@ with t as
     where
         am.abnormal_object = 1 -- 集体处罚
         and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
+        and am.abnormal_time >= '2023-03-01'
+        and am.abnormal_time < '2023-05-01'
         and am.state = 1
     group by 1,2
 )

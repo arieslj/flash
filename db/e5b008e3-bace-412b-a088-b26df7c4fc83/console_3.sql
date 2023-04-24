@@ -910,43 +910,71 @@ where
     and pr.routed_at > date_sub(curdate(), interval 10 day)
 
 ;
-
-
-
+with a as
+(
+    select
+        a.pno
+        ,a.routed_at
+        ,a.store_id
+        ,a.store_name
+        ,a.staff_info_id
+        ,link_id
+    from
+        (
+            select
+                pr.pno
+                ,pr.routed_at
+                ,pr.store_id
+                ,pr.store_name
+                ,pr.staff_info_id
+                ,replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+            from ph_staging.parcel_route pr
+            left join ph_drds.parcel_route_extra pre on pre.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
+            where
+                pr.route_action = 'TAKE_PHOTO'
+                and json_extract(pr.extra_value, '$.forceTakePhotoCategory') = 3
+                and pr.routed_at >= date_sub(date_sub(curdate() ,interval 1 day), interval 8 hour )
+                and pr.routed_at < date_sub(curdate(), interval 8 hour )
+        ) a
+    lateral view explode(split(a.valu, ',')) id as link_id
+)
 select
-    a.pno
-    ,convert_tz(a.routed_at, '+00:00', '+08:00') 路由时间
+    dp.region_name 大区
+    ,dp.piece_name 片区
+    ,dr.area_name 地区
+    ,de.pickup_time 揽收时间
+    ,de.dst_store_in_time 到达目的地网点时间
+    ,a.pno
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) '物品价值(cogs)'
+    ,oi.cod_amount/100 COD金融
+    ,datediff(date_sub(curdate(), interval 1 day), de.dst_routed_at) 在仓天数
+    ,if(pri.pno is null, '否', '是') 是否打印面单
+    ,convert_tz(a.routed_at, '+00:00', '+08:00') 拍照路由时间
     ,a.store_name 操作网点
     ,a.staff_info_id 操作员工
     ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa.object_key) 地址
-from
+from a
+left join ph_staging.sys_attachment sa on sa.id = a.link_id
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = a.pno
+left join ph_staging.order_info oi on oi.pno = de.pno
+left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+left join
     (
         select
-            a.pno
-            ,a.routed_at
-            ,a.store_name
-            ,a.staff_info_id
-            ,link_id
-        from
+            pr.pno
+        from ph_staging.parcel_route pr
+        join
             (
                 select
-                    pr.pno
-                    ,pr.routed_at
-                    ,pr.store_id
-                    ,pr.store_name
-                    ,pr.staff_info_id
-                    ,replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
-                from ph_staging.parcel_route pr
-                left join ph_drds.parcel_route_extra pre on pre.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
-                where
-                    pr.route_action = 'TAKE_PHOTO'
-                    and json_extract(pr.extra_value, '$.forceTakePhotoCategory') = 3
-                    and pr.routed_at > date_sub(date_sub(curdate() ,interval 21 day), interval 8 hour )
-#                     and pr.pno = 'P35301F7J38AQ'
-            ) a
-        lateral view explode(split(a.valu, ',')) id as link_id
-    ) a
-left join ph_staging.sys_attachment sa on sa.id = a.link_id
-    ;
+                    a.pno
+                from a
+                group by 1
+            ) a1 on a1.pno = pr.pno
+        where
+            pr.route_action = 'PRINTING'
+        group by 1
+    ) pri on pri.pno = a.pno
+left join dwm.dwd_ph_dict_lazada_period_rules dr on dr.province_code = dp.province_code
 
 ;
