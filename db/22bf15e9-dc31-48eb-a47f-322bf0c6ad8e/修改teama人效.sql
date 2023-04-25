@@ -141,7 +141,7 @@ left join
                     a.type= 1
                     AND a.action IN(1, 3, 4)
                     AND DATE_FORMAT(a.created_at, '%Y-%m-%d') >= '${date}'
-                    and  DATE_FORMAT(a.created_at, '%Y-%m-%d') <= '${date1}'
+                    and  DATE_FORMAT(a.created_at, '%Y-%m-%d') <=
                     and a.operator_id!='10000'
                     and ${if(len(operator_id)>0," a.operator_id in ('"+operator_id+"')",1=1)}
                 GROUP BY 8
@@ -152,3 +152,18 @@ left join
  where
  	 a.operator_id!='10000'
  ORDER BY 1,2,3,4;
+
+-- 新代码
+
+select
+    pcol.pno
+    ,pcol.id
+    ,pcol.action
+    ,plt.source
+from bi_pro.parcel_cs_operation_log pcol
+left join bi_pro.parcel_lose_task plt on plt.id = pcol.task_id
+where
+    pcol.type = 1 -- 闪速认定
+    and pcol.created_at >= '${date}'
+    and pcol.created_at < date_add('${date1}', interval 1 day)
+    and pcol.action in (1,3,4)

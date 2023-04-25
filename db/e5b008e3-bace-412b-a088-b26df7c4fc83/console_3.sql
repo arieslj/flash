@@ -943,16 +943,16 @@ select
     ,dp.piece_name 片区
     ,dr.area_name 地区
     ,de.pickup_time 揽收时间
-    ,de.dst_store_in_time 到达目的地网点时间
+    ,convert_tz(coalesce(arr.unseal_time, arr.scan_time), '+00:00', '+08:00') 到达目的地网点时间  --
     ,a.pno
     ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) '物品价值(cogs)'
-    ,oi.cod_amount/100 COD金融
-    ,datediff(date_sub(curdate(), interval 1 day), de.dst_routed_at) 在仓天数
+    ,oi.cod_amount/100 COD金额
+    ,datediff(date_sub(curdate(), interval 1 day), convert_tz(coalesce(arr.unseal_time, arr.scan_time), '+00:00', '+08:00')) 在仓天数
     ,if(pri.pno is null, '否', '是') 是否打印面单
     ,convert_tz(a.routed_at, '+00:00', '+08:00') 拍照路由时间
     ,a.store_name 操作网点
     ,a.staff_info_id 操作员工
-    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa.object_key) 地址
+    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa.object_key) 图片地址
 from a
 left join ph_staging.sys_attachment sa on sa.id = a.link_id
 left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
@@ -960,7 +960,7 @@ left join dwm.dwd_ex_ph_parcel_details de on de.pno = a.pno
 left join ph_staging.order_info oi on oi.pno = de.pno
 left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
 left join
-    (
+    ( -- 目的地网点拍照
         select
             pr.pno
         from ph_staging.parcel_route pr
@@ -968,13 +968,33 @@ left join
             (
                 select
                     a.pno
+                    ,a.store_id
                 from a
                 group by 1
-            ) a1 on a1.pno = pr.pno
+            ) a1 on a1.pno = pr.pno and a1.store_id = pr.store_id
         where
             pr.route_action = 'PRINTING'
         group by 1
     ) pri on pri.pno = a.pno
 left join dwm.dwd_ph_dict_lazada_period_rules dr on dr.province_code = dp.province_code
+left join
+    (
+        select
+            pr.pno
+            ,max(if(pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN', pr.routed_at, null)) scan_time
+            ,max(if(pr.route_action = 'UNSEAL', pr.routed_at, null)) unseal_time
+        from ph_staging.parcel_route pr
+        join
+            (
+                select
+                    a.pno
+                    ,a.store_id
+                from a
+                group by 1
+            ) a1 on a1.pno = pr.pno and a1.store_id = pr.store_id
+        where
+            pr.route_action in ('ARRIVAL_WAREHOUSE_SCAN','UNSEAL')
+        group by 1
+    ) arr on arr.pno = a.pno
 
 ;
