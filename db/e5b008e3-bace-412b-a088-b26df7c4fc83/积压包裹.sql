@@ -180,10 +180,11 @@ with t as
         de.pno
         ,pcd.created_at
     from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
     left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
     left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
     where
-        de.dst_store_id = 'PH19040F05' -- 目的地网点是拍卖仓
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
         and pcd.field_name = 'dst_store_id'
         and pcd.new_value = 'PH19040F05'
         and de.parcel_state not in (5,7,8,9)
@@ -220,10 +221,11 @@ with t as
             ,de.last_store_name store
             ,'目的地在仓未终态' type
         from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
         where
             de.dst_routed_at is not null
-            and de.parcel_state not in (5,7,8,9) -- 未终态，且目的地网点有路由
-            and de.dst_store_id != 'PH19040F05'  -- 目的地网点不是拍卖仓
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
 
         union
         -- 退件未发出
@@ -233,37 +235,66 @@ with t as
             ,de.src_store store
             ,'退件未发出包裹' type
         from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
         where
             de.returned = 1
             and de.last_store_id = de.src_store_id
-            and de.parcel_state not in (2,5,7,8,9)
+            and pi2.state not in (2,5,7,8,9)
 )
 select
     de.pno
     ,oi.src_name 寄件人姓名
     ,oi.src_detail_address 寄件人地址
     ,oi.dst_name 收件人姓名
-    ,oi.dst_detail_address 寄件人地址
+    ,oi.dst_detail_address 收件人地址
     ,b.type 类型
     ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
     ,de.parcel_state_name 当前状态
     ,if(de.returned = 1, '退件', '正向') 流向
-    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
     ,oi.cod_amount/100 COD金额
     ,de.pickup_time 揽收时间
     ,de.src_store 揽收网点
-    ,de.dst_store 目的地网点
+    ,dp2.store_name 目的地网点
     ,last_cn_route_action 最后一条有效路由
     ,last_route_time 最后一条有效路由时间
     ,src_piece 揽件网点所属片区
     ,src_region 揽件网点所属大区
-    ,discard_enabled 是否为丢弃
+    ,de.discard_enabled 是否为丢弃
     ,inventorys 盘库次数
     ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
 from dwm.dwd_ex_ph_parcel_details de
 join b on b.pno = de.pno
-left join ph_staging.order_info oi on b.pno = oi.pno
-left join ph_staging.parcel_route pr on pr.pno = b.pno and pr.route_action = 'INVENTORY' and pr.routed_at >= date_add(curdate(), interval 8 hour)
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+    and dp.store_category not in (8,12)
+#     and pi.pno = 'P1904TZZ96AO'
 group by 1
 
 

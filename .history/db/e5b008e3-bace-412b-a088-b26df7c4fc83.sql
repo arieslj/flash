@@ -1,4032 +1,3 @@
-select
-    mw.staff_info_id
-    ,mw.id
-    ,mw.type_code
-from ph_backyard.message_warning mw
-where
-    mw.staff_info_id in ('119872', '124880', '119279', '119022', '118822', '118925', '120282', '130832', '120267', '123336', '119617', '146865');
-;-- -. . -..- - / . -. - .-. -.--
-select
-    mw.staff_info_id
-    ,mw.id
-    ,mw.type_code
-    ,mw.date_at
-from ph_backyard.message_warning mw
-where
-    mw.staff_info_id in ('119872', '124880', '119279', '119022', '118822', '118925', '120282', '130832', '120267', '123336', '119617', '146865');
-;-- -. . -..- - / . -. - .-. -.--
-select
-    mw.staff_info_id
-    ,mw.id
-    ,mw.type_code
-    ,mw.date_at
-    ,mw.created_at
-from ph_backyard.message_warning mw
-where
-    mw.staff_info_id in ('119872', '124880', '119279', '119022', '118822', '118925', '120282', '130832', '120267', '123336', '119617', '146865');
-;-- -. . -..- - / . -. - .-. -.--
-select
-    mw.staff_info_id 员工ID
-    ,mw.id 警告信ID
-    ,mw.created_at 警告信创建时间
-    ,mw.is_delete 是否删除
-    ,case mw.type_code
-        when 'warning_1'  then '迟到早退'
-        when 'warning_29' then '贪污包裹'
-        when 'warning_30' then '偷盗公司财物'
-        when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
-        when 'warning_9'  then '腐败/滥用职权'
-        when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
-        when 'warning_5'  then '持有或吸食毒品'
-        when 'warning_4'  then '工作时间或工作地点饮酒'
-        when 'warning_10' then '玩忽职守'
-        when 'warning_2'  then '无故连续旷工3天'
-        when 'warning_3'  then '贪污'
-        when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
-        when 'warning_7'  then '通过社会媒体污蔑公司'
-        when 'warning_27' then '工作效率未达到公司的标准(KPI)'
-        when 'warning_26' then 'Fake POD'
-        when 'warning_25' then 'Fake Status'
-        when 'warning_24' then '不接受或不配合公司的调查'
-        when 'warning_23' then '损害公司名誉'
-        when 'warning_22' then '失职'
-        when 'warning_28' then '贪污钱'
-        when 'warning_21' then '煽动/挑衅/损害公司利益'
-        when 'warning_20' then '谎报里程'
-        when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
-        when 'warning_19' then '未按照网点规定的时间回款'
-        when 'warning_17' then '伪造证件'
-        when 'warning_12' then '未告知上级或无故旷工'
-        when 'warning_13' then '上级没有同意请假'
-        when 'warning_14' then '没有通过系统请假'
-        when 'warning_15' then '未按时上下班'
-        when 'warning_16' then '不配合公司的吸毒检查'
-        when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
-        else mw.`type_code`
-    end as '警告原因'
-from ph_backyard.message_warning mw
-where
-    mw.staff_info_id in ('119872', '124880', '119279', '119022', '118822', '118925', '120282', '130832', '120267', '123336', '119617', '146865');
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.date_d
-    ,a.pr_num 派件量
-    ,b.diff_num 疑难量
-    ,b.diff_num/a.pr_num 疑难件率
-from
-    (
-        select
-            date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
-            ,count(distinct pr.pno) pr_num
-        from ph_staging.parcel_route pr
-        where
-            pr.routed_at > '2023-02-13 16:00:00'
-            and pr.routed_at < '2023-03-20 16:00:00'
-            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN','DELIVERY_CONFIRM')
-        group by 1
-    ) a
-left join
-    (
-        select
-            date(convert_tz(di.created_at, '+00:00', '+08:00')) date_d
-            ,count(distinct di.pno) diff_num
-        from ph_staging.diff_info di
-        where
-            di.created_at >= '2023-02-13 16:00:00'
-            and di.created_at < '2023-03-20 16:00:00'
-        group by 1
-    ) b on a.date_d = b.date_d;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    date(convert_tz(a.created_at, '+00:00', '+08:00')) date_d
-    ,case a.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end reason
-    ,count(distinct a.pno) diff_num
-    ,count(distinct a.pno) over (partition by date(convert_tz(a.created_at, '+00:00', '+08:00'))) 总计
-from
-    (
-        select
-            di.diff_marker_category
-            ,di.created_at
-            ,di.pno
-        from ph_staging.diff_info di
-        where
-            di.created_at >= '2023-02-13 16:00:00'
-            and di.created_at < '2023-03-20 16:00:00'
-
-        union all
-
-        select
-            ppd.diff_marker_category
-            ,ppd.created_at
-            ,ppd.pno
-        from ph_staging.parcel_problem_detail ppd
-        where
-            ppd.created_at >= '2023-02-13 16:00:00'
-            and ppd.created_at < '2023-03-20 16:00:00'
-            and ppd.parcel_problem_type_category = 2 -- 留仓
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    date(convert_tz(a.created_at, '+00:00', '+08:00')) date_d
-    ,case a.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end reason
-    ,count(distinct a.pno) diff_num
-    ,count( a.pno) over (partition by date(convert_tz(a.created_at, '+00:00', '+08:00'))) 总计
-from
-    (
-        select
-            di.diff_marker_category
-            ,di.created_at
-            ,di.pno
-        from ph_staging.diff_info di
-        where
-            di.created_at >= '2023-02-13 16:00:00'
-            and di.created_at < '2023-03-20 16:00:00'
-
-        union all
-
-        select
-            ppd.diff_marker_category
-            ,ppd.created_at
-            ,ppd.pno
-        from ph_staging.parcel_problem_detail ppd
-        where
-            ppd.created_at >= '2023-02-13 16:00:00'
-            and ppd.created_at < '2023-03-20 16:00:00'
-            and ppd.parcel_problem_type_category = 2 -- 留仓
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    date(convert_tz(a.created_at, '+00:00', '+08:00')) date_d
-    ,case a.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end reason
-    ,count(distinct a.pno) diff_num
-    ,count( a.pno) over (partition by date(convert_tz(a.created_at, '+00:00', '+08:00'))) 总计
-from
-    (
-        select
-            di.diff_marker_category
-            ,di.created_at
-            ,di.pno
-        from ph_staging.diff_info di
-        where
-            di.created_at >= '2023-02-13 16:00:00'
-            and di.created_at < '2023-03-20 16:00:00'
-
-        union all
-
-        select
-            ppd.diff_marker_category
-            ,ppd.created_at
-            ,ppd.pno
-        from ph_staging.parcel_problem_detail ppd
-        where
-            ppd.created_at >= '2023-02-13 16:00:00'
-            and ppd.created_at < '2023-03-20 16:00:00'
-            and ppd.parcel_problem_type_category = 2 -- 留仓
-    ) a
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    date(convert_tz(a.created_at, '+00:00', '+08:00')) date_d
-    ,case a.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end reason
-    ,count(distinct a.pno) diff_num
-#     ,count( a.pno) over (partition by date(convert_tz(a.created_at, '+00:00', '+08:00'))) 总计
-from
-    (
-        select
-            di.diff_marker_category
-            ,di.created_at
-            ,di.pno
-        from ph_staging.diff_info di
-        where
-            di.created_at >= '2023-02-13 16:00:00'
-            and di.created_at < '2023-03-20 16:00:00'
-
-        union all
-
-        select
-            ppd.diff_marker_category
-            ,ppd.created_at
-            ,ppd.pno
-        from ph_staging.parcel_problem_detail ppd
-        where
-            ppd.created_at >= '2023-02-13 16:00:00'
-            and ppd.created_at < '2023-03-20 16:00:00'
-            and ppd.parcel_problem_type_category = 2 -- 留仓
-    ) a
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    date(convert_tz(a.created_at, '+00:00', '+08:00')) date_d
-    ,case a.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end reason
-    ,count(distinct a.pno) diff_num
-#     ,count( a.pno) over (partition by date(convert_tz(a.created_at, '+00:00', '+08:00'))) 总计
-from
-    (
-        select
-            di.diff_marker_category
-            ,di.created_at
-            ,di.pno
-        from ph_staging.diff_info di
-        where
-            di.created_at >= '2023-02-13 16:00:00'
-            and di.created_at < '2023-03-20 16:00:00'
-
-        union all
-
-        select
-            ppd.diff_marker_category
-            ,ppd.created_at
-            ,ppd.pno
-        from ph_staging.parcel_problem_detail ppd
-        where
-            ppd.created_at >= '2023-02-13 16:00:00'
-            and ppd.created_at < '2023-03-20 16:00:00'
-            and ppd.parcel_problem_type_category = 2 -- 留仓
-    ) a
-group by 1,2
-with rollup;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.*
-    ,sum(a.diff_num) over (partition by a.date_d) date_total
-from
-    (
-        select
-            date(convert_tz(a.created_at, '+00:00', '+08:00')) date_d
-            ,case a.diff_marker_category
-                when 1 then '客户不在家/电话无人接听'
-                when 2 then '收件人拒收'
-                when 3 then '快件分错网点'
-                when 4 then '外包装破损'
-                when 5 then '货物破损'
-                when 6 then '货物短少'
-                when 7 then '货物丢失'
-                when 8 then '电话联系不上'
-                when 9 then '客户改约时间'
-                when 10 then '客户不在'
-                when 11 then '客户取消任务'
-                when 12 then '无人签收'
-                when 13 then '客户周末或假期不收货'
-                when 14 then '客户改约时间'
-                when 15 then '当日运力不足，无法派送'
-                when 16 then '联系不上收件人'
-                when 17 then '收件人拒收'
-                when 18 then '快件分错网点'
-                when 19 then '外包装破损'
-                when 20 then '货物破损'
-                when 21 then '货物短少'
-                when 22 then '货物丢失'
-                when 23 then '收件人/地址不清晰或不正确'
-                when 24 then '收件地址已废弃或不存在'
-                when 25 then '收件人电话号码错误'
-                when 26 then 'cod金额不正确'
-                when 27 then '无实际包裹'
-                when 28 then '已妥投未交接'
-                when 29 then '收件人电话号码是空号'
-                when 30 then '快件分错网点-地址正确'
-                when 31 then '快件分错网点-地址错误'
-                when 32 then '禁运品'
-                when 33 then '严重破损（丢弃）'
-                when 34 then '退件两次尝试派送失败'
-                when 35 then '不能打开locker'
-                when 36 then 'locker不能使用'
-                when 37 then '该地址找不到lockerstation'
-                when 38 then '一票多件'
-                when 39 then '多次尝试派件失败'
-                when 40 then '客户不在家/电话无人接听'
-                when 41 then '错过班车时间'
-                when 42 then '目的地是偏远地区,留仓待次日派送'
-                when 43 then '目的地是岛屿,留仓待次日派送'
-                when 44 then '企业/机构当天已下班'
-                when 45 then '子母件包裹未全部到达网点'
-                when 46 then '不可抗力原因留仓(台风)'
-                when 47 then '虚假包裹'
-                when 50 then '客户取消寄件'
-                when 51 then '信息录入错误'
-                when 52 then '客户取消寄件'
-                when 69 then '禁运品'
-                when 70 then '客户改约时间'
-                when 71 then '当日运力不足，无法派送'
-                when 72 then '客户周末或假期不收货'
-                when 73 then '收件人/地址不清晰或不正确'
-                when 74 then '收件地址已废弃或不存在'
-                when 75 then '收件人电话号码错误'
-                when 76 then 'cod金额不正确'
-                when 77 then '企业/机构当天已下班'
-                when 78 then '收件人电话号码是空号'
-                when 79 then '快件分错网点-地址错误'
-                when 80 then '客户取消任务'
-                when 81 then '重复下单'
-                when 82 then '已完成揽件'
-                when 83 then '联系不上客户'
-                when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-                when 85 then '寄件人电话号码是空号'
-                when 86 then '包裹不符合揽收条件超大件'
-                when 87 then '包裹不符合揽收条件违禁品'
-                when 88 then '寄件人地址为岛屿'
-                when 89 then '运力短缺，跟客户协商推迟揽收'
-                when 90 then '包裹未准备好推迟揽收'
-                when 91 then '包裹包装不符合运输标准'
-                when 92 then '客户提供的清单里没有此包裹'
-                when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-                when 94 then '客户取消寄件/客户实际不想寄此包裹'
-                when 95 then '车辆/人力短缺推迟揽收'
-                when 96 then '遗漏揽收(已停用)'
-                when 97 then '子母件(一个单号多个包裹)'
-                when 98 then '地址错误addresserror'
-                when 99 then '包裹不符合揽收条件：超大件'
-                when 100 then '包裹不符合揽收条件：违禁品'
-                when 101 then '包裹包装不符合运输标准'
-                when 102 then '包裹未准备好'
-                when 103 then '运力短缺，跟客户协商推迟揽收'
-                when 104 then '子母件(一个单号多个包裹)'
-                when 105 then '破损包裹'
-                when 106 then '空包裹'
-                when 107 then '不能打开locker(密码错误)'
-                when 108 then 'locker不能使用'
-                when 109 then 'locker找不到'
-                when 110 then '运单号与实际包裹的单号不一致'
-                when 111 then 'box客户取消任务'
-                when 112 then '不能打开locker(密码错误)'
-                when 113 then 'locker不能使用'
-                when 114 then 'locker找不到'
-                when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-                when 116 then '客户仓库关闭'
-                when 117 then '客户仓库关闭'
-                when 118 then 'SHOPEE订单系统自动关闭'
-                when 119 then '客户取消包裹'
-                when 121 then '地址错误'
-                when 122 then '当日运力不足，无法揽收'
-            end reason
-            ,count(distinct a.pno) diff_num
-        from
-            (
-                select
-                    di.diff_marker_category
-                    ,di.created_at
-                    ,di.pno
-                from ph_staging.diff_info di
-                where
-                    di.created_at >= '2023-02-13 16:00:00'
-                    and di.created_at < '2023-03-20 16:00:00'
-
-                union all
-
-                select
-                    ppd.diff_marker_category
-                    ,ppd.created_at
-                    ,ppd.pno
-                from ph_staging.parcel_problem_detail ppd
-                where
-                    ppd.created_at >= '2023-02-13 16:00:00'
-                    and ppd.created_at < '2023-03-20 16:00:00'
-                    and ppd.parcel_problem_type_category = 2 -- 留仓
-            ) a
-        group by 1,2
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.*
-    ,sum(a.diff_num) total
-from
-    (
-        select
-            case a.diff_marker_category
-                when 1 then '客户不在家/电话无人接听'
-                when 2 then '收件人拒收'
-                when 3 then '快件分错网点'
-                when 4 then '外包装破损'
-                when 5 then '货物破损'
-                when 6 then '货物短少'
-                when 7 then '货物丢失'
-                when 8 then '电话联系不上'
-                when 9 then '客户改约时间'
-                when 10 then '客户不在'
-                when 11 then '客户取消任务'
-                when 12 then '无人签收'
-                when 13 then '客户周末或假期不收货'
-                when 14 then '客户改约时间'
-                when 15 then '当日运力不足，无法派送'
-                when 16 then '联系不上收件人'
-                when 17 then '收件人拒收'
-                when 18 then '快件分错网点'
-                when 19 then '外包装破损'
-                when 20 then '货物破损'
-                when 21 then '货物短少'
-                when 22 then '货物丢失'
-                when 23 then '收件人/地址不清晰或不正确'
-                when 24 then '收件地址已废弃或不存在'
-                when 25 then '收件人电话号码错误'
-                when 26 then 'cod金额不正确'
-                when 27 then '无实际包裹'
-                when 28 then '已妥投未交接'
-                when 29 then '收件人电话号码是空号'
-                when 30 then '快件分错网点-地址正确'
-                when 31 then '快件分错网点-地址错误'
-                when 32 then '禁运品'
-                when 33 then '严重破损（丢弃）'
-                when 34 then '退件两次尝试派送失败'
-                when 35 then '不能打开locker'
-                when 36 then 'locker不能使用'
-                when 37 then '该地址找不到lockerstation'
-                when 38 then '一票多件'
-                when 39 then '多次尝试派件失败'
-                when 40 then '客户不在家/电话无人接听'
-                when 41 then '错过班车时间'
-                when 42 then '目的地是偏远地区,留仓待次日派送'
-                when 43 then '目的地是岛屿,留仓待次日派送'
-                when 44 then '企业/机构当天已下班'
-                when 45 then '子母件包裹未全部到达网点'
-                when 46 then '不可抗力原因留仓(台风)'
-                when 47 then '虚假包裹'
-                when 50 then '客户取消寄件'
-                when 51 then '信息录入错误'
-                when 52 then '客户取消寄件'
-                when 69 then '禁运品'
-                when 70 then '客户改约时间'
-                when 71 then '当日运力不足，无法派送'
-                when 72 then '客户周末或假期不收货'
-                when 73 then '收件人/地址不清晰或不正确'
-                when 74 then '收件地址已废弃或不存在'
-                when 75 then '收件人电话号码错误'
-                when 76 then 'cod金额不正确'
-                when 77 then '企业/机构当天已下班'
-                when 78 then '收件人电话号码是空号'
-                when 79 then '快件分错网点-地址错误'
-                when 80 then '客户取消任务'
-                when 81 then '重复下单'
-                when 82 then '已完成揽件'
-                when 83 then '联系不上客户'
-                when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-                when 85 then '寄件人电话号码是空号'
-                when 86 then '包裹不符合揽收条件超大件'
-                when 87 then '包裹不符合揽收条件违禁品'
-                when 88 then '寄件人地址为岛屿'
-                when 89 then '运力短缺，跟客户协商推迟揽收'
-                when 90 then '包裹未准备好推迟揽收'
-                when 91 then '包裹包装不符合运输标准'
-                when 92 then '客户提供的清单里没有此包裹'
-                when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-                when 94 then '客户取消寄件/客户实际不想寄此包裹'
-                when 95 then '车辆/人力短缺推迟揽收'
-                when 96 then '遗漏揽收(已停用)'
-                when 97 then '子母件(一个单号多个包裹)'
-                when 98 then '地址错误addresserror'
-                when 99 then '包裹不符合揽收条件：超大件'
-                when 100 then '包裹不符合揽收条件：违禁品'
-                when 101 then '包裹包装不符合运输标准'
-                when 102 then '包裹未准备好'
-                when 103 then '运力短缺，跟客户协商推迟揽收'
-                when 104 then '子母件(一个单号多个包裹)'
-                when 105 then '破损包裹'
-                when 106 then '空包裹'
-                when 107 then '不能打开locker(密码错误)'
-                when 108 then 'locker不能使用'
-                when 109 then 'locker找不到'
-                when 110 then '运单号与实际包裹的单号不一致'
-                when 111 then 'box客户取消任务'
-                when 112 then '不能打开locker(密码错误)'
-                when 113 then 'locker不能使用'
-                when 114 then 'locker找不到'
-                when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-                when 116 then '客户仓库关闭'
-                when 117 then '客户仓库关闭'
-                when 118 then 'SHOPEE订单系统自动关闭'
-                when 119 then '客户取消包裹'
-                when 121 then '地址错误'
-                when 122 then '当日运力不足，无法揽收'
-            end reason
-            ,count(distinct a.pno) diff_num
-        from
-            (
-                select
-                    di.diff_marker_category
-                    ,di.created_at
-                    ,di.pno
-                from ph_staging.diff_info di
-                where
-                    di.created_at >= '2023-02-13 16:00:00'
-                    and di.created_at < '2023-03-20 16:00:00'
-
-                union all
-
-                select
-                    ppd.diff_marker_category
-                    ,ppd.created_at
-                    ,ppd.pno
-                from ph_staging.parcel_problem_detail ppd
-                where
-                    ppd.created_at >= '2023-02-13 16:00:00'
-                    and ppd.created_at < '2023-03-20 16:00:00'
-                    and ppd.parcel_problem_type_category = 2 -- 留仓
-            ) a
-        group by 1
-    ) a
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.*
-    ,sum(a.diff_num) over () total
-from
-    (
-        select
-            case a.diff_marker_category
-                when 1 then '客户不在家/电话无人接听'
-                when 2 then '收件人拒收'
-                when 3 then '快件分错网点'
-                when 4 then '外包装破损'
-                when 5 then '货物破损'
-                when 6 then '货物短少'
-                when 7 then '货物丢失'
-                when 8 then '电话联系不上'
-                when 9 then '客户改约时间'
-                when 10 then '客户不在'
-                when 11 then '客户取消任务'
-                when 12 then '无人签收'
-                when 13 then '客户周末或假期不收货'
-                when 14 then '客户改约时间'
-                when 15 then '当日运力不足，无法派送'
-                when 16 then '联系不上收件人'
-                when 17 then '收件人拒收'
-                when 18 then '快件分错网点'
-                when 19 then '外包装破损'
-                when 20 then '货物破损'
-                when 21 then '货物短少'
-                when 22 then '货物丢失'
-                when 23 then '收件人/地址不清晰或不正确'
-                when 24 then '收件地址已废弃或不存在'
-                when 25 then '收件人电话号码错误'
-                when 26 then 'cod金额不正确'
-                when 27 then '无实际包裹'
-                when 28 then '已妥投未交接'
-                when 29 then '收件人电话号码是空号'
-                when 30 then '快件分错网点-地址正确'
-                when 31 then '快件分错网点-地址错误'
-                when 32 then '禁运品'
-                when 33 then '严重破损（丢弃）'
-                when 34 then '退件两次尝试派送失败'
-                when 35 then '不能打开locker'
-                when 36 then 'locker不能使用'
-                when 37 then '该地址找不到lockerstation'
-                when 38 then '一票多件'
-                when 39 then '多次尝试派件失败'
-                when 40 then '客户不在家/电话无人接听'
-                when 41 then '错过班车时间'
-                when 42 then '目的地是偏远地区,留仓待次日派送'
-                when 43 then '目的地是岛屿,留仓待次日派送'
-                when 44 then '企业/机构当天已下班'
-                when 45 then '子母件包裹未全部到达网点'
-                when 46 then '不可抗力原因留仓(台风)'
-                when 47 then '虚假包裹'
-                when 50 then '客户取消寄件'
-                when 51 then '信息录入错误'
-                when 52 then '客户取消寄件'
-                when 69 then '禁运品'
-                when 70 then '客户改约时间'
-                when 71 then '当日运力不足，无法派送'
-                when 72 then '客户周末或假期不收货'
-                when 73 then '收件人/地址不清晰或不正确'
-                when 74 then '收件地址已废弃或不存在'
-                when 75 then '收件人电话号码错误'
-                when 76 then 'cod金额不正确'
-                when 77 then '企业/机构当天已下班'
-                when 78 then '收件人电话号码是空号'
-                when 79 then '快件分错网点-地址错误'
-                when 80 then '客户取消任务'
-                when 81 then '重复下单'
-                when 82 then '已完成揽件'
-                when 83 then '联系不上客户'
-                when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-                when 85 then '寄件人电话号码是空号'
-                when 86 then '包裹不符合揽收条件超大件'
-                when 87 then '包裹不符合揽收条件违禁品'
-                when 88 then '寄件人地址为岛屿'
-                when 89 then '运力短缺，跟客户协商推迟揽收'
-                when 90 then '包裹未准备好推迟揽收'
-                when 91 then '包裹包装不符合运输标准'
-                when 92 then '客户提供的清单里没有此包裹'
-                when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-                when 94 then '客户取消寄件/客户实际不想寄此包裹'
-                when 95 then '车辆/人力短缺推迟揽收'
-                when 96 then '遗漏揽收(已停用)'
-                when 97 then '子母件(一个单号多个包裹)'
-                when 98 then '地址错误addresserror'
-                when 99 then '包裹不符合揽收条件：超大件'
-                when 100 then '包裹不符合揽收条件：违禁品'
-                when 101 then '包裹包装不符合运输标准'
-                when 102 then '包裹未准备好'
-                when 103 then '运力短缺，跟客户协商推迟揽收'
-                when 104 then '子母件(一个单号多个包裹)'
-                when 105 then '破损包裹'
-                when 106 then '空包裹'
-                when 107 then '不能打开locker(密码错误)'
-                when 108 then 'locker不能使用'
-                when 109 then 'locker找不到'
-                when 110 then '运单号与实际包裹的单号不一致'
-                when 111 then 'box客户取消任务'
-                when 112 then '不能打开locker(密码错误)'
-                when 113 then 'locker不能使用'
-                when 114 then 'locker找不到'
-                when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-                when 116 then '客户仓库关闭'
-                when 117 then '客户仓库关闭'
-                when 118 then 'SHOPEE订单系统自动关闭'
-                when 119 then '客户取消包裹'
-                when 121 then '地址错误'
-                when 122 then '当日运力不足，无法揽收'
-            end reason
-            ,count(distinct a.pno) diff_num
-        from
-            (
-                select
-                    di.diff_marker_category
-                    ,di.created_at
-                    ,di.pno
-                from ph_staging.diff_info di
-                where
-                    di.created_at >= '2023-02-13 16:00:00'
-                    and di.created_at < '2023-03-20 16:00:00'
-
-                union all
-
-                select
-                    ppd.diff_marker_category
-                    ,ppd.created_at
-                    ,ppd.pno
-                from ph_staging.parcel_problem_detail ppd
-                where
-                    ppd.created_at >= '2023-02-13 16:00:00'
-                    and ppd.created_at < '2023-03-20 16:00:00'
-                    and ppd.parcel_problem_type_category = 2 -- 留仓
-            ) a
-        group by 1
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pi.pno) 揽收量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null)) COD量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno)  揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) 总疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.client_id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pi.pno) 揽收量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null)) COD量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno)  揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) 总疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.client_id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pi.pno) 揽收量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null)) COD量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno)  揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) 总疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00'
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.client_id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pi.pno) 揽收量
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) COD疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00'
-    and pi.cod_enabled = 1
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    kp.id
-    ,count(distinct pi.pno) 揽收量
-    ,count(if(pi,kp.cod_enabled = 1, pi.pno, null)) 揽收COD量
-    ,count(if(pi,kp.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno) 揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(distinct di.pno)  疑难件COD占比
-    ,count(distinct di.pno)/count(distinct pi.pno) 疑难件率
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(if(pi,kp.cod_enabled = 1, pi.pno, null)) COD疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00'
-    and kp.id is not null
-    and bc.client_id is null
-group by 1
-order by 5
-limit 100;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    kp.id
-    ,count(distinct pi.pno) 揽收量
-    ,count(if(pi.cod_enabled = 1, pi.pno, null)) 揽收COD量
-    ,count(if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno) 揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(distinct di.pno)  疑难件COD占比
-    ,count(distinct di.pno)/count(distinct pi.pno) 疑难件率
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(if(pi,kp.cod_enabled = 1, pi.pno, null)) COD疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00'
-    and kp.id is not null
-    and bc.client_id is null
-group by 1
-order by 5
-limit 100;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    kp.id
-    ,count(distinct pi.pno) 揽收量
-    ,count(if(pi.cod_enabled = 1, pi.pno, null)) 揽收COD量
-    ,count(if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno) 揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(distinct di.pno)  疑难件COD占比
-    ,count(distinct di.pno)/count(distinct pi.pno) 疑难件率
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(if(pi.cod_enabled = 1, pi.pno, null)) COD疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00'
-    and kp.id is not null
-    and bc.client_id is null
-group by 1
-order by 5
-limit 100;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    kp.id
-    ,count(distinct pi.pno) 揽收量
-    ,count(if(pi.cod_enabled = 1, pi.pno, null)) 揽收COD量
-    ,count(if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno) 揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(distinct di.pno)  疑难件COD占比
-    ,count(distinct di.pno)/count(distinct pi.pno) 疑难件率
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pi.pno, null))/count(if(pi.cod_enabled = 1, pi.pno, null)) COD疑难件率
-from ph_staging.parcel_info pi
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pi.created_at >= '2023-02-13 16:00:00'
-    and pi.created_at < '2023-03-20 16:00:00'
-    and kp.id is not null
-    and bc.client_id is null
-group by 1
-order by 5 desc
-limit 100;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.client_id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pr.pno) 交接量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null)) COD量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno)  揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) 总疑难件率
-from ph_staging.parcel_route pr
-left join ph_staging.parcel_info pi on pi.pno = pr.pno
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pr.routed_at >= '2023-02-13 16:00:00'
-    and pr.routed_at < '2023-03-20 16:00:00'
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.client_id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pr.pno) 交接量
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) COD疑难件率
-from ph_staging.parcel_route pr
-left join ph_staging.parcel_info pi on pi.pno = pr.pno
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pr.routed_at >= '2023-02-13 16:00:00'
-    and pr.routed_at < '2023-03-20 16:00:00'
-    and pi.cod_enabled = 1
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    kp.id
-    ,count(distinct pr.pno) 交接量
-    ,count(if(pi.cod_enabled = 1, pr.pno, null)) 交接COD量
-    ,count(if(pi.cod_enabled = 1, pr.pno, null))/count(distinct pi.pno) 交接COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pr.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pr.pno, null))/count(distinct di.pno)  疑难件COD占比
-    ,count(distinct di.pno)/count(distinct pr.pno) 疑难件率
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pr.pno, null))/count(if(pi.cod_enabled = 1, pr.pno, null)) COD疑难件率
-from ph_staging.parcel_route pr
-left join  ph_staging.parcel_info pi on pi.pno = pr.pno
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pr.routed_at >= '2023-02-13 16:00:00'
-    and pr.routed_at < '2023-03-20 16:00:00'
-    and kp.id is not null
-    and bc.client_id is null
-group by 1
-order by 5 desc
-limit 100;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.client_id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pr.pno) 交接量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null)) COD量
-    ,count(distinct if(pi.cod_enabled = 1, pi.pno, null))/count(distinct pi.pno)  揽收COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) 总疑难件率
-from ph_staging.parcel_route pr
-left join ph_staging.parcel_info pi on pi.pno = pr.pno
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pr.routed_at >= '2023-02-13 16:00:00'
-    and pr.routed_at < '2023-03-20 16:00:00'
-    and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    case
-        when bc.`client_id` is not null then bc.client_name
-        when kp.id is not null and bc.client_id is null then '普通ka'
-        when kp.`id` is null then '小c'
-    end 客户类型
-    ,count(distinct pr.pno) 交接量
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct di.pno)/count(distinct pi.pno) COD疑难件率
-from ph_staging.parcel_route pr
-left join ph_staging.parcel_info pi on pi.pno = pr.pno
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pr.routed_at >= '2023-02-13 16:00:00'
-    and pr.routed_at < '2023-03-20 16:00:00'
-    and pi.cod_enabled = 1
-    and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    kp.id
-    ,count(distinct pr.pno) 交接量
-    ,count(if(pi.cod_enabled = 1, pr.pno, null)) 交接COD量
-    ,count(if(pi.cod_enabled = 1, pr.pno, null))/count(distinct pi.pno) 交接COD占比
-    ,count(distinct di.pno) 疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pr.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pr.pno, null))/count(distinct di.pno)  疑难件COD占比
-    ,count(distinct di.pno)/count(distinct pr.pno) 疑难件率
-    ,count(distinct if(pi.cod_enabled = 1 and di.pno is not null , pr.pno, null))/count(if(pi.cod_enabled = 1, pr.pno, null)) COD疑难件率
-from ph_staging.parcel_route pr
-left join  ph_staging.parcel_info pi on pi.pno = pr.pno
-left join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-left join ph_staging.diff_info di on di.pno = pi.pno
-where
-    pr.routed_at >= '2023-02-13 16:00:00'
-    and pr.routed_at < '2023-03-20 16:00:00'
-    and kp.id is not null
-    and bc.client_id is null
-    and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-group by 1
-order by 5 desc
-limit 100;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        pr.pno
-    from ph_staging.parcel_route pr
-    left join ph_staging.parcel_info pi on pi.pno = pr.pno
-    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada','shopee','tiktok')
-    where
-        pr.routed_at >= '2023-02-13 16:00:00'
-        and pr.routed_at < '2023-03-20 16:00:00'
-        and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-    group by 1
-)
-select
-    case di.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end 疑难原因
-    ,count(distinct di.pno) 疑难件量
-    ,scan.scan_num 交接总量
-    ,count(distinct di.pno)/scan.scan_num 疑难件率
-    ,scan.cod_num COD交接量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null))/scan.cod_num COD疑难件率
-from t
-left join ph_staging.parcel_info pi on pi.pno = t.pno
-left join
-    (
-        select
-            di.pno
-            ,di.diff_marker_category
-        from ph_staging.diff_info di
-        join t on di.pno = t.pno
-        group by 1,2
-
-        union all
-
-        select
-            ppd.pno
-            ,ppd.diff_marker_category
-        from ph_staging.parcel_problem_detail ppd
-        join t on t.pno = ppd.pno
-        where
-            ppd.parcel_problem_type_category = 2
-        group by 1,2
-    ) di on di.pno = t.pno
-cross join
-    (
-        select
-            count(t.pno) scan_num
-            ,count(if(pi.cod_enabled = 1, pi.pno, null)) cod_num
-        from t
-        left join ph_staging.parcel_info pi on pi.pno = t.pno
-    ) scan;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        pr.pno
-    from ph_staging.parcel_route pr
-    left join ph_staging.parcel_info pi on pi.pno = pr.pno
-    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name in ('lazada','shopee','tiktok')
-    where
-        pr.routed_at >= '2023-02-13 16:00:00'
-        and pr.routed_at < '2023-03-20 16:00:00'
-        and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-    group by 1
-)
-select
-    case di.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end 疑难原因
-    ,count(distinct di.pno) 疑难件量
-    ,scan.scan_num 交接总量
-    ,count(distinct di.pno)/scan.scan_num 疑难件率
-    ,scan.cod_num COD交接量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null))/scan.cod_num COD疑难件率
-from t
-left join ph_staging.parcel_info pi on pi.pno = t.pno
-left join
-    (
-        select
-            di.pno
-            ,di.diff_marker_category
-        from ph_staging.diff_info di
-        join t on di.pno = t.pno
-        group by 1,2
-
-        union all
-
-        select
-            ppd.pno
-            ,ppd.diff_marker_category
-        from ph_staging.parcel_problem_detail ppd
-        join t on t.pno = ppd.pno
-        where
-            ppd.parcel_problem_type_category = 2
-        group by 1,2
-    ) di on di.pno = t.pno
-cross join
-    (
-        select
-            count(t.pno) scan_num
-            ,count(if(pi.cod_enabled = 1, pi.pno, null)) cod_num
-        from t
-        left join ph_staging.parcel_info pi on pi.pno = t.pno
-    ) scan
-group by 1,3,5;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        case
-            when bc.`client_id` is not null then bc.client_name
-            when kp.id is not null and bc.client_id is null then '普通ka'
-            when kp.`id` is null then '小c'
-        end client_type
-        ,pr.pno
-    from ph_staging.parcel_route pr
-    left join ph_staging.parcel_info pi on pi.pno = pr.pno
-    left join ph_staging.ka_profile kp on kp.id = pi.client_id
-    join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-    where
-        pr.routed_at >= '2023-02-13 16:00:00'
-        and pr.routed_at < '2023-03-20 16:00:00'
-        and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-    group by 1,2
-)
-select
-    t.client_type
-    ,case di.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end 疑难原因
-    ,count(distinct di.pno) 疑难件量
-    ,scan.scan_num 交接总量
-    ,count(distinct di.pno)/scan.scan_num 疑难件率
-    ,scan.cod_num COD交接量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null))/scan.cod_num COD疑难件率
-from t
-left join ph_staging.parcel_info pi on pi.pno = t.pno
-left join
-    (
-        select
-            di.pno
-            ,di.diff_marker_category
-        from ph_staging.diff_info di
-        join t on di.pno = t.pno
-        group by 1,2
-
-        union all
-
-        select
-            ppd.pno
-            ,ppd.diff_marker_category
-        from ph_staging.parcel_problem_detail ppd
-        join t on t.pno = ppd.pno
-        where
-            ppd.parcel_problem_type_category = 2
-        group by 1,2
-    ) di on di.pno = t.pno
-left  join
-    (
-        select
-            t.client_type
-            ,count(t.pno) scan_num
-            ,count(if(pi.cod_enabled = 1, pi.pno, null)) cod_num
-        from t
-        left join ph_staging.parcel_info pi on pi.pno = t.pno
-        group by 1
-    ) scan on scan.client_type = t.client_type
-group by 1,2,4,6;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        case
-            when bc.`client_id` is not null then bc.client_name
-            when kp.id is not null and bc.client_id is null then '普通ka'
-            when kp.`id` is null then '小c'
-        end client_type
-        ,pr.pno
-    from ph_staging.parcel_route pr
-    left join ph_staging.parcel_info pi on pi.pno = pr.pno
-    left join ph_staging.ka_profile kp on kp.id = pi.client_id
-    left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-    where
-        pr.routed_at >= '2023-02-13 16:00:00'
-        and pr.routed_at < '2023-03-20 16:00:00'
-        and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-    group by 1,2
-)
-select
-    t.client_type
-    ,case di.diff_marker_category
-        when 1 then '客户不在家/电话无人接听'
-        when 2 then '收件人拒收'
-        when 3 then '快件分错网点'
-        when 4 then '外包装破损'
-        when 5 then '货物破损'
-        when 6 then '货物短少'
-        when 7 then '货物丢失'
-        when 8 then '电话联系不上'
-        when 9 then '客户改约时间'
-        when 10 then '客户不在'
-        when 11 then '客户取消任务'
-        when 12 then '无人签收'
-        when 13 then '客户周末或假期不收货'
-        when 14 then '客户改约时间'
-        when 15 then '当日运力不足，无法派送'
-        when 16 then '联系不上收件人'
-        when 17 then '收件人拒收'
-        when 18 then '快件分错网点'
-        when 19 then '外包装破损'
-        when 20 then '货物破损'
-        when 21 then '货物短少'
-        when 22 then '货物丢失'
-        when 23 then '收件人/地址不清晰或不正确'
-        when 24 then '收件地址已废弃或不存在'
-        when 25 then '收件人电话号码错误'
-        when 26 then 'cod金额不正确'
-        when 27 then '无实际包裹'
-        when 28 then '已妥投未交接'
-        when 29 then '收件人电话号码是空号'
-        when 30 then '快件分错网点-地址正确'
-        when 31 then '快件分错网点-地址错误'
-        when 32 then '禁运品'
-        when 33 then '严重破损（丢弃）'
-        when 34 then '退件两次尝试派送失败'
-        when 35 then '不能打开locker'
-        when 36 then 'locker不能使用'
-        when 37 then '该地址找不到lockerstation'
-        when 38 then '一票多件'
-        when 39 then '多次尝试派件失败'
-        when 40 then '客户不在家/电话无人接听'
-        when 41 then '错过班车时间'
-        when 42 then '目的地是偏远地区,留仓待次日派送'
-        when 43 then '目的地是岛屿,留仓待次日派送'
-        when 44 then '企业/机构当天已下班'
-        when 45 then '子母件包裹未全部到达网点'
-        when 46 then '不可抗力原因留仓(台风)'
-        when 47 then '虚假包裹'
-        when 50 then '客户取消寄件'
-        when 51 then '信息录入错误'
-        when 52 then '客户取消寄件'
-        when 69 then '禁运品'
-        when 70 then '客户改约时间'
-        when 71 then '当日运力不足，无法派送'
-        when 72 then '客户周末或假期不收货'
-        when 73 then '收件人/地址不清晰或不正确'
-        when 74 then '收件地址已废弃或不存在'
-        when 75 then '收件人电话号码错误'
-        when 76 then 'cod金额不正确'
-        when 77 then '企业/机构当天已下班'
-        when 78 then '收件人电话号码是空号'
-        when 79 then '快件分错网点-地址错误'
-        when 80 then '客户取消任务'
-        when 81 then '重复下单'
-        when 82 then '已完成揽件'
-        when 83 then '联系不上客户'
-        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 85 then '寄件人电话号码是空号'
-        when 86 then '包裹不符合揽收条件超大件'
-        when 87 then '包裹不符合揽收条件违禁品'
-        when 88 then '寄件人地址为岛屿'
-        when 89 then '运力短缺，跟客户协商推迟揽收'
-        when 90 then '包裹未准备好推迟揽收'
-        when 91 then '包裹包装不符合运输标准'
-        when 92 then '客户提供的清单里没有此包裹'
-        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
-        when 94 then '客户取消寄件/客户实际不想寄此包裹'
-        when 95 then '车辆/人力短缺推迟揽收'
-        when 96 then '遗漏揽收(已停用)'
-        when 97 then '子母件(一个单号多个包裹)'
-        when 98 then '地址错误addresserror'
-        when 99 then '包裹不符合揽收条件：超大件'
-        when 100 then '包裹不符合揽收条件：违禁品'
-        when 101 then '包裹包装不符合运输标准'
-        when 102 then '包裹未准备好'
-        when 103 then '运力短缺，跟客户协商推迟揽收'
-        when 104 then '子母件(一个单号多个包裹)'
-        when 105 then '破损包裹'
-        when 106 then '空包裹'
-        when 107 then '不能打开locker(密码错误)'
-        when 108 then 'locker不能使用'
-        when 109 then 'locker找不到'
-        when 110 then '运单号与实际包裹的单号不一致'
-        when 111 then 'box客户取消任务'
-        when 112 then '不能打开locker(密码错误)'
-        when 113 then 'locker不能使用'
-        when 114 then 'locker找不到'
-        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
-        when 116 then '客户仓库关闭'
-        when 117 then '客户仓库关闭'
-        when 118 then 'SHOPEE订单系统自动关闭'
-        when 119 then '客户取消包裹'
-        when 121 then '地址错误'
-        when 122 then '当日运力不足，无法揽收'
-    end 疑难原因
-    ,count(distinct di.pno) 疑难件量
-    ,scan.scan_num 交接总量
-    ,count(distinct di.pno)/scan.scan_num 疑难件率
-    ,scan.cod_num COD交接量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null)) COD疑难件量
-    ,count(distinct if(pi.cod_enabled = 1, di.pno, null))/scan.cod_num COD疑难件率
-from t
-left join ph_staging.parcel_info pi on pi.pno = t.pno
-left join
-    (
-        select
-            di.pno
-            ,di.diff_marker_category
-        from ph_staging.diff_info di
-        join t on di.pno = t.pno
-        group by 1,2
-
-        union all
-
-        select
-            ppd.pno
-            ,ppd.diff_marker_category
-        from ph_staging.parcel_problem_detail ppd
-        join t on t.pno = ppd.pno
-        where
-            ppd.parcel_problem_type_category = 2
-        group by 1,2
-    ) di on di.pno = t.pno
-left  join
-    (
-        select
-            t.client_type
-            ,count(t.pno) scan_num
-            ,count(if(pi.cod_enabled = 1, pi.pno, null)) cod_num
-        from t
-        left join ph_staging.parcel_info pi on pi.pno = t.pno
-        group by 1
-    ) scan on scan.client_type = t.client_type
-group by 1,2,4,6;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    am.merge_column
-    ,am.extra_info
-from ph_bi.abnormal_message am
-join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-where
-    am.abnormal_object = 1 -- 集体处罚
-    and am.punish_category = 7 -- 包裹丢失
-    and am.abnormal_time >= '2023-01-01'
-    and am.abnormal_time < '2023-03-01'
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    am.merge_column
-    ,am.extra_info
-from ph_bi.abnormal_message am
-join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-where
-    am.abnormal_object = 1 -- 集体处罚
-    and am.punish_category = 7 -- 包裹丢失
-    and am.abnormal_time >= '2023-01-01'
-    and am.abnormal_time < '2023-03-01'
-    and am.state = 1
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        am.merge_column
-        ,am.extra_info
-        ,ss.name
-        ,pi.returned
-        ,pi.customary_pno
-        ,pi.client_id
-        ,am.isappeal
-    from ph_bi.abnormal_message am
-    join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-    left join ph_staging.parcel_info pi on pi.pno = am.merge_column
-    where
-        am.abnormal_object = 1 -- 集体处罚
-        and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
-        and am.state = 1
-    group by 1,2
-)
-, lost as
-(
-    select
-        pr.pno
-        ,pr.staff_info_id
-        ,pr.routed_at
-    from ph_staging.parcel_route pr
-    join  t on pr.pno = t.merge_column
-    where
-        pr.route_action = 'DIFFICULTY_HANDOVER'
-        and json_extract(pr.extra_value, '$.markerCategory') = 22 -- 丢失
-)
-select
-    t.merge_column 单号
-    ,t.customary_pno 正向单号
-    ,t.name 网点名称
-    ,if(t.returned = 0 ,'Fwd', 'Rts') 正向或逆向
-    ,case plt.last_valid_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 最后一条有效路由
-    ,plt.last_valid_routed_at
-    ,convert_tz(pri.routed_at, '+00:00', '+08:00') 最后一次打印面单日期
-    ,convert_tz(pri2.routed_at, '+00:00', '+08:00') 如果是退件面单，最后一次正向打印面单的日期
-    ,if(t.returned = 1, convert_tz(pri.routed_at, '+00:00', '+08:00'), null) 退件面单最后一次打印日期
-    ,t.client_id
-    ,if(t.isappeal in (2,3,4,5) ,'yes', 'no') 是否有申诉记录
-    ,if(c.pno is null , 'NO', 'YES') 'Source C'
-    ,case aft.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then ' to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route after Lost was reported'
-    ,lost.staff_info_id 'ID that submitted Lost'
-    ,convert_tz(aft.routed_at, '+00:00', '+08:00') 'Route after Lost was reported - Time'
-    ,convert_tz(lost.routed_at, '+00:00', '+08:00') 'Time lost was reported'
-    ,case bef.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route before reporting Lost'
-    ,group_concat(plr.staff_id)
-from t
-left join ph_bi.parcel_lose_task plt on plt.id = json_extract(t.extra_info, '$.losr_task_id')
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.merge_column
-        where
-            pr.route_action = 'PRINTING'
-    ) pri on pri.pno = t.merge_column and pri.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.customary_pno
-        where
-            pr.route_action = 'PRINTING'
-            and t.returned = 1
-    ) pri2 on pri2.pno = t.customary_pno and pri2.rn = 1
-left join
-    (
-        select
-            plt.pno
-        from ph_bi.parcel_lose_task plt
-        join t on t.merge_column = plt.pno
-        where
-            plt.source = 3
-        group by 1
-    ) c on c.pno = t.merge_column
-left join lost on lost.pno = t.merge_column
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.routed_at
-            ,pr.route_action
-            ,row_number() over (partition by pr.pno order by pr.routed_at ) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at > lost.routed_at
-    ) aft on aft.pno = t.merge_column and aft.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.route_action
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at < lost.routed_at
-    ) bef on bef.pno = t.merge_column and bef.rn = 1
-left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        am.merge_column
-        ,am.extra_info
-        ,ss.name
-        ,pi.returned
-        ,pi.customary_pno
-        ,pi.client_id
-        ,am.isappeal
-    from ph_bi.abnormal_message am
-    join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-    left join ph_staging.parcel_info pi on pi.pno = am.merge_column
-    where
-        am.abnormal_object = 1 -- 集体处罚
-        and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
-        and am.state = 1
-    group by 1,2
-)
-, lost as
-(
-    select
-        pr.pno
-        ,pr.staff_info_id
-        ,pr.routed_at
-    from ph_staging.parcel_route pr
-    join  t on pr.pno = t.merge_column
-    where
-        pr.route_action = 'DIFFICULTY_HANDOVER'
-        and json_extract(pr.extra_value, '$.markerCategory') = 22 -- 丢失
-)
-select
-    t.merge_column 单号
-    ,t.customary_pno 正向单号
-    ,t.name 网点名称
-    ,if(t.returned = 0 ,'Fwd', 'Rts') 正向或逆向
-    ,case plt.last_valid_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 最后一条有效路由
-    ,plt.last_valid_routed_at
-    ,convert_tz(pri.routed_at, '+00:00', '+08:00') 最后一次打印面单日期
-    ,convert_tz(pri2.routed_at, '+00:00', '+08:00') '如果是退件面单，最后一次正向打印面单的日期'
-    ,if(t.returned = 1, convert_tz(pri.routed_at, '+00:00', '+08:00'), null) 退件面单最后一次打印日期
-    ,t.client_id
-    ,if(t.isappeal in (2,3,4,5) ,'yes', 'no') 是否有申诉记录
-    ,if(c.pno is null , 'NO', 'YES') 'Source C'
-    ,case aft.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then ' to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route after Lost was reported'
-    ,lost.staff_info_id 'ID that submitted Lost'
-    ,convert_tz(aft.routed_at, '+00:00', '+08:00') 'Route after Lost was reported - Time'
-    ,convert_tz(lost.routed_at, '+00:00', '+08:00') 'Time lost was reported'
-    ,case bef.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route before reporting Lost'
-    ,group_concat(plr.staff_id)
-from t
-left join ph_bi.parcel_lose_task plt on plt.id = json_extract(t.extra_info, '$.losr_task_id')
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.merge_column
-        where
-            pr.route_action = 'PRINTING'
-    ) pri on pri.pno = t.merge_column and pri.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.customary_pno
-        where
-            pr.route_action = 'PRINTING'
-            and t.returned = 1
-    ) pri2 on pri2.pno = t.customary_pno and pri2.rn = 1
-left join
-    (
-        select
-            plt.pno
-        from ph_bi.parcel_lose_task plt
-        join t on t.merge_column = plt.pno
-        where
-            plt.source = 3
-        group by 1
-    ) c on c.pno = t.merge_column
-left join lost on lost.pno = t.merge_column
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.routed_at
-            ,pr.route_action
-            ,row_number() over (partition by pr.pno order by pr.routed_at ) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at > lost.routed_at
-    ) aft on aft.pno = t.merge_column and aft.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.route_action
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at < lost.routed_at
-    ) bef on bef.pno = t.merge_column and bef.rn = 1
-left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-        am.merge_column
-        ,am.extra_info
-        ,ss.name
-        ,pi.returned
-        ,pi.customary_pno
-        ,pi.client_id
-        ,am.isappeal
-    from ph_bi.abnormal_message am
-    join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-    left join ph_staging.parcel_info pi on pi.pno = am.merge_column
-    where
-        am.abnormal_object = 1 -- 集体处罚
-        and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
-        and am.state = 1
-    group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        am.merge_column
-        ,json_extract(am.extra_info, '$.losr_task_id') lose_task_id
-        ,ss.name
-        ,pi.returned
-        ,pi.customary_pno
-        ,pi.client_id
-        ,am.isappeal
-    from ph_bi.abnormal_message am
-    join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-    left join ph_staging.parcel_info pi on pi.pno = am.merge_column
-    where
-        am.abnormal_object = 1 -- 集体处罚
-        and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
-        and am.state = 1
-    group by 1,2
-)
-, lost as
-(
-    select
-        pr.pno
-        ,pr.staff_info_id
-        ,pr.routed_at
-    from ph_staging.parcel_route pr
-    join  t on pr.pno = t.merge_column
-    where
-        pr.route_action = 'DIFFICULTY_HANDOVER'
-        and json_extract(pr.extra_value, '$.markerCategory') = 22 -- 丢失
-)
-select
-    t.merge_column 单号
-    ,t.customary_pno 正向单号
-    ,t.name 网点名称
-    ,if(t.returned = 0 ,'Fwd', 'Rts') 正向或逆向
-    ,case plt.last_valid_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 最后一条有效路由
-    ,plt.last_valid_routed_at 最后一条有效路由时间
-    ,convert_tz(pri.routed_at, '+00:00', '+08:00') 最后一次打印面单日期
-    ,convert_tz(pri2.routed_at, '+00:00', '+08:00') '如果是退件面单，最后一次正向打印面单的日期'
-    ,if(t.returned = 1, convert_tz(pri.routed_at, '+00:00', '+08:00'), null) 退件面单最后一次打印日期
-    ,t.client_id
-    ,if(t.isappeal in (2,3,4,5) ,'yes', 'no') 是否有申诉记录
-    ,if(c.pno is null , 'NO', 'YES') 'Source C'
-    ,case aft.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then ' to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route after Lost was reported'
-    ,lost.staff_info_id 'ID that submitted Lost'
-    ,convert_tz(aft.routed_at, '+00:00', '+08:00') 'Route after Lost was reported - Time'
-    ,convert_tz(lost.routed_at, '+00:00', '+08:00') 'Time lost was reported'
-    ,case bef.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route before reporting Lost'
-    ,group_concat(plr.staff_id) staff
-from t
-left join ph_bi.parcel_lose_task plt on plt.id = t.lose_task_id
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.merge_column
-        where
-            pr.route_action = 'PRINTING'
-    ) pri on pri.pno = t.merge_column and pri.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.customary_pno
-        where
-            pr.route_action = 'PRINTING'
-            and t.returned = 1
-    ) pri2 on pri2.pno = t.customary_pno and pri2.rn = 1
-left join
-    (
-        select
-            plt.pno
-        from ph_bi.parcel_lose_task plt
-        join t on t.merge_column = plt.pno
-        where
-            plt.source = 3
-        group by 1
-    ) c on c.pno = t.merge_column
-left join lost on lost.pno = t.merge_column
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.routed_at
-            ,pr.route_action
-            ,row_number() over (partition by pr.pno order by pr.routed_at ) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at > lost.routed_at
-    ) aft on aft.pno = t.merge_column and aft.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.route_action
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at < lost.routed_at
-    ) bef on bef.pno = t.merge_column and bef.rn = 1
-left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-        am.merge_column
-        ,json_extract(am.extra_info, '$.losr_task_id') lose_task_id
-        ,ss.name
-        ,pi.returned
-        ,pi.customary_pno
-        ,pi.client_id
-        ,am.isappeal
-    from ph_bi.abnormal_message am
-    join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-    left join ph_staging.parcel_info pi on pi.pno = am.merge_column
-    where
-        am.abnormal_object = 1 -- 集体处罚
-        and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
-        and am.state = 1
-    group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        am.merge_column
-        ,json_extract(am.extra_info, '$.losr_task_id') lose_task_id
-        ,ss.name
-        ,pi.returned
-        ,pi.customary_pno
-        ,pi.client_id
-        ,am.isappeal
-    from ph_bi.abnormal_message am
-    join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-    left join ph_staging.parcel_info pi on pi.pno = am.merge_column
-    where
-        am.abnormal_object = 1 -- 集体处罚
-        and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
-        and am.state = 1
-    group by 1,2
-)
-, lost as
-(
-    select
-        pr.pno
-        ,pr.staff_info_id
-        ,pr.routed_at
-    from ph_staging.parcel_route pr
-    join  t on pr.pno = t.merge_column
-    where
-        pr.route_action = 'DIFFICULTY_HANDOVER'
-        and json_extract(pr.extra_value, '$.markerCategory') = 22 -- 丢失
-)
-select
-    t.merge_column 单号
-    ,t.customary_pno 正向单号
-    ,t.name 网点名称
-    ,if(t.returned = 0 ,'Fwd', 'Rts') 正向或逆向
-    ,case pr.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 最后一条有效路由
-    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一条有效路由时间
-    ,convert_tz(pri.routed_at, '+00:00', '+08:00') 最后一次打印面单日期
-    ,convert_tz(pri2.routed_at, '+00:00', '+08:00') '如果是退件面单，最后一次正向打印面单的日期'
-    ,if(t.returned = 1, convert_tz(pri.routed_at, '+00:00', '+08:00'), null) 退件面单最后一次打印日期
-    ,t.client_id
-    ,if(t.isappeal in (2,3,4,5) ,'yes', 'no') 是否有申诉记录
-    ,if(c.pno is null , 'NO', 'YES') 'Source C'
-    ,case aft.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then ' to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route after Lost was reported'
-    ,lost.staff_info_id 'ID that submitted Lost'
-    ,convert_tz(aft.routed_at, '+00:00', '+08:00') 'Route after Lost was reported - Time'
-    ,convert_tz(lost.routed_at, '+00:00', '+08:00') 'Time lost was reported'
-    ,case bef.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 'Route before reporting Lost'
-    ,group_concat(plr.staff_id) staff
-from t
-left join
-    (
-          select
-            pr.pno
-            ,pr.route_action
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-        from ph_staging.parcel_route pr
-        join  t on t.merge_column = pr.pno
-        where  -- 最后有效路由
-            pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN','DELIVERY_PICKUP_STORE_SCAN','DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE','REFUND_CONFIRM','ACCEPT_PARCEL')
-    ) pr on pr.pno = t.merge_column and pr.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.merge_column
-        where
-            pr.route_action = 'PRINTING'
-    ) pri on pri.pno = t.merge_column and pri.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
-        from ph_staging.parcel_route pr
-        join t on pr.pno = t.customary_pno
-        where
-            pr.route_action = 'PRINTING'
-            and t.returned = 1
-    ) pri2 on pri2.pno = t.customary_pno and pri2.rn = 1
-left join
-    (
-        select
-            plt.pno
-        from ph_bi.parcel_lose_task plt
-        join t on t.merge_column = plt.pno
-        where
-            plt.source = 3
-        group by 1
-    ) c on c.pno = t.merge_column
-left join lost on lost.pno = t.merge_column
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.routed_at
-            ,pr.route_action
-            ,row_number() over (partition by pr.pno order by pr.routed_at ) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at > lost.routed_at
-    ) aft on aft.pno = t.merge_column and aft.rn = 1
-left join
-    (
-        select
-            pr.pno
-            ,pr.staff_info_id
-            ,pr.route_action
-            ,pr.routed_at
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-        from ph_staging.parcel_route pr
-        join  t on pr.pno = t.merge_column
-        left join lost on pr.pno = lost.pno
-        where
-            pr.routed_at < lost.routed_at
-    ) bef on bef.pno = t.merge_column and bef.rn = 1
-left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = t.lose_task_id
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        am.merge_column
-        ,json_extract(am.extra_info, '$.losr_task_id') lose_task_id
-        ,ss.name
-        ,pi.returned
-        ,pi.customary_pno
-        ,pi.client_id
-        ,am.isappeal
-    from ph_bi.abnormal_message am
-    join ph_staging.sys_store ss on ss.id = am.store_id and ss.category = 14 -- PDC
-    left join ph_staging.parcel_info pi on pi.pno = am.merge_column
-    where
-        am.abnormal_object = 1 -- 集体处罚
-        and am.punish_category = 7 -- 包裹丢失
-        and am.abnormal_time >= '2023-01-01'
-        and am.abnormal_time < '2023-03-01'
-        and am.state = 1
-    group by 1,2
-)
-select
-    t.merge_column
-    ,case pr.route_action
-        when 'RECEIVED' then 'Pickup by Courier'
-        when 'RECEIVE_WAREHOUSE_SCAN' then 'Courier to DC'
-        when 'DELIVERY_TICKET_CREATION_SCAN' then 'Handover Scan'
-        when 'ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan'
-        when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then 'Inbound Attendance'
-        when 'DEPARTURE_GOODS_VAN_CK_SCAN' then 'Outbound Attendance'
-        when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then 'Cancel Arrival scan in'
-        when 'HAVE_HAIR_SCAN_NO_TO' then 'report Shipped Parcels without Arrival'
-        when 'SHIPMENT_WAREHOUSE_SCAN' then 'Loading scan'
-        when 'CANCEL_SHIPMENT_WAREHOUSE' then 'cancel departure scan'
-        when 'DETAIN_WAREHOUSE' then 'Detained at current station'
-        when 'DELIVERY_CONFIRM' then 'Finished Delivery'
-        when 'DIFFICULTY_HANDOVER' then 'Problem shipment handover'
-        when 'CONTINUE_TRANSPORT' then 'Continue delivery'
-        when 'DIFFICULTY_INDEMNITY' then 'Problem shipment compensation'
-        when 'DIFFICULTY_RETURN' then 'Problem shipment return to sender'
-        when 'DIFFICULTY_RE_TRANSIT' then 'Problem shipment return to DC/re-delivery'
-        when 'CLOSE_ORDER' then 'Delivery terminated'
-        when 'DIFFICULTY_DETAIN' then 'Problem shipment retained in station'
-        when 'DIFFICULTY_FINISH_INDEMNITY' then 'Problem shipment has been paid'
-        when 'DIFFICULTY_FINISH_RETURN' then 'Problem shipment return print'
-        when 'CANCEL_PARCEL' then 'shipment cancelled'
-        when 'DELIVERY_MARKER' then 'Delivery Mark'
-        when 'REPLACE_PNO' then 'Replace Waybill'
-        when 'SEAL' then 'Bagging Scan'
-        when 'UNSEAL' then 'Unbagging Scan'
-        when 'UNSEAL_NO_PARCEL' then 'Report the parcel is not in the bagging'
-        when 'DIFFICULTY_SEAL' then 'Bagging exception'
-        when 'SEAL_NUMBER_CHANGE' then 'Parcels in a bagging is scanned separately'
-        when 'UNSEAL_NOT_SCANNED' then 'The bag has been unbagging. This parcel was not been scanned'
-        when 'PARCEL_HEADLESS_CLAIMED' then 'No label parcel has been retrieved'
-        when 'PARCEL_HEADLESS_PRINTED' then 'No label parcel has been printed label'
-        when 'PHONE' then 'Phone contact'
-        when 'HURRY_PARCEL' then 'Reminder'
-        when 'MANUAL_REMARK' then 'Shipment remark'
-        when 'INTERRUPT_PARCEL_AND_RETURN' then 'Interrupt and return'
-        when 'CHANGE_PARCEL_INFO' then 'Modify shipment’s info'
-        when 'CUSTOMER_CHANGE_PARCEL_INFO' then 'Customer Modify Package Information'
-        when 'CHANGE_PARCEL_CLOSE' then 'Close the waybill'
-        when 'CHANGE_PARCEL_SIGNED' then 'Confirm that the customer has received this shipment'
-        when 'CHANGE_PARCEL_CANCEL' then 'shipment cancelled'
-        when 'STAFF_INFO_UPDATE_WEIGHT' then 'Courier changes weight'
-        when 'STORE_KEEPER_UPDATE_WEIGHT' then 'Warehouse keeper re-weight'
-        when 'STORE_SORTER_UPDATE_WEIGHT' then 'Reweighed by sorter machine'
-        when 'THIRD_EXPRESS_ROUTE' then 'Third-party courier company routing'
-        when 'EXCHANGE_PARCEL' then 'Exchange goods&Return'
-        when 'DISCARD_RETURN_BKK' then 'Re-print the waybill and send to auction warehouse'
-        when 'DELIVERY_TRANSFER' then 'Task reassign'
-        when 'PICKUP_RETURN_RECEIPT' then 'pickup return receipt'
-        when 'CHANGE_PARCEL_IN_TRANSIT' then 'Modify the package to be in transit'
-        when 'FLASH_HOME_SCAN' then 'to courier'
-        when 'INCOMING_CALL' then 'Answered the consignee call'
-        when 'REVISION_TIME' then 'Change time'
-        when 'TRANSFER_LOST_PARTS_TEAM' then 'Handover to SS Judge System (Lost)'
-        when 'NOTICE_LOST_PARTS_TEAM' then 'Synchronize to SS Judge System (Non-Lost)'
-        when 'LOSE_PARCEL_TEAM_OPERATION' then 'SS Judge System Process'
-        when 'THIRD_PARTY_REASON_DETAIN' then 'Third party detention'
-        when 'CREATE_WORK_ORDER' then 'Create the ticket'
-        when 'REPLY_WORK_ORDER' then 'Reply the ticket'
-        when 'PRINTING' then 'Print Label'
-        when 'seal.ARRIVAL_WAREHOUSE_SCAN' then 'Unloading Scan for Bagging'
-        when 'CUSTOMER_OPERATING_RETURN' then 'Customer operation returns to sender'
-        when 'SYSTEM_AUTO_RETURN' then 'system auto return'
-        when 'INVENTORY' then 'Inventory check'
-        when 'REPAIRED' then 'Package repair'
-        when 'DELIVERY_PICKUP_STORE_SCAN' then 'Scan code to sign for package by BS'
-        when 'FORCE_TAKE_PHOTO' then 'Compulsory photo'
-        when 'TAKE_PHOTO' then 'Abnormal ordering and taking photos'
-        when 'DISTRIBUTION_INVENTORY' then 'Hub Inventory Check'
-    end 最后一条有效路由
-    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一条有效路由时间
-from t
-left join
-(
-      select
-        pr.pno
-        ,pr.route_action
-        ,pr.routed_at
-        ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
-    from ph_staging.parcel_route pr
-    join  t on t.merge_column = pr.pno
-    where  -- 最后有效路由
-        pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN','DELIVERY_PICKUP_STORE_SCAN','DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE','REFUND_CONFIRM','ACCEPT_PARCEL')
-) pr on pr.pno = t.merge_column and pr.rn = 1;
-;-- -. . -..- - / . -. - .-. -.--
-select DATE_FORMAT(curdate() ,'%Y%m');
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-	DATE_FORMAT(plt.`updated_at`, '%Y%m%d') '统计日期 Statistical date'
-	,if(plt.`duty_result`=3,pr.store_name,ss.`name`) '网点名称 store name'
-	,smp.`name` '片区Area'
-	,smr.`name` '大区District'
-	,pi.`揽件包裹Qty. of pick up parcel`
-	,pi2.`妥投包裹Qty. of delivered parcel`
-	,COUNT(DISTINCT(if(plt.`duty_result`=1 and plt.`duty_type` in(4),plt.`pno`,null)))*0.5+COUNT(DISTINCT(if(plt.`duty_result`=1 and plt.`duty_type` not in(4),plt.`pno`,null))) '丢失 Lost'
-	,COUNT(DISTINCT(if(plt.`duty_result`=2 and plt.`duty_type` in(4),plt.`pno`,null)))*0.5+COUNT(DISTINCT(if(plt.`duty_result`=2 and plt.`duty_type` not in(4),plt.`pno`,null))) '破损 Dmaged'
-	,COUNT(DISTINCT(if(plt.`duty_result`=3 and plt.`duty_type` in(4),plt.`pno`,null)))*0.5+COUNT(DISTINCT(if(plt.`duty_result`=3 and plt.`duty_type` not in(4),plt.`pno`,null))) '超时包裹 Over SLA'
-	,sum(if(plt.`duty_result`=1,pcn.claim_money,0)) '丢失理赔金额 Lost claim amount'
-	,sum(if(plt.`duty_result`=2,pcn.claim_money,0)) '破损理赔金额 Damage claim amount'
-	,sum(if(plt.`duty_result`=3,pcn.claim_money,0)) '超时效理赔金额 Over SLA claim amount'
-FROM  `ph_bi`.`parcel_lose_task` plt
-LEFT JOIN `ph_bi`.`parcel_lose_responsible` plr on plr.`lose_task_id` =plt.`id`
-LEFT JOIN `ph_bi`.`sys_store` ss on ss.`id` = plr.`store_id`
-LEFT JOIN `ph_bi`.`sys_manage_region` smr on smr.`id`  =ss.`manage_region`
-LEFT JOIN `ph_bi`.`sys_manage_piece` smp on smp.`id`  =ss.`manage_piece`
-LEFT JOIN ( SELECT
-                    DATE_FORMAT(convert_tz(pi.`created_at`,'+00:00','+08:00'),'%Y%m%d') 揽收日期
-                    ,pi.`ticket_pickup_store_id`
-           			,COUNT( DISTINCT(pi.pno)) '揽件包裹Qty. of pick up parcel'
-             FROM `ph_staging`.`parcel_info` pi
-           	 where pi.`state`<9
-           	 and DATE_FORMAT(convert_tz(pi.`created_at`,'+00:00','+08:00'),'%Y-%m-%d') >= date_sub(curdate(), interval 31 day)
-             GROUP BY 1,2
-            ) pi on pi.揽收日期=DATE_FORMAT(plt.`updated_at`, '%Y%m%d') and pi.`ticket_pickup_store_id`= plr.`store_id`
-LEFT JOIN ( SELECT
-                    DATE_FORMAT(convert_tz(pi.`finished_at`, '+00:00','+08:00'),'%Y%m%d') 妥投日期
-                    ,pi.`ticket_delivery_store_id`
-           			,COUNT( DISTINCT(if(pi.state=5,pi.pno,null))) '妥投包裹Qty. of delivered parcel'
-             FROM `ph_staging`.`parcel_info` pi
-           	 where pi.`state`<9
-           	 and DATE_FORMAT(convert_tz(pi.`finished_at`, '+00:00','+08:00'),'%Y-%m-%d') >= date_sub(curdate(), interval 31 day)
-             GROUP BY 1,2
-            ) pi2 on pi2.妥投日期=DATE_FORMAT(plt.`updated_at`, '%Y%m%d') and pi2.`ticket_delivery_store_id`= plr.`store_id`
-LEFT JOIN
-(
-
-    SELECT *
-     FROM
-           (
-                 SELECT pct.`pno`
-                               ,pct.`id`
-                    ,pct.`finance_updated_at`
-                             ,pct.`state`
-                               ,pct.`created_at`
-                        ,row_number() over (partition by pct.`pno` order by pct.`created_at` DESC ) row_num
-             FROM `ph_bi`.parcel_claim_task pct
-             where pct.state=6
-           )t0
-    WHERE t0.row_num=1
-)pct on pct.pno=plt.pno
-LEFT  join
-        (
-            select *
-            from
-                (
-                select
-                pcn.`task_id`
-                ,replace(json_extract(pcn.`neg_result`,'$.money'),'\"','') claim_money
-                ,row_number() over (partition by pcn.`task_id` order by pcn.`created_at` DESC ) row_num
-                from `ph_bi`.parcel_claim_negotiation pcn
-                ) t1
-            where t1.row_num=1
-        )pcn on pcn.task_id =pct.`id`
-LEFT JOIN (select pr.`pno`,pr.store_id,pr.`routed_at`,pr.route_action,pr.store_name,pr.staff_info_id,pr.staff_info_phone,pr.staff_info_name,pr.extra_value
-           from (select
-         pr.`pno`,pr.store_id,pr.`routed_at`,pr.route_action,pr.store_name,pr.staff_info_id,pr.staff_info_phone,pr.staff_info_name,pr.extra_value,
-         row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
-         from `ph_staging`.`parcel_route` pr
-         where pr.`routed_at`>= CONVERT_TZ('2022-12-01','+08:00','+00:00')
-         and pr.`route_action` in(
-             select dd.`element`  from dwm.dwd_dim_dict dd where dd.remark ='valid')
-                ) pr
-         where pr.rn = 1
-        ) pr on pr.pno=plt.`pno`
-where plt.`state` in (6)
-and plt.`operator_id` not in ('10000','10001')
-and DATE_FORMAT(plt.`updated_at`, '%Y-%m-%d') >= date_sub(curdate(), interval 31 day)
-and plt.`updated_at` IS NOT NULL
-GROUP BY 1,2,3,4
-ORDER BY 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT DISTINCT
-
-	plt.created_at '任务生成时间 Task generation time'
-    ,CONCAT('SSRD',plt.`id`) '任务ID Task ID'
-	,plt.`pno`  '运单号 Waybill'
-	,case plt.`vip_enable`
-    when 0 then '普通客户'
-    when 1 then 'KAM客户'
-    end as '客户类型 Client type'
-	,case plt.`duty_result`
-	when 1 then '丢失'
-	when 2 then '破损'
-	when 3 then '超时效'
-	end as '判责类型Judgement type'
-	,t.`t_value` '原因 Reason'
-	,plt.`client_id` '客户ID Client ID'
-	,pi.`cod_amount`/100 'COD金额 COD'
-	,plt.`parcel_created_at` '揽收时间 Pick up time'
-	,cast(pi.exhibition_weight as double)/1000 '重量 Weight'
-    ,concat(pi.exhibition_length,'*',pi.exhibition_width,'*',pi.exhibition_height) '尺寸 Size'
-	,case pi.parcel_category
-     when '0' then '文件'
-     when '1' then '干燥食品'
-     when '10' then '家居用具'
-    when '11' then '水果'
-     when '2' then '日用品'
-     when '3' then '数码产品'
-     when '4' then '衣物'
-     when '5' then '书刊'
-    when '6' then '汽车配件'
-     when '7' then '鞋包'
-    when '8' then '体育器材'
-     when '9' then '化妆品'
-    when '99' then '其它'
-    end  as '包裹品类 Item type'
-	,pr.route_action 最后一条有效路由动作
-	,wo.`order_no` '工单号 Ticket No.'
-	,case  plt.`source`
-        WHEN 1 THEN 'A-问题件-丢失'
-        WHEN 2 THEN 'B-记录本-丢失'
-        WHEN 3 THEN 'C-包裹状态未更新'
-        WHEN 4 THEN 'D-问题件-破损/短少'
-        WHEN 5 THEN 'E-记录本-索赔-丢失'
-        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
-        WHEN 7 THEN 'G-记录本-索赔-其他'
-        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
-        WHEN 9 THEN 'I-问题件-外包装破损险'
-        WHEN 10 THEN 'J-问题记录本-外包装破损险'
-		WHEN 11 THEN 'K-超时效'
-		when 12 then 'L-高度疑似丢失'
-		END AS '问题件来源渠道 Source channel of issue'
-	,case plt.`state`
-	when 5 then '无需追责'
-	when 6 then '责任人已认定'
-	end  as '状态 Status'
-    ,plt.`fleet_stores` '异常区间 Abnormal interval'
-    ,ft.`line_name`  '异常车线  Abnormal LH'
-	,plt.`operator_id` '处理人 Handler'
-	,plt.`updated_at` '处理时间 Handle time'
-	,plt.`penalty_base` '判罚依据 Basis of penalty'
-    ,case plt.`link_type`
-    WHEN 0 THEN 'ipc计数后丢失'
-    WHEN 1 THEN '揽收网点已揽件，未收件入仓'
-    WHEN 2 THEN '揽收网点已收件入仓，未发件出仓'
-    WHEN 3 THEN '中转已到件入仓扫描，中转未发件出仓'
-    WHEN 4 THEN '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
-    WHEN 5 THEN '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
-    WHEN 6 THEN '分拨发件出仓扫描，目的地未到件入仓(集包)'
-    WHEN 7 THEN '分拨发件出仓扫描，目的地未到件入仓(单件)'
-    WHEN 8 THEN '目的地到件入仓扫描，目的地未交接,当日遗失'
-    WHEN 9 THEN '目的地到件入仓扫描，目的地未交接,次日遗失'
-    WHEN 10 THEN '目的地交接扫描，目的地未妥投'
-    WHEN 11 THEN '目的地妥投后丢失'
-    WHEN 12 THEN '途中破损/短少'
-    WHEN 13 THEN '妥投后破损/短少'
-    WHEN 14 THEN '揽收网点已揽件，未收件入仓'
-    WHEN 15 THEN '揽收网点已收件入仓，未发件出仓'
-    WHEN 16 THEN '揽收网点发件出仓到分拨了'
-    WHEN 17 THEN '目的地到件入仓扫描，目的地未交接'
-    WHEN 18 THEN '目的地交接扫描，目的地未妥投'
-    WHEN 19 THEN '目的地妥投后破损短少'
-    WHEN 20 THEN '分拨已发件出仓，下一站分拨未到件入仓(集包)'
-    WHEN 21 THEN '分拨已发件出仓，下一站分拨未到件入仓(单件)'
-    WHEN 22 THEN 'ipc计数后丢失'
-    WHEN 23 THEN '超时效SLA'
-    WHEN 24 THEN '分拨发件出仓到下一站分拨了'
-	end as '判责环节 Judgement'
-    ,case if(plt.state= 6,plt.`duty_type`,null)
-	when 1 then '快递员100%套餐'
-    when 2 then '仓7主3套餐(仓管70%主管30%)'
- 	when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
-    when 5 then  '快递员721套餐(快递员70%仓管20%主管10%)'
-    when 6 then  '仓管721套餐(仓管70%快递员20%主管10%)'
-    when 8 then  'LH全责（LH100%）'
-    when 7 then  '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
-    when 21 then  '仓7主3套餐(仓管70%主管30%)'
-	end as '套餐 Penalty plan'
-	,ss3.`name` '责任网点 Resposible DC'
-	,case pct.state
-                when 1 then '丢失件待协商'
-                when 2 then '协商不一致'
-                when 3 then '待财务核实'
-                when 4 then '待财务支付'
-                when 5 then '支付驳回'
-                when 6 then '理赔完成'
-                when 7 then '理赔终止'
-                when 8 then '异常关闭'
-                end as '理赔处理状态 Status of claim'
-	,if(pct.state=6,pcn.claim_money,0) '理赔金额 Claim amount'
-	,timestampdiff( hour ,plt.`created_at` ,plt.`updated_at`) '处理时效 Processing SLA'
-	,DATE_FORMAT(plt.`updated_at`,'%Y%m%d') '统计日期 Statistical date'
-	,plt.`remark` 备注
-
-
-
-
-FROM  `ph_bi`.`parcel_lose_task` plt
-LEFT JOIN `ph_staging`.`parcel_info`  pi on pi.pno = plt.pno
-LEFT JOIN `ph_bi`.`sys_store` ss on ss.id = pi.`ticket_pickup_store_id`
-LEFT JOIN `ph_bi`.`sys_store` ss1 on ss1.id = pi.`dst_store_id`
-
-LEFT JOIN `ph_bi`.`work_order` wo on wo.`loseparcel_task_id` = plt.`id`
-LEFT JOIN `ph_bi`.`fleet_time` ft on ft.`proof_id` =LEFT (plt.`fleet_routeids`,11)
-LEFT JOIN `ph_bi`.`parcel_lose_stat_detail` pld on pld. `lose_task_id`=plt.`id`
-LEFT JOIN `ph_bi`.`parcel_lose_responsible` plr on plr.`lose_task_id`=plt.`id`
-LEFT JOIN `ph_bi`.`sys_store` ss3 on ss3.id = plr.store_id
-LEFT JOIN `ph_bi`.`translations` t ON plt.duty_reasons = t.t_key AND t.`lang` = 'zh-CN'
-LEFT JOIN
-(
-
-    SELECT *
-     FROM
-           (
-                 SELECT pct.`pno`
-                               ,pct.`id`
-                    ,pct.`finance_updated_at`
-                             ,pct.`state`
-                               ,pct.`created_at`
-                        ,row_number() over (partition by pct.`pno` order by pct.`created_at` DESC ) row_num
-             FROM `ph_bi`.parcel_claim_task pct
-
-           )t0
-    WHERE t0.row_num=1
-)pct on pct.pno=plt.pno
-LEFT  join
-        (
-            select *
-            from
-                (
-                select
-                pcn.`task_id`
-                ,replace(json_extract(pcn.`neg_result`,'$.money'),'\"','') claim_money
-                ,row_number() over (partition by pcn.`task_id` order by pcn.`created_at` DESC ) row_num
-                from `ph_bi`.parcel_claim_negotiation pcn
-                ) t1
-            where t1.row_num=1
-        )pcn on pcn.task_id =pct.`id`
-LEFT JOIN (select pr.`pno`,pr.store_id,pr.`routed_at`,pr.route_action,pr.store_name,pr.staff_info_id,pr.staff_info_phone,pr.staff_info_name,pr.extra_value
-           from (select
-         pr.`pno`,pr.store_id,pr.`routed_at`,pr.route_action,pr.store_name,pr.staff_info_id,pr.staff_info_phone,pr.staff_info_name,pr.extra_value,
-         row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
-         from `ph_staging`.`parcel_route` pr
-         where pr.`routed_at`>= CONVERT_TZ('2022-12-01','+08:00','+00:00')
-         and pr.`route_action` in(
-             select dd.`element`  from dwm.dwd_dim_dict dd where dd.remark ='valid')
-                ) pr
-         where pr.rn = 1
-        ) pr on pr.pno=plt.`pno`
-where 1=1
-and plt.`state` in (5,6)
-and plt.`operator_id` not in ('10000','10001')
-and DATE_FORMAT(plt.`updated_at`, '%Y-%m-%d') >= date_sub(curdate(), interval 31 day)
-GROUP BY 2
-ORDER BY 2;
-;-- -. . -..- - / . -. - .-. -.--
-select DATE_FORMAT(curdate() ,'%Y-%m-%d');
-;-- -. . -..- - / . -. - .-. -.--
-select
-    pi.store_total_amount
-    ,pi.store_parcel_amount
-    ,pi.cod_poundage_amount
-    ,pi.material_amount
-    ,pi.insure_amount
-    ,pi.freight_insure_amount
-    ,pi.label_amount
-from ph_staging.parcel_info pi
-where
-    pi.pno = 'P18031DPPG5BQ';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    pi.store_total_amount
-    ,pi.store_parcel_amount
-    ,pi.cod_poundage_amount
-    ,pi.material_amount
-    ,pi.insure_amount
-    ,pi.freight_insure_amount
-    ,pi.label_amount
-    ,pi.cod_amount
-from ph_staging.parcel_info pi
-where
-    pi.pno = 'P18031DPPG5BQ';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    pcd.pno
-    ,if(pi.returned = 0, '正向', '逆向') 包裹流向
-    ,pi.customary_pno 原单号
-    ,oi.cogs_amount cog金额
-    ,pi2.store_total_amount 总运费
-    ,pi2.cod_amount/100 COD金额
-    ,pi2.cod_poundage_amount COD手续费
-    ,case pi.state
-        when 1 then '已揽收'
-        when 2 then '运输中'
-        when 3 then '派送中'
-        when 4 then '已滞留'
-        when 5 then '已签收'
-        when 6 then '疑难件处理中'
-        when 7 then '已退件'
-        when 8 then '异常关闭'
-        when 9 then '已撤销'
-    end as 当前包裹状态
-from ph_staging.parcel_change_detail pcd
-left join ph_staging.parcel_info pi on pcd.pno = pi.pno
-left join ph_staging.parcel_info pi2 on pi2.pno = if(pi.returned = 0, pi.pno, pi.customary_pno)
-left join ph_staging.order_info oi on if(pi.returned = 0, pi.pno, pi.customary_pno) = oi.pno
-where
-    pcd.new_value = 'PH19040F05'
-    and pcd.created_at >= '2023-01-31 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    pcd.pno
-    ,if(pi.returned = 0, '正向', '逆向') 包裹流向
-    ,pi.customary_pno 原单号
-    ,oi.cogs_amount/100 cog金额
-    ,pi2.store_total_amount 总运费
-    ,pi2.cod_amount/100 COD金额
-    ,pi2.cod_poundage_amount COD手续费
-    ,case pi.state
-        when 1 then '已揽收'
-        when 2 then '运输中'
-        when 3 then '派送中'
-        when 4 then '已滞留'
-        when 5 then '已签收'
-        when 6 then '疑难件处理中'
-        when 7 then '已退件'
-        when 8 then '异常关闭'
-        when 9 then '已撤销'
-    end as 当前包裹状态
-from ph_staging.parcel_change_detail pcd
-left join ph_staging.parcel_info pi on pcd.pno = pi.pno
-left join ph_staging.parcel_info pi2 on pi2.pno = if(pi.returned = 0, pi.pno, pi.customary_pno)
-left join ph_staging.order_info oi on if(pi.returned = 0, pi.pno, pi.customary_pno) = oi.pno
-where
-    pcd.new_value = 'PH19040F05'
-    and pcd.created_at >= '2023-01-31 16:00:00';
-;-- -. . -..- - / . -. - .-. -.--
-select
-    *
-from tmpale.tmp_ph_test_0406;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    t.dated
-    ,t.staff
-    ,count(distinct t.pno) num
-    ,group_concat(t.pno) pno
-from tmpale.tmp_ph_test_0406 t
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    ss.category
-from ph_staging.parcel_headless ph
-left join ph_staging.sys_store ss on ss.id = ph.submit_store_id
-group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    ss.category
-    ,ss2.category category2
-from ph_staging.parcel_headless ph
-left join ph_staging.sys_store ss on ss.id = ph.submit_store_id
-left join ph_staging.sys_store ss2 on ss2.id = ph.claim_store_id
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    ss.category
-    ,ss2.category
-    ,count(ph.hno) num
-from ph_staging.parcel_headless ph
-left join ph_staging.sys_store ss on ss.id = ph.submit_store_id
-left join ph_staging.sys_store ss2 on ss2.id = ph.claim_store_id
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    ss.category
-    ,ss2.category
-    ,count(ph.hno) num
-from ph_staging.parcel_headless ph
-left join ph_staging.sys_store ss on ss.id = ph.submit_store_id
-left join ph_staging.sys_store ss2 on ss2.id = ph.claim_store_id
-where
-    ph.claim_store_id is not null
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    ss.name
-    ,ss2.name name2
-    ,count(ph.hno) num
-from ph_staging.parcel_headless ph
-left join ph_staging.sys_store ss on ss.id = ph.submit_store_id
-left join ph_staging.sys_store ss2 on ss2.id = ph.claim_store_id
-where
-    ph.claim_store_id is not null
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
 select #应集包
             pr.`store_id`
             ,count(distinct pr.`pno`) 应集包量
@@ -13900,3 +9871,2886 @@ left join s1 on s1.store_id = ss.store_id
 left join s2 on s2.store_id = ss.store_id
 left join s3 on s3.store_id = ss.store_id
 left join s4 on s4.store_id = ss.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,if(pi.state = 5, ss.name, null) 妥投网点
+    ,pi.state
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+where
+    pi.pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'p61181GHK3SdM', 'P20231GA55KaP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'p0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'p0206WR89Nbg', 'P6201ZUFJ6BD', 'p0234NQPB1AE', 'p022817SZKUaK', 'P6201S7BHEAY', 'p0234N629Xab', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBk', 'P620114UHYEAJ', 'P021415AB3NBH', 'p0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2Aa', 'p0112K5RUMci', 'p6201K6B0EbA', 'P0220K1W1Dar', 'p6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'p0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'p0104XNMY1Al', 'P0105MFWH5aI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'p6222Y45Q9ad', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAk', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAh', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'p01121C85S0bn', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAa', 'P3016AHZW8as', 'P3230DMS09aM', 'p3221AHZVGfh', 'p3307DUSZ7Ao', 'P3608AHZWRaA', 'p322319N0SCe', 'p61011EN7TBS', 'p33011QBZMAB', 'p281313PWNAs', 'p2906140HBBe', 'P33021XRY1Aw', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'p3231JE2QEaa', 'p3309AHZV2Ab', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'p3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'pT13111VJRC0bd', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,if(pi.state = 5, ss.name, null) 妥投网点
+    ,pi.state
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+where
+    pi.pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,if(pi.state = 5, ss.name, null) 妥投网点
+    ,pi.state
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+where
+    pi.pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX')
+    or pi.recent_pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,if(pi.state = 5, ss.name, null) 妥投网点
+    ,pi.state
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+where
+    pi.pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX')
+#     or pi.recent_pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX')
+
+union all
+
+select
+    pi.recent_pno pno
+    ,if(pi.state = 5, ss.name, null) 妥投网点
+    ,pi.state
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+where
+    pi.recent_pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,if(pi.state = 5, ss.name, null) 妥投网点
+    ,pi.state
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+where
+    pi.pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX')
+#     or pi.recent_pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX')
+
+union
+
+select
+    pi.recent_pno pno
+    ,if(pi.state = 5, ss.name, null) 妥投网点
+    ,pi.state
+from ph_staging.parcel_info pi
+left join ph_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+where
+    pi.recent_pno in ('P61171DPYUTBA', 'P19141D1X78AF', 'P201817WV6RAA', 'PT61151PVV9AA', 'P110716C16JAH', 'PT61201SK18GF', 'P201817J2EEAA', 'P201817RYZYAZ', 'P611817BNYWEV', 'P612017HYV2GK', 'PT61201VKD1GJ', 'P612317W38AAN', 'P201817GUBGAJ', 'P6123181ZUCAQ', 'P61231822T3AQ', 'P6117181PYQAK', 'P6128187586DW', 'P201818NPD9AZ', 'P6118141JPYCQ', 'P201818R54BAA', 'P612018EBJYHB', 'P612018K4Y5GR', 'P611618HKFNAB', 'P611718MYUGAO', 'PT613121ZZ2BU', 'P201818VHHXAZ', 'PT211324YH7AA', 'PT2102263F5AD', 'P21041952HEAY', 'PT211326698AD', 'PT121225WT5AB', 'P612319C6W5AK', 'P6118191D7TEV', 'PD612019H7GCCJ', 'P6120195RT3GR', 'P6102196VCAAG', 'P202019HY1ZBN', 'P181119YWE2AK', 'P181119YWE4AK', 'P181119YWE7AK', 'P181119YWE3AK', 'P181119YWEAAK', 'P181119YWE6AK', 'P181119YWE9AK', 'P181119YWE8AK', 'P181119YWEBAK', 'PT61131S29X6AA', 'PT21122AJA5AK', 'P20181A2JGXAY', 'PD061517VFYWAI', 'P192419H6AYAY', 'P20341A1MKRAA', 'PT611821F4GC2BY', 'P61201A7UURCZ', 'P201819Y5MMAZ', 'P61181AC7WRDE', 'P61181AK62SCH', 'PT61181SD7X2FI', 'P61211B6ANTAF', 'P19051B66FDAW', 'P20031BAUUCAG', 'PT20131SPSB6BL', 'P19241A9MVXCJ', 'P61221BE0CHAK', 'P61021BS6Z1AA', 'P61181BW6CCEL', 'P61011BPPW6EO', 'P21041BXCFTAB', 'PT61181SZSJ0BI', 'P61181BQG79DM', 'PT61201T0PE6GD', 'PT20231T46M6AW', 'P61231C0K9MBD', 'P18111CDQCNAH', 'P17051A04KZBI', 'P61181CFAGJFH', 'P61091CJG1KAD', 'P19011CFAFUAJ', 'P19241CFACQAE', 'P53021BBRJ0CE', 'P21051CHTT2AA', 'P18031CHYUVBF', 'PD21021CK7Z2AI', 'P01151CKTCAAP', 'PT14851TCUQ3ZZ', 'PT61231TDMV5AW', 'P61011CYSS3AX', 'PT61071TAN94AE', 'PT14011TDT50AC', 'P61261CJ1E1AD', 'P20181D0J7YAZ', 'PT21081THUS6AA', 'PT21121TD9Q4AS', 'PT19241TDDT4BR', 'P61301DB36ZAV', 'P20181DBH4ZAZ', 'PD61151D8V97AM', 'P61171DEZN8AO', 'P21051D9M10AC', 'P20181D6C2HAZ', 'P20181DER67AZ', 'P61151D71U8AK', 'P20181E1WMVAZ', 'P21021E3NWKAF', 'P61181EDKC0CY', 'P61161E9JYTAA', 'PT61181TUVF6CN', 'P61061E4P35HA', 'P61181EDKBVFI', 'P61171DNKH0AK', 'P61201E4NH5HF', 'P19271E4KD1AV', 'P61221EAWXXAM', 'P20071E88ZDAA', 'P61201DQ9XSGD', 'P61011E9T8SFF', 'P61171EJHS4AK', 'PT20081UJ729BG', 'PT20141UJA43AL', 'P61181DNKCMCY', 'P61231E52JYAM', 'P61181DTAJHDD', 'P61201ED3RDGU', 'P61201EDTAUGT', 'P61201EM0EAAL', 'P61051EFCT2BY', 'P21081EREG7AJ', 'PT612321F4U48AQ', 'P20131EKU43BE', 'PT21021UV8A0AO', 'P21131EHT7BAC', 'P61271EGX9FAO', 'P21021EAACMAN', 'P17051EXE55BN', 'PD61011EKJ77JQ', 'PD61011B17KEJQ', 'P21021EPS1GAD', 'P18111EVFHPAK', 'P61231EVEA0AE', 'P61161EVFFHAB', 'P61181F2NC4AT', 'PT61011U58V3DG', 'P80051EBUQNAK', 'PT61171UVNS5AA', 'P21021EMDWUAG', 'PD17031EXFN2AI', 'P19211DWH4YAA', 'P21081FHM7PAI', 'P61201EMTFMGR', 'P07351FHC1GAZ', 'P61041FYH9PAO', 'P20181FYFT3AZ', 'PT61201VBNQ1BB', 'P61231FJ28ZAM', 'P61201FTA8BGR', 'P61201G8PAHGT', 'P18011FS4FWBD', 'P61181GHK3SDM', 'P20231GA55KAP', 'P6210XD52DAO', 'P022017Z3MZAZ', 'P022417DUQ2AX', 'P011419G2TVAF', 'P6210XUZVYAB', 'FLPHM000004752832', 'P0206XAVPTBG', 'P011719AHQZAT', 'P020618JEEKBG', 'P011817374KAU', 'P0226TZA1YBB', 'P620718Z6RYAE', 'P011913AE90AB', 'P0224W209WAP', 'P0206WR89NBG', 'P6201ZUFJ6BD', 'P0234NQPB1AE', 'P022817SZKUAK', 'P6201S7BHEAY', 'P0234N629XAB', 'P0228JYEEVBC', 'P02041964QPAV', 'P0223166AWGAE', 'P0112KAASZBK', 'P620114UHYEAJ', 'P021415AB3NBH', 'P0117U8DMTAK', 'P022515PDSXAD', 'P6220142Y1UAC', 'P022413PX15AQ', 'P0226TV68AAL', 'P0220130DKKAB', 'P0213MWQY2AA', 'P0112K5RUMCI', 'P6201K6B0EBA', 'P0220K1W1DAR', 'P6201EPX9DAZ', 'P0121NZPC0AX', 'P0212T9TGTAV', 'P0116F0QE4AS', 'P0119QSUKUAY', 'P0233T7VWWBB', 'P0222PJ521AI', 'P0206PWMZ5BL', 'P02121396WDAV', 'P6201X5WR6BB', 'P0224Z0SGJAW', 'P0228JK5AFAS', 'P0203FJU14AX', 'P012110BGA3AT', 'P0104XNMY1AL', 'P0105MFWH5AI', 'P6210144XS6AJ', 'P023410XCZ4AQ', 'P6201K35CHBA', 'P0206FCH69BL', 'P6201TUE5TAL', 'P0223131JVNAG', 'P6222Y45Q9AD', 'P0210100GT3AC', 'P011512V7DJAC', 'P6216PU8RXAK', 'P020611DYCJAM', 'P6223YQAZVAF', 'P0220VYFPKAH', 'P0227YZW3PAX', 'P022011MY0NAF', 'P022610XDBUAH', 'P6201ZYA9MAY', 'P0112NY5EABP', 'PD020513TFYWAZ', 'P0104HEMN3AF', 'PD62071BUK41AL', 'P02141C6B1FAW', 'P01121C85S0BN', 'P02071CFSHGAO', 'P62011DA8ZMBC', 'PT1031TNGN7BB', 'P4714188CC4AE', 'P490416MT3SAV', 'P472113SVX7AW', 'P610211J1C0AA', 'P4715AHZX2AD', 'P4904A87JNAO', 'P4904AJ0DQAZ', 'P5105AJ0D5AE', 'P4514DQTGRBL', 'P5126AHZUTAJ', 'P7707G5B5AAH', 'P5302XKT3KAU', 'P5302XKT3TDB', 'P4715YRZZDAH', 'P45145HYT3AP', 'P47196WPNKAA', 'P5120127KKHAH', 'P4721WK3W4AW', 'PD4703Q0MNRAB', 'P4721S1VKMAA', 'P4712ZM7XKAB', 'P7304ZJ3S4AD', 'P510517BFUCBO', 'P47081573ZFAU', 'P5101TSGFXAE', 'P7412UPR74AG', 'P471517X6X3AN', 'P7302ZSAXQBD', 'P510514RMQ1BY', 'P4712AJZJRAH', 'P7905MDJKEAI', 'P6916XKT3VDP', 'P51055N28BBR', 'P4704FFC0VAE', 'P470317M5J9AL', 'P511213W61NAK', 'P3227SQBP6BF', 'P3205AHZWBAA', 'P3016AHZW8AS', 'P3230DMS09AM', 'P3221AHZVGFH', 'P3307DUSZ7AO', 'P3608AHZWRAA', 'P322319N0SCE', 'P61011EN7TBS', 'P33011QBZMAB', 'P281313PWNAS', 'P2906140HBBE', 'P33021XRY1AW', 'P300284U21AO', 'P3101HXHE6AJ', 'P2913NUCA8AO', 'P3102TZA60AL', 'P3231JE2QEAA', 'P3309AHZV2AB', 'P32375PDBEBT', 'P3221A0XXNFK', 'P3226F8JJPAX', 'P3207951XBAX', 'P33246QJJ0AM', 'P3223UM7X1CC', 'P3101S6YYGAT', 'P3221DMXC7DN', 'P020619TZT9BF', 'P32077NDA2AK', 'P61161CTG9HAL', 'P32341DAQV8AB', 'P32341DBB13AK', 'PT32211U7XJ8EZ', 'PT32211UH3T8FN', 'P32261FGVMBBW', 'P64021F71W3BS', 'P64021F8NE5AZ', 'P13261FCDYWAK', 'P03051FH0YGBF', 'P64021FHV8SBI', 'P64021FE8DRBL', 'P04211F72W0AE', 'PT13021VFNJ7AF', 'PT16101VBHY0AJ', 'P13031FTJF0AQ', 'PT13111VJRC0BD', 'P64021FNZV7BL', 'P64131FMUQ1AD', 'P100011FHZD7AJ', 'P13271FXWQCAK', 'P16031FYZA0AG', 'P64021FHCD1DK', 'PT16041VRTS0AJ', 'P13031G9N1VBO', 'P13031G605UBQ', 'P16041FV05EAJ', 'P10011GCW2MAG', 'PT13301VYZN3AO', 'P03141G35FQBD', 'P03051G9R1GAX');
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        de.dst_store_id = 'PH19040F05' -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.dst_routed_at is not null
+            and de.parcel_state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and de.dst_store_id != 'PH19040F05'  -- 目的地网点不是拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and de.parcel_state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 寄件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,de.dst_store 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join ph_staging.parcel_route pr on pr.pno = b.pno and pr.route_action = 'INVENTORY' and pr.routed_at >= date_add(curdate(), interval 8 hour)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,a.pack_no
+    ,count(a.pno) over (partition by a.pack_no) num
+from
+    (
+        select
+            *
+        from
+            (
+                select
+                    plt.pno
+                    ,psd.pack_no
+                    ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                from ph_bi.parcel_lose_task plt
+                left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                where
+                    plt.updated_at >= '2023-03-01'
+                    and plt.state = 6
+                    and plt.duty_result = 1
+            ) a
+        where
+            a.rk = 1
+    ) a;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(distinct plt.id)
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,sum(plr.duty_ratio) jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,sum(plr.duty_ratio)/100 jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,sum(plr.duty_ratio)/100 jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2
+order by 3 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,count(plt.id) 技术
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2
+order by 3 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,count(plt.id) 技术
+from ph_bi.parcel_lose_task plt
+left join
+    (
+        select
+            plr.lose_task_id
+            ,plr.store_id
+        from ph_bi.parcel_lose_responsible plr
+        where
+            plr.created_at >= '2023-03-01'
+        group by 1,2
+    ) plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2
+order by 3 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+   select
+       a.*
+   from
+       (
+            select
+                plt.pno
+                ,plr.store_id
+                ,plt.id
+                ,pr.routed_at
+                ,row_number() over (partition by plt.id order by pr.routed_at desc ) rk
+            from ph_bi.parcel_lose_task plt
+            left join
+                (
+                    select
+                        plr.lose_task_id
+                        ,plr.store_id
+                    from ph_bi.parcel_lose_responsible plr
+                    where
+                        plr.created_at >= '2023-03-01'
+                    group by 1,2
+                ) plr on plr.lose_task_id = plt.id
+            left join ph_staging.parcel_route pr on pr.pno = plt.pno and pr.routed_at < date_sub(plt.created_at, interval 8 hour)
+            where
+                plt.state = 6
+                and plt.duty_result = 1
+                and plt.created_at >= '2023-03-01'
+                and plt.created_at < '2023-04-27'
+                and plr.store_id in ('PH19280F01', 'PH61182U01', 'PH14010F00', 'PH19280400', 'PH61270401', 'PH61180400', 'PH14010400', 'PH18180200', 'PH14160300', 'PH52050800', 'PH74060200', 'PH18060200', 'PH18040100', 'PH14200300', 'PH21130100', 'PH61184403', 'PH64021N00', 'PH51050301', 'PH21020301')
+
+       ) a
+   where
+       a.rk = 1
+   group by 1,2,3
+)
+select
+    t.store_id
+    ,date(convert_tz(t.routed_at, '+00:00', '+08:00')) date_d
+    ,t.id
+    ,t.pno
+from t;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+   select
+       a.*
+   from
+       (
+            select
+                plt.pno
+                ,plr.store_id
+                ,plt.id
+                ,pr.routed_at
+                ,row_number() over (partition by plt.id order by pr.routed_at desc ) rk
+            from ph_bi.parcel_lose_task plt
+            left join
+                (
+                    select
+                        plr.lose_task_id
+                        ,plr.store_id
+                    from ph_bi.parcel_lose_responsible plr
+                    where
+                        plr.created_at >= '2023-03-01'
+                    group by 1,2
+                ) plr on plr.lose_task_id = plt.id
+            left join ph_staging.parcel_route pr on pr.pno = plt.pno and pr.routed_at < date_sub(plt.created_at, interval 8 hour)
+            where
+                plt.state = 6
+                and plt.duty_result = 1
+                and plt.created_at >= '2023-03-01'
+                and plt.created_at < '2023-04-27'
+                and plr.store_id in ('PH19280F01', 'PH61182U01', 'PH14010F00', 'PH19280400', 'PH61270401', 'PH61180400', 'PH14010400', 'PH18180200', 'PH14160300', 'PH52050800', 'PH74060200', 'PH18060200', 'PH18040100', 'PH14200300', 'PH21130100', 'PH61184403', 'PH64021N00', 'PH51050301', 'PH21020301')
+
+       ) a
+   where
+       a.rk = 1
+   group by 1,2,3,4
+)
+select
+    t.store_id
+    ,date(convert_tz(t.routed_at, '+00:00', '+08:00')) date_d
+    ,t.id
+    ,t.pno
+from t;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+   select
+       a.*
+   from
+       (
+            select
+                plt.pno
+                ,plr.store_id
+                ,plt.id
+                ,pr.routed_at
+                ,row_number() over (partition by plt.id order by pr.routed_at desc ) rk
+            from ph_bi.parcel_lose_task plt
+            left join
+                (
+                    select
+                        plr.lose_task_id
+                        ,plr.store_id
+                    from ph_bi.parcel_lose_responsible plr
+                    where
+                        plr.created_at >= '2023-03-01'
+                    group by 1,2
+                ) plr on plr.lose_task_id = plt.id
+            left join ph_staging.parcel_route pr on pr.pno = plt.pno and pr.routed_at < date_sub(plt.created_at, interval 8 hour)
+            where
+                plt.state = 6
+                and plt.duty_result = 1
+                and plt.created_at >= '2023-03-01'
+                and plt.created_at < '2023-04-27'
+                and plr.store_id in ('PH19280F01', 'PH61182U01', 'PH14010F00', 'PH19280400', 'PH61270401', 'PH61180400', 'PH14010400', 'PH18180200', 'PH14160300', 'PH52050800', 'PH74060200', 'PH18060200', 'PH18040100', 'PH14200300', 'PH21130100', 'PH61184403', 'PH64021N00', 'PH51050301', 'PH21020301')
+
+       ) a
+   where
+       a.rk = 1
+   group by 1,2,3,4,5
+)
+select
+    t.store_id
+    ,date(convert_tz(t.routed_at, '+00:00', '+08:00')) date_d
+    ,t.id
+    ,t.pno
+from t;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+   select
+       a.*
+   from
+       (
+            select
+                plt.pno
+                ,plr.store_id
+                ,plt.id
+                ,pr.routed_at
+                ,row_number() over (partition by plt.id order by pr.routed_at desc ) rk
+            from ph_bi.parcel_lose_task plt
+            left join
+                (
+                    select
+                        plr.lose_task_id
+                        ,plr.store_id
+                    from ph_bi.parcel_lose_responsible plr
+                    where
+                        plr.created_at >= '2023-03-01'
+                    group by 1,2
+                ) plr on plr.lose_task_id = plt.id
+            left join ph_staging.parcel_route pr on pr.pno = plt.pno and pr.routed_at < date_sub(plt.created_at, interval 8 hour)
+            where
+                plt.state = 6
+                and plt.duty_result = 1
+                and plt.created_at >= '2023-03-01'
+                and plt.created_at < '2023-04-27'
+                and plr.store_id in ('PH19280F01', 'PH61182U01', 'PH14010F00', 'PH19280400', 'PH61270401', 'PH61180400', 'PH14010400', 'PH18180200', 'PH14160300', 'PH52050800', 'PH74060200', 'PH18060200', 'PH18040100', 'PH14200300', 'PH21130100', 'PH61184403', 'PH64021N00', 'PH51050301', 'PH21020301')
+
+       ) a
+   where
+       a.rk = 1
+   group by 1,2,3,4,5
+)
+select
+    t.store_id
+    ,ss.short_name
+    ,date(convert_tz(t.routed_at, '+00:00', '+08:00')) date_d
+    ,t.id
+    ,t.pno
+from t
+left join ph_staging.sys_store ss on ss.id = t.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+   select
+       a.*
+   from
+       (
+            select
+                plt.pno
+                ,plr.store_id
+                ,plt.id
+                ,pr.routed_at
+                ,row_number() over (partition by plt.id order by pr.routed_at desc ) rk
+            from ph_bi.parcel_lose_task plt
+            join
+                (
+                    select
+                        plr.lose_task_id
+                        ,plr.store_id
+                    from ph_bi.parcel_lose_responsible plr
+                    where
+                        plr.created_at >= '2023-03-01'
+                        and plr.store_id in ('PH19280F01', 'PH61182U01', 'PH14010F00', 'PH19280400', 'PH61270401', 'PH61180400', 'PH14010400', 'PH18180200', 'PH14160300', 'PH52050800', 'PH74060200', 'PH18060200', 'PH18040100', 'PH14200300', 'PH21130100', 'PH61184403', 'PH64021N00', 'PH51050301', 'PH21020301')
+                    group by 1,2
+                ) plr on plr.lose_task_id = plt.id
+            left join ph_staging.parcel_route pr on pr.pno = plt.pno and pr.routed_at < date_sub(plt.created_at, interval 8 hour);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+   select
+       a.*
+   from
+       (
+            select
+                plt.pno
+                ,plr.store_id
+                ,plt.id
+                ,pr.routed_at
+                ,row_number() over (partition by plt.id order by pr.routed_at desc ) rk
+            from ph_bi.parcel_lose_task plt
+            join
+                (
+                    select
+                        plr.lose_task_id
+                        ,plr.store_id
+                    from ph_bi.parcel_lose_responsible plr
+                    where
+                        plr.created_at >= '2023-03-01'
+                        and plr.store_id in ('PH19280F01', 'PH61182U01', 'PH14010F00', 'PH19280400', 'PH61270401', 'PH61180400', 'PH14010400', 'PH18180200', 'PH14160300', 'PH52050800', 'PH74060200', 'PH18060200', 'PH18040100', 'PH14200300', 'PH21130100', 'PH61184403', 'PH64021N00', 'PH51050301', 'PH21020301')
+                    group by 1,2
+                ) plr on plr.lose_task_id = plt.id
+            left join ph_staging.parcel_route pr on pr.pno = plt.pno and pr.routed_at < date_sub(plt.created_at, interval 8 hour)
+            where
+                plt.state = 6
+                and plt.duty_result = 1
+                and plt.created_at >= '2023-03-01'
+                and plt.created_at < '2023-04-27'
+       ) a
+   where
+       a.rk = 1
+   group by 1,2,3,4,5
+)
+select
+    t.store_id
+    ,ss.short_name
+    ,date(convert_tz(t.routed_at, '+00:00', '+08:00')) date_d
+    ,t.id
+    ,t.pno
+from t
+left join ph_staging.sys_store ss on ss.id = t.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    if(pi.cod_enabled = 1, 'COD', '非COD') 是否COD
+    ,count(plt.id)
+from ph_bi.parcel_lose_task plt
+left join ph_staging.parcel_info pi on pi.pno = plt.pno
+where
+     plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case
+        when bc.client_id is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.id is null then '小c'
+    end as  客户
+    ,if(pi.cod_enabled = 1, 'COD', '非COD') 是否COD
+    ,count(plt.id)
+from ph_bi.parcel_lose_task plt
+left join ph_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_bigClient bc on pi.client_id=bc.client_id
+left join ph_staging.ka_profile kp on .client_id=kp.id
+where
+     plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case
+        when bc.client_id is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.id is null then '小c'
+    end as  客户
+    ,if(pi.cod_enabled = 1, 'COD', '非COD') 是否COD
+    ,count(plt.id)
+from ph_bi.parcel_lose_task plt
+left join ph_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_bigClient bc on pi.client_id=bc.client_id
+left join ph_staging.ka_profile kp on pi.client_id=kp.id
+where
+     plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,plr.staff_id
+    ,sum(plr.duty_ratio)/100 jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2,3
+order by 4 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,plr.staff_id
+#     ,sum(plr.duty_ratio)/100 jishu
+    ,count(plt.id) jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2,3
+order by 4 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,plr.staff_id
+    ,case
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =0 then '在职'
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =1 then '待离职'
+        when hsi.`state` =2 then '离职'
+        when hsi.`state` =3 then '停职'
+    end 在职状态
+    ,sum(plr.duty_ratio)/100 jishu
+#     ,count(plt.id) jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = plr.staff_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2,3,4
+order by 5 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,plr.staff_id
+    ,case
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =0 then '在职'
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =1 then '待离职'
+        when hsi.`state` =2 then '离职'
+        when hsi.`state` =3 then '停职'
+    end 在职状态
+    ,sum(plr.duty_ratio)/100 jishu
+#     ,count(plt.id) jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+left join ph_backyard.hr_staff_info hsi on hsi.staff_info_id = plr.staff_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2,3,4
+order by 5 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plr.store_id
+    ,ss.name 网点
+    ,plr.staff_id
+    ,case
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =0 then '在职'
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =1 then '待离职'
+        when hsi.`state` =2 then '离职'
+        when hsi.`state` =3 then '停职'
+    end 在职状态
+#     ,sum(plr.duty_ratio)/100 jishu
+    ,count(plt.id) jishu
+from ph_bi.parcel_lose_task plt
+left join ph_bi.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+left join ph_staging.sys_store ss on ss.id = plr.store_id
+left join ph_backyard.hr_staff_info hsi on hsi.staff_info_id = plr.staff_id
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+group by 1,2,3,4
+order by 5 desc;
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+    plt.pno
+    ,plt.created_at
+    ,plt.updated_at
+    ,case
+    when bc.client_id is not null then bc.client_name
+    when kp.id is not null and bc.client_id is null then '普通ka'
+    when kp.id is null then '小c'
+    end as  客户类型
+    ,loi.item_name 产品名称
+    ,case pi2.article_category
+         when 0 then '文件'
+         when 1 then '干燥食品'
+         when 2 then '日用品'
+         when 3 then '数码产品'
+         when 4 then '衣物'
+         when 5 then '书刊'
+         when 6 then '汽车配件'
+         when 7 then '鞋包'
+         when 8 then '体育器材'
+         when 9 then '化妆品'
+         when 10 then '家居用具'
+         when 11 then '水果'
+         when 99 then '其它'
+        end as 物品类型
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 cod金额
+    ,if(pi2.cod_enabled = 1, 'y')
+    ,case plt.last_valid_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end as  最后一个有效路由
+    ,ss.name 丢失包裹所在网点
+    ,case
+        when ss.category=1 then 'SP'
+        when ss.category=2 then 'DC'
+        when ss.category=4 then 'SHOP'
+        when ss.category=5 then 'SHOP'
+        when ss.category=6 then 'FH'
+        when ss.category=7 then 'SHOP'
+        when ss.category=8 then 'Hub'
+        when ss.category=9 then 'Onsite'
+        when ss.category=10 then 'BDC'
+        when ss.category=11 then 'fulfillment'
+        when ss.category=12 then 'B-HUB'
+        when ss.category=13 then 'CDC'
+        when ss.category=14 then 'PDC'
+    end 网点类型
+    ,plt.last_valid_staff_info_id 最后操作快递员
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end '来源'
+    ,case plt.duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓7主3套餐(仓管70%主管30%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 21 then '仓7主3套餐(仓管70%主管30%)'
+    end 套餐
+    ,t.t_value 原因
+from ph_bi.parcel_lose_task plt
+left join ph_staging.sys_store ss on plt.last_valid_store_id =ss.id
+left join ph_drds.lazada_order_info_d loi on plt.pno=loi.pno
+left join ph_staging.order_info oi on plt.pno=oi.pno
+left join dwm.dwd_dim_bigClient bc on oi.client_id=bc.client_id
+left join ph_staging.ka_profile kp on oi.client_id=kp.id
+left join ph_staging.parcel_info pi2 on plt.pno=pi2.pno
+left join ph_bi.translations t on plt.duty_reasons=t.t_key
+where
+    plt.state=6
+    and plt.duty_result=1
+    and plt.updated_at >= '2023-03-01'
+    and plt.updated_at < '2023-04-27'
+    and t.lang = 'zh-CN';
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+    plt.pno
+    ,plt.created_at
+    ,plt.updated_at
+    ,case
+    when bc.client_id is not null then bc.client_name
+    when kp.id is not null and bc.client_id is null then '普通ka'
+    when kp.id is null then '小c'
+    end as  客户类型
+    ,loi.item_name 产品名称
+    ,case pi2.article_category
+         when 0 then '文件'
+         when 1 then '干燥食品'
+         when 2 then '日用品'
+         when 3 then '数码产品'
+         when 4 then '衣物'
+         when 5 then '书刊'
+         when 6 then '汽车配件'
+         when 7 then '鞋包'
+         when 8 then '体育器材'
+         when 9 then '化妆品'
+         when 10 then '家居用具'
+         when 11 then '水果'
+         when 99 then '其它'
+        end as 物品类型
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) 物品价值
+    ,pi2.cod_amount/100 cod金额
+    ,if(pi2.cod_enabled = 1, 'y')
+    ,case plt.last_valid_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end as  最后一个有效路由
+    ,ss.name 丢失包裹所在网点
+    ,case
+        when ss.category=1 then 'SP'
+        when ss.category=2 then 'DC'
+        when ss.category=4 then 'SHOP'
+        when ss.category=5 then 'SHOP'
+        when ss.category=6 then 'FH'
+        when ss.category=7 then 'SHOP'
+        when ss.category=8 then 'Hub'
+        when ss.category=9 then 'Onsite'
+        when ss.category=10 then 'BDC'
+        when ss.category=11 then 'fulfillment'
+        when ss.category=12 then 'B-HUB'
+        when ss.category=13 then 'CDC'
+        when ss.category=14 then 'PDC'
+    end 网点类型
+    ,plt.last_valid_staff_info_id 最后操作快递员
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end '来源'
+    ,case plt.duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓7主3套餐(仓管70%主管30%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 21 then '仓7主3套餐(仓管70%主管30%)'
+    end 套餐
+    ,t.t_value 原因
+from ph_bi.parcel_lose_task plt
+left join ph_staging.sys_store ss on plt.last_valid_store_id =ss.id
+left join ph_drds.lazada_order_info_d loi on plt.pno=loi.pno
+left join ph_staging.order_info oi on plt.pno=oi.pno
+left join dwm.dwd_dim_bigClient bc on oi.client_id=bc.client_id
+left join ph_staging.ka_profile kp on oi.client_id=kp.id
+left join ph_staging.parcel_info pi2 on plt.pno=pi2.pno
+left join ph_bi.translations t on plt.duty_reasons=t.t_key
+where
+    plt.state = 6
+    and plt.duty_result = 1
+    and plt.created_at >= '2023-03-01'
+    and plt.created_at < '2023-04-27'
+    and t.lang = 'zh-CN';
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    a.pno
+    ,a2.ratio
+from a
+left join
+    (
+        select
+            psd.pack_no
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1
+    ) a2 on a2.pack_no = a.pack_no;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    a.pno
+    ,a2.ratio
+    ,a2.seal_num
+from a
+left join
+    (
+        select
+            psd.pack_no
+            ,count(psd.pno) seal_num
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1
+    ) a2 on a2.pack_no = a.pack_no;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    a.pno
+    ,a2.pack_no
+    ,a2.ratio
+    ,a2.seal_num
+from a
+left join
+    (
+        select
+            psd.pack_no
+            ,count(psd.pno) seal_num
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1
+    ) a2 on a2.pack_no = a.pack_no;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hjt.job_name
+from ph_bi.hr_staff_info hsi
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    hsi.staff_info_id in ('120072', '134656', '132744', '144666', '123400', '138407', '144975', '146865', '125021', '132436', '128244', '120282', '147272', '146520', '145591', '145390', '131781', '149451', '146585', '122107', '138260', '124441', '142557', '133522', '147945', '132907', '119081', '147515', '119462', '135354', '150011', '135692', '146286', '125532', '133963', '148714', '134748', '141232', '147729', '139155', '131707', '148013', '140774', '123612', '129538', '123370', '119279', '135323');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hjt.job_name
+from ph_bi.hr_staff_info hsi
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    hsi.staff_info_id in ('122045', '123109', '136875', '131888', '126146', '135814', '139915', '126295', '121862', '139548', '146160', '126298', '124824', '138330', '133128', '138072', '132653', '131546', '134129', '126554', '139332', '138177', '138416', '135259', '125453', '137715', '134042', '133699', '134773', '134040', '137721', '126308', '136759', '124969', '136043', '136435', '132455', '124821', '138385', '145375', '140081', '139920', '136217', '125133', '140921', '124968', '140079', '124840');
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+        ,a.last_valid_store_id
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,plt.last_valid_store_id
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    ss.name
+    ,count(distinct a.pack_no) 丢失集包数
+    ,count(distinct a.pno) 丢失包裹数
+from a
+left join
+    (
+        select
+            psd.pack_no
+            ,count(psd.pno) seal_num
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1
+    ) a2 on a2.pack_no = a.pack_no
+left join ph_staging.sys_store ss on ss.id = a.last_valid_store_id
+where
+    a2.ratio > 0.7
+    and a2.seal_num > 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+        ,a.last_valid_store_id
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,plt.last_valid_store_id
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    ss.name
+    ,count(distinct a.pack_no) 丢失集包数
+    ,count(distinct a.pno) 丢失包裹数
+from a
+left join
+    (
+        select
+            psd.pack_no
+            ,count(psd.pno) seal_num
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1
+    ) a2 on a2.pack_no = a.pack_no
+left join ph_staging.sys_store ss on ss.id = a.last_valid_store_id
+where
+    a2.ratio = 1
+    and a2.seal_num > 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+        ,a.last_valid_store_id
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,plt.last_valid_store_id
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    ss.name
+    ,count(distinct a.pack_no) 丢失集包数
+    ,sum(a2.seal_num) 丢失包裹数
+from a
+left join
+    (
+        select
+            psd.pack_no
+            ,count(psd.pno) seal_num
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1
+    ) a2 on a2.pack_no = a.pack_no
+left join ph_staging.sys_store ss on ss.id = a.last_valid_store_id
+where
+    a2.ratio = 1
+    and a2.seal_num > 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+        ,a.last_valid_store_id
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,plt.last_valid_store_id
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+# select
+#     ss.name
+#     ,count(distinct a.pack_no) 丢失集包数
+#     ,sum(a2.seal_num) 丢失包裹数
+# from a
+# left join
+#     (
+        select
+            psd.pack_no
+            ,count(psd.pno) seal_num
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+        ,a.last_valid_store_id
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,plt.last_valid_store_id
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    ss.name
+    ,count(distinct a.pack_no) 丢失集包数
+    ,sum(a2.seal_num) 丢失包裹数
+from a
+join
+    (
+        select
+            psd.pack_no
+            ,count(psd.pno) seal_num
+            ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+        from ph_staging.pack_seal_detail psd
+        join
+            (
+                select
+                    a.pack_no
+                from a
+                group by 1
+            ) a1 on a1.pack_no = psd.pack_no
+        left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+        group by 1
+    ) a2 on a2.pack_no = a.pack_no
+left join ph_staging.sys_store ss on ss.id = a.last_valid_store_id
+where
+    a2.ratio = 1
+    and a2.seal_num > 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+        ,a.last_valid_store_id
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,plt.last_valid_store_id
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+select
+    b.name
+    ,count(distinct b.pack_no) 丢失集包数
+    ,count(distinct b.pno) 丢失包裹数
+from
+    (
+                select
+            a.pno
+            ,a2.pack_no
+            ,ss.name
+            ,a2.ratio
+            ,a2.seal_num
+        from a
+        left join
+            (
+                select
+                    psd.pack_no
+                    ,count(psd.pno) seal_num
+                    ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+                from ph_staging.pack_seal_detail psd
+                join
+                    (
+                        select
+                            a.pack_no
+                        from a
+                        group by 1
+                    ) a1 on a1.pack_no = psd.pack_no
+                left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+                group by 1
+            ) a2 on a2.pack_no = a.pack_no
+        left join ph_staging.sys_store ss on ss.id = a.last_valid_store_id
+        where
+            a2.ratio = 1
+            and a2.seal_num > 1
+    ) b
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        a.pno
+        ,a.pack_no
+        ,a.last_valid_store_id
+    from
+        (
+            select
+                *
+            from
+                (
+                    select
+                        plt.pno
+                        ,plt.last_valid_store_id
+                        ,psd.pack_no
+                        ,row_number() over (partition by plt.pno order by psd.created_at desc) rk
+                    from ph_bi.parcel_lose_task plt
+                    left join ph_staging.pack_seal_detail psd on psd.pno = plt.pno
+                    where
+                        plt.created_at >= '2023-03-01'
+                        and plt.created_at < '2023-04-27'
+                        and plt.state = 6
+                        and plt.duty_result = 1
+                ) a
+            where
+                a.rk = 1
+        ) a
+
+)
+
+        select
+            a.pno
+            ,a2.pack_no
+            ,ss.name
+            ,a2.ratio
+            ,a2.seal_num
+        from a
+        left join
+            (
+                select
+                    psd.pack_no
+                    ,count(psd.pno) seal_num
+                    ,count(if(plt.pno is not null , psd.pno, null))/count(psd.pno) ratio
+                from ph_staging.pack_seal_detail psd
+                join
+                    (
+                        select
+                            a.pack_no
+                        from a
+                        group by 1
+                    ) a1 on a1.pack_no = psd.pack_no
+                left join ph_bi.parcel_lose_task plt on plt.pno = psd.pno and plt.state = 6 and plt.duty_result = 1
+                group by 1
+            ) a2 on a2.pack_no = a.pack_no
+        left join ph_staging.sys_store ss on ss.id = a.last_valid_store_id
+        where
+            a2.ratio = 1
+            and a2.seal_num > 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        de.dst_store_id = 'PH19040F05' -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        where
+            de.dst_routed_at is not null
+            and de.parcel_state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and de.dst_store_id != 'PH19040F05'  -- 目的地网点不是拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 寄件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,de.dst_store 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join ph_staging.parcel_route pr on pr.pno = b.pno and pr.route_action = 'INVENTORY' and pr.routed_at >= date_add(curdate(), interval 8 hour)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        de.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and de.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 寄件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,de.dst_store 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        de.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and de.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 寄件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,de.dst_store 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 寄件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 寄件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+    and pi.pno = 'P1904TZZ96AO'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,pi.dst_detail_address 收件人地址
+    ,pd.last_valid_action 最后一条有效路由
+    ,pd.last_valid_store_id 最后有效路由操作网点
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pi.pno
+left join ph_bi.parcel_detail pd on pd.pno = pi.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,pi.dst_detail_address 收件人地址
+    ,case pd.last_valid_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+    end as 最后一条有效路由
+    ,pd.last_valid_store_id 最后有效路由操作网点
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pi.pno
+left join ph_bi.parcel_detail pd on pd.pno = pi.pno;
+;-- -. . -..- - / . -. - .-. -.--
+elect
+    pi.pno
+    ,pi.dst_detail_address 收件人地址
+    ,case pd.last_valid_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+    end as 最后一条有效路由
+    ,ss.name 最后有效路由操作网点
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pi.pno
+left join ph_bi.parcel_detail pd on pd.pno = pi.pno
+left join ph_staging.sys_store ss on ss.id = pd.last_valid_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,pi.dst_detail_address 收件人地址
+    ,case pd.last_valid_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+    end as 最后一条有效路由
+    ,ss.name 最后有效路由操作网点
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pi.pno
+left join ph_bi.parcel_detail pd on pd.pno = pi.pno
+left join ph_staging.sys_store ss on ss.id = pd.last_valid_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,pi.dst_detail_address 收件人地址
+    ,seal.pack_no
+    ,case pr.route_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+    end as 最后一条有效路由
+    ,ss.name 最后有效路由操作网点
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pi.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.route_action
+            ,pr.store_id
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rk
+        from ph_staging.parcel_route pr
+        join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pr.pno
+        where
+            pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN','DELIVERY_PICKUP_STORE_SCAN','DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE','REFUND_CONFIRM','ACCEPT_PARCEL')
+    ) pr on pr.pno = pi.pno and pr.rk = 1
+left join ph_staging.sys_store ss on ss.id = pr.store_id
+left join
+    (
+        select
+            psd.pno
+            ,psd.pack_no
+            ,row_number() over (partition by psd.pno order by psd.created_at desc ) rk
+        from ph_staging.pack_seal_detail psd
+        join tmpale.tmp_ph_pno_lj_0504 t on t.pno = psd.pno
+    ) seal on seal.pno = pi.pno and seal.rk = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 收件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+left join ph_staging.sys_store ss on ss.name = b.store
+where
+    pi.state not in (5,7,8,9)
+    and ss.category not in (8,12)
+#     and pi.pno = 'P1904TZZ96AO'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.routed_at < t.created_at
+                    and pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 收件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+    and dp.store_category not in (8,12)
+#     and pi.pno = 'P1904TZZ96AO'
+group by 1;
