@@ -56,7 +56,7 @@ select
         when 6 then '理赔完成'
         when 7 then '理赔终止'
         when 8 then '异常关闭'
-        when 9 then' 待协商（搁置）'
+        when 9 then '待协商（搁置）'
         when 10 then '等待再次联系'
     end 状态
     ,pct.area 区域

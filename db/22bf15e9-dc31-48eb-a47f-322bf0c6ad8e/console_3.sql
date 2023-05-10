@@ -225,3 +225,93 @@ where pct.created_at>='2023-03-01'
 and pct.pno='TH011840B1YJ1A0'
 group by 3
 
+;
+
+
+
+
+
+
+
+select
+    t.运单号
+    ,case pct.state
+        when 1 then '待协商'
+        when 2 then '协商不一致，待重新协商'
+        when 3 then '待财务核实'
+        when 4 then '核实通过，待财务支付'
+        when 5 then '财务驳回'
+        when 6 then '理赔完成'
+        when 7 then '理赔终止'
+        when 8 then '异常关闭'
+        when 9 then '待协商（搁置）'
+        when 10 then '等待再次联系'
+    end 状态
+    ,replace(json_extract(a.neg_result,'$.money'),'"','') 理赔金额
+from bi_pro.parcel_claim_task pct
+join tmpale.tmp_th_pno_lj_0508 t on t.运单号 = pct.pno
+left join
+    (
+        select
+            pct.id
+        #     ,case pct.state
+        #         when 1 then '待协商'
+        #         when 2 then '协商不一致，待重新协商'
+        #         when 3 then '待财务核实'
+        #         when 4 then '核实通过，待财务支付'
+        #         when 5 then '财务驳回'
+        #         when 6 then '理赔完成'
+        #         when 7 then '理赔终止'
+        #         when 8 then '异常关闭'
+        #         when 9 then' 待协商（搁置）'
+        #         when 10 then '等待再次联系'
+        #     end 状态
+            ,pct.state
+            ,pcn.neg_result
+            ,row_number() over (partition by pcn.task_id order by pcn.created_at desc ) rk
+        from bi_pro.parcel_claim_task pct
+        join tmpale.tmp_th_pno_lj_0508 t on t.运单号 = pct.pno
+        left join bi_pro.parcel_claim_negotiation pcn on pcn.task_id = pct.id
+        where
+            pct.state = 6
+    ) a on pct.id = a.id and a.rk = 1
+
+;
+
+
+
+select
+    *
+from
+    (
+        select
+            plt.pno
+            ,plt.updated_at
+        from bi_pro.parcel_lose_task plt
+        join tmpale.tmp_th_pno_lj_0508 t on t.pno = plt.pno
+        where
+            plt.state = 6
+        group by 1,2
+    ) a
+left join
+    (
+        select
+            *
+        from phstag
+    )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

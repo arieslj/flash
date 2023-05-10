@@ -1,4128 +1,3 @@
-select #应集包
-            pr.`store_id`
-            ,count(distinct pr.`pno`) 应集包量
-        from `ph_staging`.`parcel_route` pr
-        left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
-        left join ph_staging.parcel_route pr2 on pr2.pno = pr.pno and pr2.route_action = 'UNSEAL' and DATE_FORMAT(CONVERT_TZ(pr2.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')=date_sub(curdate(),interval 1 day) and pr2.store_id = pr.store_id
-        where
-            pr.`route_action` in ('SHIPMENT_WAREHOUSE_SCAN')
-            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')=date_sub(curdate(),interval 1 day)
-            and pi.`exhibition_weight`<=3000
-            and (pi.`exhibition_length` +pi.`exhibition_width` +pi.`exhibition_height`)<=60
-            and pi.`exhibition_length` <=30
-            and pi.`exhibition_width` <=30
-            and pi.`exhibition_height` <=30
-            and pr2.pno is not null
-        GROUP BY 1;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    date_sub(curdate(),interval 1 day) 日期
-    ,ss.`name` 网点名称
-    ,smr.`name` 大区
-    ,smp.`name` 片区
-    ,v2.出勤收派员人数
-    ,v2.出勤仓管人数
-    ,v2.出勤主管人数
-    ,pr.妥投量
-    ,pr1.应到量
-    ,pr2.实到量
-    ,concat(round(pr2.实到量/pr1.应到量,4)*100,'%') 到件入仓率
-    ,dc.应派量
-    ,pr3.交接量
-    ,concat(round(pr3.交接量/dc.应派量,4)*100,'%') 交接率
-    ,pr4.应盘点量
-    ,pr5.实际盘点量
-    ,pr4.应盘点量- pr5.实际盘点量 未盘点量
-    ,concat(round(pr5.实际盘点量/pr4.应盘点量,4)*100,'%') 盘点率
-    ,pr6.应集包量
-    ,pr7.实际集包量
-    ,concat(round(pr7.实际集包量/pr6.应集包量,4)*100,'%') 集包率
-from
-    (
-        select
-            *
-        from `ph_staging`.`sys_store` ss
-        where
-            ss.category in (8,12)
-            and ss.state = 1
-    ) ss
-left join `ph_staging`.`sys_manage_region` smr on smr.`id`  =ss.`manage_region`
-left join `ph_staging`.`sys_manage_piece` smp on smp.`id`  =ss.`manage_piece`
-left join
-    (
-        select #出勤
-            hi.`sys_store_id`
-            ,count(distinct(if(v2.`job_title` in (13,110,807,1000),v2.`staff_info_id`,null))) 出勤收派员人数
-            ,count(distinct(if(v2.`job_title` in (37),v2.`staff_info_id`,null))) 出勤仓管人数
-            ,count(distinct(if(v2.`job_title` in (16,272),v2.`staff_info_id`,null))) 出勤主管人数
-        from `ph_bi`.`attendance_data_v2` v2
-        left join `ph_bi`.`hr_staff_info` hi on hi.`staff_info_id` =v2.`staff_info_id`
-        where
-            v2.`stat_date`=date_sub(curdate(),interval 1 day)
-            and
-                (v2.`attendance_started_at` is not null or v2.`attendance_end_at` is not null)
-        group by 1
-    )v2 on v2.`sys_store_id`=ss.`id`
-left join
-    (
-        select #妥投
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 妥投量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('DELIVERY_CONFIRM')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y%m%d') = date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr on pr.`store_id`=ss.`id`
-LEFT JOIN
-    (
-        select #应到
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 应到量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y%m%d') = date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr1 on pr1.`store_id`=ss.`id`
-left join
-    (
-        select #实到
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实到量
-        from
-            (
-                select #车货关联到港
-                    pr.`pno`
-                    ,pr.`store_id`
-                    ,pr.`routed_at`
-                from `ph_staging`.`parcel_route` pr
-                where
-                    pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
-                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')=date_sub(curdate(),interval 1 day)
-            )pr
-        join
-            (
-                select #有效路由
-                    pr.`pno`
-                    ,pr.store_id
-                    ,pr.`routed_at`
-                    ,pr.route_action
-                    ,pr.store_name
-                    ,pr.staff_info_id
-                    ,pr.staff_info_phone
-                    ,pr.staff_info_name
-                    ,pr.extra_value
-                from `ph_staging`.`parcel_route` pr
-                where
-                    pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
-                                       'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
-                                       'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
-                                       'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
-                                       'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
-                                       'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
-                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d') >= date_sub(curdate(),interval 1 day)
-            ) pr1 on pr1.pno = pr.`pno`
-        where
-            pr1.store_id=pr.store_id
-            and pr1.`routed_at`<= date_add(pr.`routed_at`,interval 4 hour)
-        group by 1
-    )pr2 on  pr2.`store_id`=ss.`id`
-left join
-    (
-        select #应派
-            dc.`store_id`
-            ,count(distinct(dc.`pno`)) 应派量
-        from `ph_bi`.`dc_should_delivery_today` dc
-        where
-            dc.`stat_date`= date_sub(curdate(),interval 1 day)
-        group by 1
-    ) dc on dc.`store_id`=ss.`id`
-left join
-    (
-        select #交接
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 交接量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('DELIVERY_TICKET_CREATION_SCAN')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y%m%d')=date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr3 on pr3.`store_id`=ss.`id`
-left join
-    (
-        select #应盘
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 应盘点量
-        from
-            (
-                select #最后一条有效路由
-                    pr.`pno`
-                    ,pr.store_id
-                    ,pr.`state`
-                    ,pr.`routed_at`
-                from
-                    (
-                        select
-                             pr.`pno`
-                             ,pr.store_id
-                             ,pr.`state`
-                             ,pr.`routed_at`
-                             ,row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
-                        from `ph_staging`.`parcel_route` pr
-                        where
-                            DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')<=date_sub(curdate(),interval 1 day)
-                            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')>=date_sub(curdate(),interval 200 day)
-                            and   pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
-                                                           'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
-                                                           'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
-                                                           'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
-                                                           'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
-                                                           'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
-                     ) pr
-                where pr.rn = 1
-            ) pr
-            left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
-            left join
-                (
-                    select #车货关联出港
-                        pr.`pno`
-                        ,pr.`store_id`
-                        ,pr.`routed_at`
-                    from `ph_staging`.`parcel_route` pr
-                    where
-                        pr.`route_action` in ( 'DEPARTURE_GOODS_VAN_CK_SCAN')
-                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')<=date_sub(curdate(),interval 1 day)
-                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')>=date_sub(curdate(),interval 200 day)
-                )pr1 on pr.pno=pr1.pno and pr.`store_id` =pr1.`store_id` and pr1.`routed_at`> pr.`routed_at`
-        where
-            pr1.pno is null
-            and pi.state in (1,2,3,4,6)
-        group by 1
-    )pr4 on pr4.`store_id`=ss.`id`
-left join
-    (
-        select #实际盘点
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实际盘点量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('INVENTORY','DETAIN_WAREHOUSE','DISTRIBUTION_INVENTORY','SORTING_SCAN')
-            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')=date_sub(curdate(),interval 1 day)
-        GROUP BY 1
-    )pr5 on pr5.`store_id`=ss.`id`
-left join
-    (
-        select #应集包
-            pr.`store_id`
-            ,count(distinct pr.`pno`) 应集包量
-        from `ph_staging`.`parcel_route` pr
-        left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
-        left join ph_staging.parcel_route pr2 on pr2.pno = pr.pno and pr2.route_action = 'UNSEAL' and DATE_FORMAT(CONVERT_TZ(pr2.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')=date_sub(curdate(),interval 1 day) and pr2.store_id = pr.store_id
-        where
-            pr.`route_action` in ('SHIPMENT_WAREHOUSE_SCAN')
-            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y%m%d')=date_sub(curdate(),interval 1 day)
-            and pi.`exhibition_weight`<=3000
-            and (pi.`exhibition_length` +pi.`exhibition_width` +pi.`exhibition_height`)<=60
-            and pi.`exhibition_length` <=30
-            and pi.`exhibition_width` <=30
-            and pi.`exhibition_height` <=30
-            and pr2.pno is not null
-        GROUP BY 1
-    )pr6 on pr6.`store_id`=ss.`id`
-left join
-    (
-        select #实际集包
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实际集包量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ( 'SEAL')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y%m%d')=date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr7 on pr7.`store_id`=ss.`id`
-group by 1,2,3,4
-order by 2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    date_sub(curdate(),interval 1 day) 日期
-    ,ss.`name` 网点名称
-    ,smr.`name` 大区
-    ,smp.`name` 片区
-    ,v2.出勤收派员人数
-    ,v2.出勤仓管人数
-    ,v2.出勤主管人数
-    ,pr.妥投量
-    ,pr1.应到量
-    ,pr2.实到量
-    ,concat(round(pr2.实到量/pr1.应到量,4)*100,'%') 到件入仓率
-    ,dc.应派量
-    ,pr3.交接量
-    ,concat(round(pr3.交接量/dc.应派量,4)*100,'%') 交接率
-    ,pr4.应盘点量
-    ,pr5.实际盘点量
-    ,pr4.应盘点量- pr5.实际盘点量 未盘点量
-    ,concat(round(pr5.实际盘点量/pr4.应盘点量,4)*100,'%') 盘点率
-    ,pr6.应集包量
-    ,pr7.实际集包量
-    ,concat(round(pr7.实际集包量/pr6.应集包量,4)*100,'%') 集包率
-from
-    (
-        select
-            *
-        from `ph_staging`.`sys_store` ss
-        where
-            ss.category in (8,12)
-            and ss.state = 1
-    ) ss
-left join `ph_staging`.`sys_manage_region` smr on smr.`id`  =ss.`manage_region`
-left join `ph_staging`.`sys_manage_piece` smp on smp.`id`  =ss.`manage_piece`
-left join
-    (
-        select #出勤
-            hi.`sys_store_id`
-            ,count(distinct(if(v2.`job_title` in (13,110,807,1000),v2.`staff_info_id`,null))) 出勤收派员人数
-            ,count(distinct(if(v2.`job_title` in (37),v2.`staff_info_id`,null))) 出勤仓管人数
-            ,count(distinct(if(v2.`job_title` in (16,272),v2.`staff_info_id`,null))) 出勤主管人数
-        from `ph_bi`.`attendance_data_v2` v2
-        left join `ph_bi`.`hr_staff_info` hi on hi.`staff_info_id` =v2.`staff_info_id`
-        where
-            v2.`stat_date`=date_sub(curdate(),interval 1 day)
-            and
-                (v2.`attendance_started_at` is not null or v2.`attendance_end_at` is not null)
-        group by 1
-    )v2 on v2.`sys_store_id`=ss.`id`
-left join
-    (
-        select #妥投
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 妥投量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('DELIVERY_CONFIRM')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr on pr.`store_id`=ss.`id`
-LEFT JOIN
-    (
-        select #应到
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 应到量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr1 on pr1.`store_id`=ss.`id`
-left join
-    (
-        select #实到
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实到量
-        from
-            (
-                select #车货关联到港
-                    pr.`pno`
-                    ,pr.`store_id`
-                    ,pr.`routed_at`
-                from `ph_staging`.`parcel_route` pr
-                where
-                    pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
-                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-            )pr
-        join
-            (
-                select #有效路由
-                    pr.`pno`
-                    ,pr.store_id
-                    ,pr.`routed_at`
-                    ,pr.route_action
-                    ,pr.store_name
-                    ,pr.staff_info_id
-                    ,pr.staff_info_phone
-                    ,pr.staff_info_name
-                    ,pr.extra_value
-                from `ph_staging`.`parcel_route` pr
-                where
-                    pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
-                                       'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
-                                       'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
-                                       'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
-                                       'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
-                                       'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
-                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') >= date_sub(curdate(),interval 1 day)
-            ) pr1 on pr1.pno = pr.`pno`
-        where
-            pr1.store_id=pr.store_id
-            and pr1.`routed_at`<= date_add(pr.`routed_at`,interval 4 hour)
-        group by 1
-    )pr2 on  pr2.`store_id`=ss.`id`
-left join
-    (
-        select #应派
-            dc.`store_id`
-            ,count(distinct(dc.`pno`)) 应派量
-        from `ph_bi`.`dc_should_delivery_today` dc
-        where
-            dc.`stat_date`= date_sub(curdate(),interval 1 day)
-        group by 1
-    ) dc on dc.`store_id`=ss.`id`
-left join
-    (
-        select #交接
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 交接量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('DELIVERY_TICKET_CREATION_SCAN')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y-%m-%d')=date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr3 on pr3.`store_id`=ss.`id`
-left join
-    (
-        select #应盘
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 应盘点量
-        from
-            (
-                select #最后一条有效路由
-                    pr.`pno`
-                    ,pr.store_id
-                    ,pr.`state`
-                    ,pr.`routed_at`
-                from
-                    (
-                        select
-                             pr.`pno`
-                             ,pr.store_id
-                             ,pr.`state`
-                             ,pr.`routed_at`
-                             ,row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
-                        from `ph_staging`.`parcel_route` pr
-                        where
-                            DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
-                            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
-                            and   pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
-                                                           'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
-                                                           'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
-                                                           'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
-                                                           'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
-                                                           'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
-                     ) pr
-                where pr.rn = 1
-            ) pr
-            left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
-            left join
-                (
-                    select #车货关联出港
-                        pr.`pno`
-                        ,pr.`store_id`
-                        ,pr.`routed_at`
-                    from `ph_staging`.`parcel_route` pr
-                    where
-                        pr.`route_action` in ( 'DEPARTURE_GOODS_VAN_CK_SCAN')
-                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
-                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
-                )pr1 on pr.pno=pr1.pno and pr.`store_id` =pr1.`store_id` and pr1.`routed_at`> pr.`routed_at`
-        where
-            pr1.pno is null
-            and pi.state in (1,2,3,4,6)
-        group by 1
-    )pr4 on pr4.`store_id`=ss.`id`
-left join
-    (
-        select #实际盘点
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实际盘点量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('INVENTORY','DETAIN_WAREHOUSE','DISTRIBUTION_INVENTORY','SORTING_SCAN')
-            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-        GROUP BY 1
-    )pr5 on pr5.`store_id`=ss.`id`
-left join
-    (
-        select #应集包
-            pr.`store_id`
-            ,count(distinct pr.`pno`) 应集包量
-        from `ph_staging`.`parcel_route` pr
-        left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
-        left join ph_staging.parcel_route pr2 on pr2.pno = pr.pno and pr2.route_action = 'UNSEAL' and DATE_FORMAT(CONVERT_TZ(pr2.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day) and pr2.store_id = pr.store_id
-        where
-            pr.`route_action` in ('SHIPMENT_WAREHOUSE_SCAN')
-            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-            and pi.`exhibition_weight`<=3000
-            and (pi.`exhibition_length` +pi.`exhibition_width` +pi.`exhibition_height`)<=60
-            and pi.`exhibition_length` <=30
-            and pi.`exhibition_width` <=30
-            and pi.`exhibition_height` <=30
-            and pr2.pno is not null
-        GROUP BY 1
-    )pr6 on pr6.`store_id`=ss.`id`
-left join
-    (
-        select #实际集包
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实际集包量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ( 'SEAL')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr7 on pr7.`store_id`=ss.`id`
-group by 1,2,3,4
-order by 2;
-;-- -. . -..- - / . -. - .-. -.--
-select #实际集包
-            pr.`store_id`
-            ,count(distinctpr.`pno`) 实际集包量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ( 'SEAL')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-        group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-select #实际集包
-            pr.`store_id`
-            ,count(distinct pr.`pno`) 实际集包量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ( 'SEAL')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-        group by 1;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    hub_name
-   , to_date (van_arrive_phtime) AS '到港日期'
-    ,SUM (hub_should_seal) AS '应该集包包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-    ,SUM(IF (hub_should_seal = 1  AND seal_phtime IS NOT NULL, 1, 0))/ SUM (hub_should_seal) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '应拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0))/ SUM (IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '应直接集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际直接集包包裹数'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0))/ SUM (IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '集包率'
-FROM
-    (
-        SELECT
-            pi.pno
-            , pss.store_name AS 'hub_name'
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                    8 HOUR) AS 'van_arrive_phtime'
-            , pss.arrival_pack_no
-            , pack.es_unseal_store_name
-            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'、
-            , date_add (pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-        FROM ph_staging.parcel_info pi
-        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-            AND pi.pno = pss.pno
-            AND pss.store_category IN (8, 12)
-            AND pss.store_name != '66 BAG_HUB_Maynila'
-            AND pss.store_name NOT REGEXP '^Air|^SEA'
-        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-        WHERE
-            1 = 1
-            AND pi.state < 9
-            AND pi.returned = 0
-    )
-GROUP BY 1, 2
-ORDER BY 1, 2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    hub_name
-   , date (van_arrive_phtime) AS '到港日期'
-    ,SUM (hub_should_seal) AS '应该集包包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-    ,SUM(IF (hub_should_seal = 1  AND seal_phtime IS NOT NULL, 1, 0))/ SUM (hub_should_seal) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '应拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0))/ SUM (IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '应直接集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际直接集包包裹数'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0))/ SUM (IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '集包率'
-FROM
-    (
-        SELECT
-            pi.pno
-            , pss.store_name AS 'hub_name'
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                    8 HOUR) AS 'van_arrive_phtime'
-            , pss.arrival_pack_no
-            , pack.es_unseal_store_name
-            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'、
-            , date_add (pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-        FROM ph_staging.parcel_info pi
-        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-            AND pi.pno = pss.pno
-            AND pss.store_category IN (8, 12)
-            AND pss.store_name != '66 BAG_HUB_Maynila'
-            AND pss.store_name NOT REGEXP '^Air|^SEA'
-        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-        WHERE
-            1 = 1
-            AND pi.state < 9
-            AND pi.returned = 0
-    )
-GROUP BY 1, 2
-ORDER BY 1, 2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    hub_name
-    ,date(van_arrive_phtime) AS '到港日期'
-    ,SUM(hub_should_seal) AS '应该集包包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-    ,SUM(IF (hub_should_seal = 1  AND seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '应拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '应直接集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际直接集包包裹数'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '集包率'
-FROM
-    (
-        SELECT
-            pi.pno
-            , pss.store_name AS 'hub_name'
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                    8 HOUR) AS 'van_arrive_phtime'
-            , pss.arrival_pack_no
-            , pack.es_unseal_store_name
-            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'、
-            , date_add (pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-        FROM ph_staging.parcel_info pi
-        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-            AND pi.pno = pss.pno
-            AND pss.store_category IN (8, 12)
-            AND pss.store_name != '66 BAG_HUB_Maynila'
-            AND pss.store_name NOT REGEXP '^Air|^SEA'
-        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-        WHERE
-            1 = 1
-            AND pi.state < 9
-            AND pi.returned = 0
-    )
-GROUP BY 1, 2
-ORDER BY 1, 2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    hub_name
-    ,date(van_arrive_phtime) AS '到港日期'
-    ,SUM(hub_should_seal) AS '应该集包包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-    ,SUM(IF (hub_should_seal = 1  AND seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '应拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '应直接集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际直接集包包裹数'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '集包率'
-FROM
-    (
-        SELECT
-            pi.pno
-            , pss.store_name AS 'hub_name'
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                    8 HOUR) AS 'van_arrive_phtime'
-            , pss.arrival_pack_no
-            , pack.es_unseal_store_name
-            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'、
-            , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-        FROM ph_staging.parcel_info pi
-        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-            AND pi.pno = pss.pno
-            AND pss.store_category IN (8, 12)
-            AND pss.store_name != '66 BAG_HUB_Maynila'
-            AND pss.store_name NOT REGEXP '^Air|^SEA'
-        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-        WHERE
-            1 = 1
-            AND pi.state < 9
-            AND pi.returned = 0
-    )
-GROUP BY 1, 2
-ORDER BY 1, 2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    hub_name
-    ,date(van_arrive_phtime) AS '到港日期'
-    ,SUM(hub_should_seal) AS '应该集包包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-    ,SUM(IF (hub_should_seal = 1  AND seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '应拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际拆包并集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 1 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 1, 1, 0)) AS '集包率'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '应直接集包的包裹量'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0)) AS '实际直接集包包裹数'
-    ,SUM(IF (hub_should_seal = 1 AND should_unseal = 0 AND seal_phtime IS NOT NULL, 1, 0))/ SUM(IF (hub_should_seal = 1 AND should_unseal = 0, 1, 0)) AS '集包率'
-FROM
-    (
-        SELECT
-            pi.pno
-            , pss.store_name AS 'hub_name'
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                    8 HOUR) AS 'van_arrive_phtime'
-            , pss.arrival_pack_no
-            , pack.es_unseal_store_name
-            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
-            , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-        FROM ph_staging.parcel_info pi
-        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-            AND pi.pno = pss.pno
-            AND pss.store_category IN (8, 12)
-            AND pss.store_name != '66 BAG_HUB_Maynila'
-            AND pss.store_name NOT REGEXP '^Air|^SEA'
-        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-        WHERE
-            1 = 1
-            AND pi.state < 9
-            AND pi.returned = 0
-    )
-GROUP BY 1, 2
-ORDER BY 1, 2;
-;-- -. . -..- - / . -. - .-. -.--
-select date_sub(curdate(), 1);
-;-- -. . -..- - / . -. - .-. -.--
-select
-    *
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = date_sub(curdate(), interval 1 day)
-    where
-        ph.parcel_discover_date = '{$date}';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,b.area
-    ,a.hno
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval substring_index(t.unload_period,'-',1) hour) time1
-                    ,date_add('2023-03-25', interval substring_index(t.unload_period,'-',1) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = t.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case -- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,b.area
-    ,a.hno
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval substring_index(t.unload_period,'-',1) hour) time1
-                    ,date_add('2023-03-25', interval substring_index(t.unload_period,'-',1) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = t.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case -- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,b.area
-    ,a.hno
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval substring_index(t.unload_period,'-',1) hour) time1
-                    ,date_add('2023-03-25', interval substring_index(t.unload_period,'-',1) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case -- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,b.area
-    ,a.hno
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case -- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-#     ,b.area
-    ,a.hno
-#     ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-select  substring_index('2-4','-',1);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-#     ,b.area
-    ,a.hno
-#     ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-#     ,b.area
-    ,a.hno
-#     ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-#     ,b.area
-    ,a.hno
-#     ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case -- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,b.area
-    ,a.hno
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case -- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            sh.store_id
-            ,case -- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-03-25'
-    where
-        ph.parcel_discover_date = '2023-03-25'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,b.area
-    ,a.hno
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-25', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-25'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,b.area
-    ,a.hno
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,b.area
-#     ,a.hno
-#     ,b.num
-# from
-#     (
-#         select
-#             ph.submit_store_name
-#             ,ph.submit_store_id
-#             ,a.unload_period
-#             ,ph.hno
-#         from ph_staging.parcel_headless ph
-#         join
-#             (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-#     ,b.area
-#     ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2,3;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 0 then 'B'
-                when 1 then 'B'
-                when 1 then 'C'
-                when 2 then 'C'
-            end area
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select * from ph_nbd.suspected_headless_parcel_detail_v1 sh where  sh.store_id = 'PH19280F01' and sh.arrival_date = '2023-04-23';
-;-- -. . -..- - / . -. - .-. -.--
-select * from ph_staging.parcel_headless ph where ph.parcel_discover_date = '2023-04-03' and ph.submit_store_id = 'PH19280F01';
-;-- -. . -..- - / . -. - .-. -.--
-select * from ph_nbd.suspected_headless_parcel_detail_v1 sh where  sh.store_id = 'PH19280F01' and sh.arrival_date = '2023-04-02';
-;-- -. . -..- - / . -. - .-. -.--
-select * from ph_staging.parcel_headless ph where ph.parcel_discover_date = '2023-04-02' and ph.submit_store_id = 'PH19280F01';
-;-- -. . -..- - / . -. - .-. -.--
-select * from ph_staging.parcel_headless ph where date(convert_tz(ph.created_at,'+00:00', '+08:00')) = '2023-04-02' and ph.submit_store_id = 'PH19280F01';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour)
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-# )
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id and ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        ph.submit_store_id
-        ,sh.unload_period
-    from ph_staging.parcel_headless ph
-    left join ph_nbd.suspected_headless_parcel_detail_v1 sh on ph.submit_store_id = sh.store_id and sh.arrival_date = '2023-04-03'
-    where
-        ph.parcel_discover_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.submit_store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.submit_store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-select * from ph_nbd.suspected_headless_parcel_detail_v1 sh where  sh.store_id = 'PH19280F01' and sh.arrival_date = '2023-04-03';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-                group by 1,2
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour) and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and ph.find_area_category regexp a.type;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-            ,
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type regexp ph.find_area_category;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type regexp ph.find_area_category;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type regexp cast(ph.find_area_category as int);
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2,3;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-03'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-03', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-03'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-02'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-02', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-02', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-02'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-#     ,b.area
-#     ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%');
-;-- -. . -..- - / . -. - .-. -.--
-select * from ph_nbd.suspected_headless_parcel_detail_v1 sh where  sh.store_id = 'PH19280F01' and sh.arrival_date = '2023-03-29';
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-            ,a.time1
-            ,a.time2
-            ,a.type
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-#             ,a.type
-#             ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-#             ,a.type
-#             ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-where
-     a.type like  concat('%',b.area, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-            ,a.type
-#             ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-where
-     a.type like  concat('%',b.area, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,case
-                when t.parcel_type = 0 then '1,2'
-                when t.parcel_type = 1 then '2,3'
-                when t.parcel_type = 2 then '3'
-            end type
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3,4
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-where
-     b.type like  concat('%',a.find_area_category, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,case
-                when sh.parcel_type = 0 then '1,2'
-                when sh.parcel_type = 1 then '2,3'
-                when sh.parcel_type = 2 then '3'
-            end type
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3,4
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-where
-     b.type like  concat('%',a.find_area_category, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,case
-                when sh.parcel_type = 0 then '1,2'
-                when sh.parcel_type = 1 then '2,3'
-                when sh.parcel_type = 2 then '3'
-            end type
-
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-where
-     b.type like  concat('%',a.find_area_category, '%');
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like concat('%',ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-
-
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-#             ,ph.created_at
-#             ,a.time1
-#             ,a.time2
-            ,ph.find_area_category
-
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,case
-                        when t.parcel_type = 0 then '1'
-                        when t.parcel_type = 1 then '2'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                from t
-
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like concat('%',ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type-- 上线前
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-
-
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-04-02'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-04-02', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-04-02', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-04-02'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-28'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-28', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-28', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-28'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-28'
-)
-# select
-#     a.unload_period
-#     ,a.submit_store_id
-#     ,a.hno
-#     ,b.area
-#     ,b.num
-# from
-#     (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-28', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-28', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-        group by 1,2,3,4;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-28'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-28', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-28', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-            and ph.state = 0
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-28'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,b.area
-    ,b.num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-                    ,case
-                        when t.parcel_type = 0 then '1,2'
-                        when t.parcel_type = 1 then '2,3'
-                        when t.parcel_type = 2 then '3'
-                    end type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-            and ph.state = 0
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2,3
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            sh.store_id
-#             ,case  sh.parcel_type
-#                 when 0 then 'A'
-#                 when 1 then 'B'
-#                 when 2 then 'C'
-#             end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select arrival_date,unload_period,store_id,parcel_type,count(pno)AS headless_count
-from ph_nbd.suspected_headless_parcel_detail_v1
-where arrival_date = '2023-03-29'
-and store_id = 'PH19280F01'
-group by unload_period, parcel_type;
-;-- -. . -..- - / . -. - .-. -.--
-select
-        fp.p_date 日期
-        ,ss.name 网点
-        ,ss.id 网点ID
-        ,fp.view_num 访问人次
-    #     ,fp.view_staff_num uv
-        ,fp.match_num 点击匹配量
-        ,fp.search_num 点击搜索量
-        ,fp.sucess_num 成功匹配量
-    from
-        (
-            select
-                json_extract(ext_info,'$.organization_id') store_id
-                ,fp.p_date
-                ,count(if(fp.event_type = 'screenView', fp.user_id, null)) view_num
-                ,count(distinct if(fp.event_type = 'screenView', fp.user_id, null)) view_staff_num
-                ,count(if(fp.event_type = 'click' and fp.button_id = 'search', fp.user_id, null)) search_num
-                ,count(if(fp.event_type = 'click' and fp.button_id = 'match', fp.user_id, null)) match_num
-                ,count(if(json_unquote(json_extract(ext_info,'$.matchResult')) = 'true', fp.user_id, null)) sucess_num
-            from dwm.dwd_ph_sls_pro_flash_point fp
-            where
-                fp.p_date >= '2023-03-01'
-            group by 1,2
-        ) fp
-    left join ph_staging.sys_store ss on ss.id = fp.store_id
-    where
-        ss.category in (8,12);
-;-- -. . -..- - / . -. - .-. -.--
-select
-    pi.pno
-    ,ss3.name 揽收网点
-    ,pr.next_store_name 揽收网点下一站
-from ph_staging.parcel_info pi
-left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
-left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id
-left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id
-left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
-where
-    pi.created_at >= convert_tz('2023-04-10', '+08:00', '+00:00')
-    and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
-    and ss2.id = 'PH14160302'  -- 99hub
-    and ss3.category = 14;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
-    ,pi.pno
-    ,ss3.name 揽收网点
-    ,pr.next_store_name 揽收网点下一站
-from ph_staging.parcel_info pi
-left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
-left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id
-left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id
-left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
-where
-    pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
-    and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
-    and ss2.id = 'PH14160302'  -- 99hub
-    and ss3.category = 14;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
-    ,pi.pno
-    ,ss3.name 揽收网点
-    ,pr.next_store_name 揽收网点下一站
-from ph_staging.parcel_info pi
-left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
-left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
-left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
-left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
-where
-    pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
-    and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
-    and ss2.id = 'PH14160302'  -- 99hub
-    and ss3.category = 14;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.日期
-    ,a.揽收网点
-    ,count(if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
-    ,count(if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
-from
-    (
-        select
-            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
-            ,pi.pno
-            ,ss3.name 揽收网点
-            ,pr.next_store_name 揽收网点下一站
-            ,pr.next_store_id
-        from ph_staging.parcel_info pi
-        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
-        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
-        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
-        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
-        where
-            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
-            and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
-            and ss2.id = 'PH14160302'  -- 99hub
-            and ss3.category = 14 -- PDC
-            and pr.pno is not null
-    ) a
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.日期
-    ,a.揽收网点
-    ,count(distinct if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
-    ,count(distinct if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
-from
-    (
-        select
-            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
-            ,pi.pno
-            ,ss3.name 揽收网点
-            ,pr.next_store_name 揽收网点下一站
-            ,pr.next_store_id
-        from ph_staging.parcel_info pi
-        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
-        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
-        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
-        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
-        where
-            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
-            and pi.created_at < convert_tz('2023-04-10', '+08:00', '+00:00')
-            and ss2.id = 'PH14160302'  -- 99hub
-            and ss3.category = 14 -- PDC
-            and pr.pno is not null
-    ) a
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.日期
-    ,a.揽收网点
-    ,count(distinct if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
-    ,count(distinct if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
-from
-    (
-        select
-            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
-            ,pi.pno
-            ,ss3.name 揽收网点
-            ,pr.next_store_name 揽收网点下一站
-            ,pr.next_store_id
-        from ph_staging.parcel_info pi
-        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
-        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
-        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
-        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
-        where
-            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
-            and pi.created_at < convert_tz('2023-04-11', '+08:00', '+00:00')
-            and ss2.id = 'PH14160302'  -- 99hub
-            and ss3.category = 14 -- PDC
-            and pr.pno is not null
-    ) a
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    a.日期
-    ,a.揽收网点
-    ,count(distinct if(a.next_store_id = 'PH14160302', a.pno, null)) 下一站99
-    ,count(distinct if(a.next_store_id != 'PH14160302', a.pno, null)) 下一站非99
-from
-    (
-        select
-            date(convert_tz(pi.created_at, '+00:00', '+08:00')) 日期
-            ,pi.pno
-            ,ss3.name 揽收网点
-            ,pr.next_store_name 揽收网点下一站
-            ,pr.next_store_id
-        from ph_staging.parcel_info pi
-        left join ph_staging.sys_store ss on ss.id = pi.dst_store_id
-        left join ph_staging.sys_store ss2 on if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', 1)) = ss2.id -- 目的地hub
-        left join ph_staging.sys_store ss3 on ss3.id = pi.ticket_pickup_store_id -- 揽收网点
-        left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.store_id = pi.ticket_pickup_store_id
-        where
-            pi.created_at >= convert_tz('2023-04-01', '+08:00', '+00:00')
-            and pi.created_at < convert_tz('2023-04-12', '+08:00', '+00:00')
-            and ss2.id = 'PH14160302'  -- 99hub
-            and ss3.category = 14 -- PDC
-            and pr.pno is not null
-    ) a
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-        ,case sh.parcel_type
-            when 0 then '1,2'
-            when 1 then '2,3'
-            when 2 then '3'
-        end type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,max(b.num) max_num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-
-                    ,t.type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-            and ph.state = 0
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        sh.store_id
-        ,sh.unload_period
-        ,sh.pno
-        ,sh.parcel_type
-        ,case sh.parcel_type
-            when 0 then '1,2'
-            when 1 then '2,3'
-            when 2 then '3'
-        end type
-    from ph_nbd.suspected_headless_parcel_detail_v1 sh
-    where
-        sh.arrival_date = '2023-03-29'
-)
-select
-    a.unload_period
-    ,a.submit_store_id
-    ,a.hno
-    ,max(b.num) max_num
-from
-    (
-        select
-            ph.submit_store_name
-            ,ph.submit_store_id
-            ,a.unload_period
-            ,ph.hno
-            ,ph.created_at
-        from ph_staging.parcel_headless ph
-        join
-            (
-                select
-                    t.store_id
-                    ,t.unload_period
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) hour) time1
-                    ,date_add('2023-03-29', interval cast(substring_index(t.unload_period,'-',1) as int) + 24 hour) time2
-
-                    ,t.type
-                from t
-            ) a on ph.submit_store_id = a.store_id
-        where
-            ph.created_at >= date_sub(a.time1, interval 8 hour)
-            and ph.created_at < date_sub(a.time2, interval 8 hour)
-            and a.type like  concat('%', ph.find_area_category, '%')
-            and ph.state = 0
-        group by 1,2,3,4
-    ) a
-left join
-    (
-        select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2
-    ) b on a.submit_store_id = b.store_id and a.unload_period = b.unload_period
-group by 1,2,3;
-;-- -. . -..- - / . -. - .-. -.--
-select
-            sh.store_id
-            ,case  sh.parcel_type
-                when 0 then 'A'
-                when 1 then 'B'
-                when 2 then 'C'
-            end area
-            ,sh.unload_period
-            ,count(distinct sh.pno) num
-        from ph_nbd.suspected_headless_parcel_detail_v1 sh
-        where
-            sh.arrival_date = '2023-03-29'
-        group by 1,2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    a.store_id
-    ,date(a.van_arrive_phtime) AS '到港日期'
-    ,SUM(a.hub_should_seal) AS '应该集包包裹量'
-    ,SUM(IF (a.hub_should_seal = 1 AND a.seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-    ,SUM(IF (a.hub_should_seal = 1  AND a.seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
-FROM
-    (
-        SELECT
-            pi.pno
-            , pss.store_name AS 'hub_name'
-            ,pss.store_id
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                    8 HOUR) AS 'van_arrive_phtime'
-            , pss.arrival_pack_no
-            , pack.es_unseal_store_name
-            ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-    -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-            ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                 AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
-            , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-        FROM ph_staging.parcel_info pi
-        JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-            AND pi.pno = pss.pno
-            AND pss.store_category IN (8, 12)
-            AND pss.store_name != '66 BAG_HUB_Maynila'
-            AND pss.store_name NOT REGEXP '^Air|^SEA'
-        LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-        WHERE
-            1 = 1
-            AND pi.state < 9
-            AND pi.returned = 0
-    ) a
-GROUP BY 1, 2
-ORDER BY 1, 2;
-;-- -. . -..- - / . -. - .-. -.--
-SELECT
-    date_sub(curdate(),interval 1 day) 日期
-    ,ss.`name` 网点名称
-    ,smr.`name` 大区
-    ,smp.`name` 片区
-    ,v2.出勤收派员人数
-    ,v2.出勤仓管人数
-    ,v2.出勤主管人数
-    ,pr.妥投量
-    ,pr1.应到量
-    ,pr2.实到量
-    ,concat(round(pr2.实到量/pr1.应到量,4)*100,'%') 到件入仓率
-    ,dc.应派量
-    ,pr3.交接量
-    ,concat(round(pr3.交接量/dc.应派量,4)*100,'%') 交接率
-    ,pr4.应盘点量
-    ,pr5.实际盘点量
-    ,pr4.应盘点量- pr5.实际盘点量 未盘点量
-    ,concat(round(pr5.实际盘点量/pr4.应盘点量,4)*100,'%') 盘点率
-    ,seal.应该集包包裹量
-    ,seal.应集包且实际集包的总包裹量 实际集包量
-    ,seal.集包率 集包率
-from
-    (
-        select
-            *
-        from `ph_staging`.`sys_store` ss
-        where
-            ss.category in (8,12)
-    ) ss
-left join `ph_staging`.`sys_manage_region` smr on smr.`id`  =ss.`manage_region`
-left join `ph_staging`.`sys_manage_piece` smp on smp.`id`  =ss.`manage_piece`
-left join
-    (
-        select #出勤
-            hi.`sys_store_id`
-            ,count(distinct(if(v2.`job_title` in (13,110,807,1000),v2.`staff_info_id`,null))) 出勤收派员人数
-            ,count(distinct(if(v2.`job_title` in (37),v2.`staff_info_id`,null))) 出勤仓管人数
-            ,count(distinct(if(v2.`job_title` in (16,272),v2.`staff_info_id`,null))) 出勤主管人数
-        from `ph_bi`.`attendance_data_v2` v2
-        left join `ph_bi`.`hr_staff_info` hi on hi.`staff_info_id` =v2.`staff_info_id`
-        where
-            v2.`stat_date`=date_sub(curdate(),interval 1 day)
-            and
-                (v2.`attendance_started_at` is not null or v2.`attendance_end_at` is not null)
-        group by 1
-    )v2 on v2.`sys_store_id`=ss.`id`
-left join
-    (
-        select #妥投
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 妥投量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('DELIVERY_CONFIRM')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr on pr.`store_id`=ss.`id`
-LEFT JOIN
-    (
-        select #应到
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 应到量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') = date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr1 on pr1.`store_id`=ss.`id`
-left join
-    (
-        select #实到
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实到量
-        from
-            (
-                select #车货关联到港
-                    pr.`pno`
-                    ,pr.`store_id`
-                    ,pr.`routed_at`
-                from `ph_staging`.`parcel_route` pr
-                where
-                    pr.`route_action` in ('ARRIVAL_GOODS_VAN_CHECK_SCAN')
-                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-            )pr
-        join
-            (
-                select #有效路由
-                    pr.`pno`
-                    ,pr.store_id
-                    ,pr.`routed_at`
-                    ,pr.route_action
-                    ,pr.store_name
-                    ,pr.staff_info_id
-                    ,pr.staff_info_phone
-                    ,pr.staff_info_name
-                    ,pr.extra_value
-                from `ph_staging`.`parcel_route` pr
-                where
-                    pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
-                                       'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
-                                       'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
-                                       'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
-                                       'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
-                                       'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
-                    and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d') >= date_sub(curdate(),interval 1 day)
-            ) pr1 on pr1.pno = pr.`pno`
-        where
-            pr1.store_id=pr.store_id
-            and pr1.`routed_at`<= date_add(pr.`routed_at`,interval 4 hour)
-        group by 1
-    )pr2 on  pr2.`store_id`=ss.`id`
-left join
-    (
-        select #应派
-            dc.`store_id`
-            ,count(distinct(dc.`pno`)) 应派量
-        from `ph_bi`.`dc_should_delivery_today` dc
-        where
-            dc.`stat_date`= date_sub(curdate(),interval 1 day)
-        group by 1
-    ) dc on dc.`store_id`=ss.`id`
-left join
-    (
-        select #交接
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 交接量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('DELIVERY_TICKET_CREATION_SCAN')
-            and date_format(convert_tz(pr.`routed_at`, '+00:00', '+08:00'),'%y-%m-%d')=date_sub(curdate(),interval 1 day)
-        group by 1
-    )pr3 on pr3.`store_id`=ss.`id`
-left join
-    (
-        select #应盘
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 应盘点量
-        from
-            (
-                select #最后一条有效路由
-                    pr.`pno`
-                    ,pr.store_id
-                    ,pr.`state`
-                    ,pr.`routed_at`
-                from
-                    (
-                        select
-                             pr.`pno`
-                             ,pr.store_id
-                             ,pr.`state`
-                             ,pr.`routed_at`
-                             ,row_number() over(partition by pr.`pno` order by pr.`routed_at` desc) as rn
-                        from `ph_staging`.`parcel_route` pr
-                        where
-                            DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
-                            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
-                            and   pr.`route_action` in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
-                                                           'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
-                                                           'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
-                                                           'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
-                                                           'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
-                                                           'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
-                     ) pr
-                where pr.rn = 1
-            ) pr
-            left join `ph_staging`.`parcel_info` pi on pi.pno=pr.`pno`
-            left join
-                (
-                    select #车货关联出港
-                        pr.`pno`
-                        ,pr.`store_id`
-                        ,pr.`routed_at`
-                    from `ph_staging`.`parcel_route` pr
-                    where
-                        pr.`route_action` in ( 'DEPARTURE_GOODS_VAN_CK_SCAN')
-                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')<=date_sub(curdate(),interval 1 day)
-                        and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')>=date_sub(curdate(),interval 200 day)
-                )pr1 on pr.pno=pr1.pno and pr.`store_id` =pr1.`store_id` and pr1.`routed_at`> pr.`routed_at`
-        where
-            pr1.pno is null
-            and pi.state in (1,2,3,4,6)
-        group by 1
-    )pr4 on pr4.`store_id`=ss.`id`
-left join
-    (
-        select #实际盘点
-            pr.`store_id`
-            ,count(distinct(pr.`pno`)) 实际盘点量
-        from `ph_staging`.`parcel_route` pr
-        where
-            pr.`route_action` in ('INVENTORY','DETAIN_WAREHOUSE','DISTRIBUTION_INVENTORY','SORTING_SCAN')
-            and DATE_FORMAT(CONVERT_TZ(pr.`routed_at`, '+00:00', '+08:00'),'%Y-%m-%d')=date_sub(curdate(),interval 1 day)
-        GROUP BY 1
-    )pr5 on pr5.`store_id`=ss.`id`
-left join
-    (
-        SELECT
-            a.store_id
-            ,date(a.van_arrive_phtime) AS '到港日期'
-            ,SUM(a.hub_should_seal) AS '应该集包包裹量'
-            ,SUM(IF (a.hub_should_seal = 1 AND a.seal_phtime IS NOT NULL, 1, 0)) AS '应集包且实际集包的总包裹量'
-            ,SUM(IF (a.hub_should_seal = 1  AND a.seal_phtime IS NOT NULL, 1, 0))/ SUM(hub_should_seal) AS '集包率'
-        FROM
-            (
-                SELECT
-                    pi.pno
-                    , pss.store_name AS 'hub_name'
-                    ,pss.store_id
-                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11, 1, 0) AS 'if_store_should_seal', date_add (pss.van_arrived_at, INTERVAL
-                            8 HOUR) AS 'van_arrive_phtime'
-                    , pss.arrival_pack_no
-                    , pack.es_unseal_store_name
-                    ,IF (pss.store_id = pack.es_unseal_store_id, 1, 0) AS 'should_unseal'
-            -- 包裹本身应该集包，来的时候不是集包件或应拆包HUB是这个HUB，这个HUB就应该做集包
-                    ,IF (pi.exhibition_weight <= 3000 AND pi.exhibition_length <= 30 AND pi.exhibition_width <= 30 AND pi.exhibition_height <= 30 AND pi.exhibition_length + pi.exhibition_width + pi.exhibition_height <= 60 AND pi.article_category != 11
-                         AND (arrival_pack_no IS NULL OR pack.es_unseal_store_id = pss.store_id),1, 0) AS 'hub_should_seal'
-                    , date_add(pss.sealed_at, INTERVAL 8 HOUR) AS 'seal_phtime'
-                FROM ph_staging.parcel_info pi
-                JOIN dw_dmd.parcel_store_stage_new pss  ON pss.van_arrived_at >= date_add (CURRENT_DATE() , INTERVAL -24-8 HOUR) AND pss.van_arrived_at < date_add (CURRENT_DATE() , INTERVAL -8 HOUR)
-                    AND pi.pno = pss.pno
-                    AND pss.store_category IN (8, 12)
-                    AND pss.store_name != '66 BAG_HUB_Maynila'
-                    AND pss.store_name NOT REGEXP '^Air|^SEA'
-                LEFT JOIN ph_staging.pack_info pack ON pss.arrival_pack_no = pack.pack_no
-                WHERE
-                    1 = 1
-                    AND pi.state < 9
-                    AND pi.returned = 0
-            ) a
-        GROUP BY 1, 2
-        ORDER BY 1, 2
-    ) seal on seal.store_id = ss.id
-group by 1,2,3,4
-order by 2;
-;-- -. . -..- - / . -. - .-. -.--
-select
-    *
-from ph_bi.abnormal_customer_complaint acc
-where
-    acc.work_id is not null
-limit 20;
-;-- -. . -..- - / . -. - .-. -.--
-with t as
-(
-    select
-        hsi.staff_info_id
-        ,case
-        when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
-        when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
-        when hsi.`state`=2 then '离职'
-        when hsi.`state`=3 then '停职'
-        end as 在职状态
-        ,ss.name 所属网点
-        ,smr.name  大区
-        ,smp.name  片区
-        ,convert_tz(mw.created_at,'+00:00','+08:00') created_at
-        ,case mw.type_code
-            when 'warning_1'  then '迟到早退'
-            when 'warning_29' then '贪污包裹'
-            when 'warning_30' then '偷盗公司财物'
-            when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
-            when 'warning_9'  then '腐败/滥用职权'
-            when 'warning_8'  then '公司设备私人使用 / 利用公司设备去做其他事情'
-            when 'warning_08'  then '公司设备私人使用 / 利用公司设备去做其他事情'
-            when 'warning_5'  then '持有或吸食毒品'
-            when 'warning_4'  then '工作时间或工作地点饮酒'
-            when 'warning_10' then '玩忽职守'
-            when 'warning_2'  then '无故连续旷工3天'
-            when 'warning_3'  then '贪污'
-            when 'warning_6'  then '违反公司的命令/通知/规则/纪律/规定'
-            when 'warning_7'  then '通过社会媒体污蔑公司'
-            when 'warning_27' then '工作效率未达到公司的标准(KPI)'
-            when 'warning_26' then 'Fake POD'
-            when 'warning_25' then 'Fake Status'
-            when 'warning_24' then '不接受或不配合公司的调查'
-            when 'warning_23' then '损害公司名誉'
-            when 'warning_22' then '失职'
-            when 'warning_28' then '贪污钱'
-            when 'warning_21' then '煽动/挑衅/损害公司利益'
-            when 'warning_20' then '谎报里程'
-            when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
-            when 'warning_19' then '未按照网点规定的时间回款'
-            when 'warning_17' then '伪造证件'
-            when 'warning_12' then '未告知上级或无故旷工'
-            when 'warning_13' then '上级没有同意请假'
-            when 'warning_14' then '没有通过系统请假'
-            when 'warning_15' then '未按时上下班'
-            when 'warning_16' then '不配合公司的吸毒检查'
-            when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
-            else mw.`type_code`
-        end as '警告原因'
-        ,case mw.`warning_type`
-        when 1 then '口述警告'
-        when 2 then '书面警告'
-        when 3 then '末次书面警告'
-        end as 警告类型
-        ,ROW_NUMBER ()over(partition by hsi.staff_info_id order by mw.created_at ) rn
-        ,count(mw.id) over (partition by hsi.staff_info_id) ct
-    from
-    (
-             select
-                mw.staff_info_id
-            from ph_backyard.message_warning mw
-            where
-                mw.type_code = 'warning_27'
-                and mw.operator_id = 87166
-#             and mw.created_at >=convert_tz('2023-04-13','+08:00','+00:00')
-            group by 1
-    )ws
-    join ph_bi.hr_staff_info hsi  on ws.staff_info_id=hsi.staff_info_id
-    left join  ph_backyard.message_warning mw on hsi.staff_info_id =mw.staff_info_id and  mw.is_delete =0
-    left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
-    left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
-    left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
-    where
-        hsi.state <> 2
-)
-
-select 
-    t.staff_info_id 员工id
-    ,t. 在职状态
-    ,t.所属网点
-    ,t.大区
-    ,t.片区
-    ,t.ct 警告次数
-    ,t.created_at 第一次警告信时间
-    ,t.警告原因 第一次警告原因
-    ,t.警告类型 第一次警告类型
-    ,t2.created_at 第二次警告信时间
-    ,t2.警告原因 第二次警告原因
-    ,t2.警告类型 第二次警告类型
-    ,t3.created_at 第三次警告信时间
-    ,t3.警告原因 第三次警告原因
-    ,t3.警告类型 第三次警告类型
-    ,t4.created_at 第四次警告信时间
-    ,t4.警告原因 第四次警告原因
-    ,t4.警告类型 第四次警告类型
-    ,t5.created_at 第五次警告信时间
-    ,t5.警告原因 第五次警告原因
-    ,t5.警告类型 第五次警告类型
-from t 
-left join t t2 on t.staff_info_id=t2.staff_info_id and t2.rn=2
-left join t t3 on t.staff_info_id=t3.staff_info_id and t3.rn=3
-left join t t4 on t.staff_info_id=t4.staff_info_id and t4.rn=4
-left join t t5 on t.staff_info_id=t5.staff_info_id and t5.rn=5
-where
-    t.rn=1;
-;-- -. . -..- - / . -. - .-. -.--
 select DATE_SUB(CURDATE(), INTERVAL 1 MONTH);
 ;-- -. . -..- - / . -. - .-. -.--
 select  DATE_ADD(curdate(),interval -day(curdate())+1 day);
@@ -12753,4 +8628,2980 @@ where
     pi.state not in (5,7,8,9)
     and dp.store_category not in (8,12)
 #     and pi.pno = 'P1904TZZ96AO'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    *
+from dw_dmd.parcel_store_stage_new pssn
+where
+    pssn.van_arrived_at >= date_sub(curdate(), interval 32 hour )
+    and pssn.van_arrived_at < date_sub(curdate(), interval 8 hour)
+    and pssn.arrival_pack_no is not null
+    and pssn.van_arrived_at is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+from
+ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-05-01'
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+where
+    pct.created_at >= '2023-05-01'
+    and pcol.task_id is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+    ,pct.pno
+from
+ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-05-01'
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+where
+    pct.created_at >= '2023-05-01'
+    and pcol.task_id is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+    ,pct.pno
+    ,pct.state
+from
+ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-05-01'
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+where
+    pct.created_at >= '2023-05-01'
+    and pcol.task_id is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+    ,pct.pno
+    ,pct.state
+from
+ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-04-01'
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+where
+    pct.created_at >= '2023-04-01'
+    and pcol.task_id is null
+    and pct.state > 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+    ,pct.pno
+    ,pct.state
+from
+ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+where
+    pct.created_at >= '2023-01-01'
+    and pcol.task_id is null
+    and pct.state = 6;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+    ,pct.pno
+    ,pcol2.operator_id
+from ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+left join ph_bi.parcel_cs_operation_log pcol2 on pcol2.task_id = pct.id and pcol2.action in (14,12)
+where
+    pct.created_at >= '2023-01-01'
+    and pcol.task_id is null
+    and pct.state = 6;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+    ,pct.pno
+    ,group_concat(pcol2.operator_id) 操作人员
+from ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+left join ph_bi.parcel_cs_operation_log pcol2 on pcol2.task_id = pct.id and pcol2.action in (14,12)
+where
+    pct.created_at >= '2023-01-01'
+    and pcol.task_id is null
+    and pct.state = 6
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pct.id
+    ,pct.pno
+    ,pcol2.operator_id 操作人员
+from ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcol.task_id
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+            and pcol.action in (21,7)
+        group by 1
+    ) pcol on pct.id = pcol.task_id
+left join ph_bi.parcel_cs_operation_log pcol2 on pcol2.task_id = pct.id and pcol2.action in (14)
+where
+    pct.created_at >= '2023-01-01'
+    and pcol.task_id is null
+    and pct.state = 6
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select * from tmpale.tmp_ph_pno_lj_0506;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            psd.pno
+            ,psd.pack_no
+            ,row_number() over (partition by psd.pno order by psd.created_at desc ) rk
+        from ph_staging.pack_seal_detail psd
+        join tmpale.tmp_ph_pno_lj_0506 t on t.pno = psd.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            pr.pno
+            ,pr.route_action
+            ,pr.store_id
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rk
+        from ph_staging.parcel_route pr
+        join tmpale.tmp_ph_pno_lj_0506 t on t.pno = pr.pno
+        where
+            pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN','DELIVERY_PICKUP_STORE_SCAN','DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE','REFUND_CONFIRM','ACCEPT_PARCEL');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    min(pi.created_at)
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0506 t on t.pno = pi.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,pi.dst_detail_address 收件人地址
+    ,seal.pack_no
+    ,case pr.route_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+    end as 最后一条有效路由
+    ,ss.name 最后有效路由操作网点
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0506 t on t.pno = pi.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.route_action
+            ,pr.store_id
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rk
+        from ph_staging.parcel_route pr
+        join tmpale.tmp_ph_pno_lj_0506 t on t.pno = pr.pno
+        where
+            pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN','DELIVERY_PICKUP_STORE_SCAN','DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE','REFUND_CONFIRM','ACCEPT_PARCEL')
+    ) pr on pr.pno = pi.pno and pr.rk = 1
+left join ph_staging.sys_store ss on ss.id = pr.store_id
+left join
+    (
+        select
+            psd.pno
+            ,psd.pack_no
+            ,row_number() over (partition by psd.pno order by psd.created_at desc ) rk
+        from ph_staging.pack_seal_detail psd
+        join tmpale.tmp_ph_pno_lj_0506 t on t.pno = psd.pno
+    ) seal on seal.pno = pi.pno and seal.rk = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+select
+    a.pno
+    ,a.date_d
+from a
+left join
+    (
+        select
+            pr2.pno
+            ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        from ph_staging.parcel_route pr2
+        join
+            (
+                select a.pno from a group by 1
+            ) b on pr2.pno = b.pno
+        where
+            pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+            and pr2.routed_at >= '2023-03-31 16:00:00'
+    ) b on a.pno = b.pno and a.date_d = b.date_d;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+select
+    a.pno
+    ,a.date_d
+from a
+left join
+    (
+        select
+            pr2.pno
+            ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        from ph_staging.parcel_route pr2
+        join
+            (
+                select a.pno from a group by 1
+            ) b on pr2.pno = b.pno
+        where
+            pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+            and pr2.routed_at >= '2023-03-31 16:00:00'
+        group by 1,2
+    ) b on a.pno = b.pno and a.date_d = b.date_d;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+select
+    a.pno
+    ,a.date_d
+from a
+join
+    (
+        select
+            pr2.pno
+            ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        from ph_staging.parcel_route pr2
+        join
+            (
+                select a.pno from a group by 1
+            ) b on pr2.pno = b.pno
+        where
+            pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+            and pr2.routed_at >= '2023-03-31 16:00:00'
+        group by 1,2
+    ) b on a.pno = b.pno and a.date_d = b.date_d;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+select
+    a.pno
+    ,a.date_d
+from a
+join
+    (
+        select
+            pr2.pno
+            ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        from ph_staging.parcel_route pr2
+        join
+            (
+                select a.pno from a group by 1
+            ) b on pr2.pno = b.pno
+        where
+            pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+            and pr2.routed_at >= '2023-03-31 16:00:00'
+        group by 1,2
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+where
+    pi.state != 7;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+select
+    a.pno
+    ,a.date_d
+from a
+join
+    (
+        select
+            pr2.pno
+            ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        from ph_staging.parcel_route pr2
+        join
+            (
+                select a.pno from a group by 1
+            ) b on pr2.pno = b.pno
+        where
+            pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+            and pr2.routed_at >= '2023-03-31 16:00:00'
+        group by 1,2
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+where
+    pi.state not in (5,7,8,9);
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+        ,pr.store_id
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+, b as
+(
+    select
+        pr2.pno
+        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        ,pr2.staff_info_id
+    from ph_staging.parcel_route pr2
+    join
+        (
+            select a.pno from a group by 1
+        ) b on pr2.pno = b.pno
+    where
+        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+        and pr2.routed_at >= '2023-03-31 16:00:00'
+)
+select
+    a.pno 包裹
+    ,dp.store_name 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,pi.cod_amount/100 COD金额
+    ,group_concat(b2.staff_info_id) 交接员工id
+from a
+join
+    (
+        select
+            b.pno
+            ,b.date_d
+        from b
+        group by 1,2
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+where
+    pi.state not in (5,7,8,9);
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+        ,pr.store_id
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+, b as
+(
+    select
+        pr2.pno
+        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        ,pr2.staff_info_id
+    from ph_staging.parcel_route pr2
+    join
+        (
+            select a.pno from a group by 1
+        ) b on pr2.pno = b.pno
+    where
+        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+        and pr2.routed_at >= '2023-03-31 16:00:00'
+)
+select
+    a.pno 包裹
+    ,dp.store_name 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,pi.cod_amount/100 COD金额
+    ,group_concat(b2.staff_info_id) 交接员工id
+from a
+join
+    (
+        select
+            b.pno
+            ,b.date_d
+        from b
+        group by 1,2
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+where
+    pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+        ,pr.store_id
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+, b as
+(
+    select
+        pr2.pno
+        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        ,pr2.staff_info_id
+    from ph_staging.parcel_route pr2
+    join
+        (
+            select a.pno from a group by 1
+        ) b on pr2.pno = b.pno
+    where
+        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+        and pr2.routed_at >= '2023-03-31 16:00:00'
+)
+select
+    a.pno 包裹
+    ,dp.store_name 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,pi.cod_amount/100 COD金额
+    ,group_concat(distinct b2.staff_info_id) 交接员工id
+from a
+join
+    (
+        select
+            b.pno
+            ,b.date_d
+        from b
+        group by 1,2
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+where
+    pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+, b as
+(
+    select
+        pr2.pno
+        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        ,pr2.staff_info_id
+        ,pr2.store_id
+    from ph_staging.parcel_route pr2
+    join
+        (
+            select a.pno from a group by 1
+        ) b on pr2.pno = b.pno
+    where
+        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+        and pr2.routed_at >= '2023-03-31 16:00:00'
+)
+select
+    a.pno 包裹
+    ,dp.store_name 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,pi.cod_amount/100 COD金额
+    ,group_concat(distinct b2.staff_info_id) 交接员工id
+from a
+join
+    (
+        select
+            b.pno
+            ,b.date_d
+            ,b.store_id
+        from b
+        group by 1,2,3
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = b.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+where
+    pi.state not in (5,7,8,9)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+, b as
+(
+    select
+        pr2.pno
+        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        ,pr2.staff_info_id
+        ,pr2.store_id
+    from ph_staging.parcel_route pr2
+    join
+        (
+            select a.pno from a group by 1
+        ) b on pr2.pno = b.pno
+    where
+        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+        and pr2.routed_at >= '2023-03-31 16:00:00'
+)
+select
+    a.pno 包裹
+    ,dp.store_name 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,pi.cod_amount/100 COD金额
+    ,group_concat(distinct b2.staff_info_id) 交接员工id
+from a
+join
+    (
+        select
+            b.pno
+            ,b.date_d
+            ,b.store_id
+        from b
+        group by 1,2,3
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = b.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+where
+    pi.state not in (5,7,8,9)
+    and a.date_d < curdate()
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pcol.task_id
+        ,pcol.action
+        ,pcol.operator_id
+        ,pcol.created_at
+    from ph_bi.parcel_claim_task pct
+    left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+    where
+        pct.created_at >= '2023-01-01'
+        and pct.state = 6
+)
+
+select
+    pct.id 理赔任务ID
+    ,pct.pno 单号
+    ,json_extract(pcn.neg_result,'$.money') 理赔金额
+    ,t4.created_at 电话号码不对时间
+    ,t5.created_at 客户不接电话时间
+    ,t1.created_at 待重新协商时间
+    ,t2.created_at 审核通过时间
+    ,t2.operator_id 审核通过员工
+    ,t3.created_at 已联系时间
+    ,t3.created_at 已联系员工
+from ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcn.task_id
+            ,pcn.neg_result
+            ,row_number() over (partition by pcn.task_id order by pcn.created_at desc ) rk
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_claim_negotiation pcn on pcn.task_id = pct.id
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+    ) pcn on pcn.task_id = pct.id and pcn.rk = 1
+left join t t1 on t1.task_id = pct.id and t1.action = 7 -- 待重新协商
+left join t t2 on t2.task_id = pct.id and t2.action = 14 -- 审核通过
+left join t t3 on t3.task_id = pct.id and t3.action = 21 -- 已联系
+left join t t4 on t4.task_id = pct.id and t4.action = 19 -- 电话号码不对
+left join t t5 on t5.task_id = pct.id and t5.action = 18 -- 客户不接电话
+where
+    pct.created_at >= '2023-01-01'
+    and pct.state = 6;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pcol.task_id
+        ,pcol.action
+        ,pcol.operator_id
+        ,pcol.created_at
+    from ph_bi.parcel_claim_task pct
+    left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+    where
+        pct.created_at >= '2023-01-01'
+        and pct.state = 6
+)
+
+select
+    pct.id 理赔任务ID
+    ,pct.pno 单号
+    ,json_unquote(json_extract(pcn.neg_result,'$.money')) 理赔金额
+    ,t4.created_at 电话号码不对时间
+    ,t5.created_at 客户不接电话时间
+    ,t1.created_at 待重新协商时间
+    ,t2.created_at 审核通过时间
+    ,t2.operator_id 审核通过员工
+    ,t3.created_at 已联系时间
+    ,t3.created_at 已联系员工
+from ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcn.task_id
+            ,pcn.neg_result
+            ,row_number() over (partition by pcn.task_id order by pcn.created_at desc ) rk
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_claim_negotiation pcn on pcn.task_id = pct.id
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+    ) pcn on pcn.task_id = pct.id and pcn.rk = 1
+left join t t1 on t1.task_id = pct.id and t1.action = 7 -- 待重新协商
+left join t t2 on t2.task_id = pct.id and t2.action = 14 -- 审核通过
+left join t t3 on t3.task_id = pct.id and t3.action = 21 -- 已联系
+left join t t4 on t4.task_id = pct.id and t4.action = 19 -- 电话号码不对
+left join t t5 on t5.task_id = pct.id and t5.action = 18 -- 客户不接电话
+where
+    pct.created_at >= '2023-01-01'
+    and pct.state = 6;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pcol.task_id
+        ,pcol.action
+        ,pcol.operator_id
+        ,pcol.created_at
+    from ph_bi.parcel_claim_task pct
+    left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+    where
+        pct.created_at >= '2023-01-01'
+        and pct.state = 6
+)
+
+select
+    pct.id 理赔任务ID
+    ,pct.client_id 客户ID
+    ,pct.pno 单号
+    ,json_unquote(json_extract(pcn.neg_result,'$.money')) 理赔金额
+    ,t4.created_at 电话号码不对时间
+    ,t5.created_at 客户不接电话时间
+    ,t1.created_at 待重新协商时间
+    ,t2.created_at 审核通过时间
+    ,t2.operator_id 审核通过员工
+    ,t3.created_at 已联系时间
+    ,t3.created_at 已联系员工
+from ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcn.task_id
+            ,pcn.neg_result
+            ,row_number() over (partition by pcn.task_id order by pcn.created_at desc ) rk
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_claim_negotiation pcn on pcn.task_id = pct.id
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+    ) pcn on pcn.task_id = pct.id and pcn.rk = 1
+left join t t1 on t1.task_id = pct.id and t1.action = 7 -- 待重新协商
+left join t t2 on t2.task_id = pct.id and t2.action = 14 -- 审核通过
+left join t t3 on t3.task_id = pct.id and t3.action = 21 -- 已联系
+left join t t4 on t4.task_id = pct.id and t4.action = 19 -- 电话号码不对
+left join t t5 on t5.task_id = pct.id and t5.action = 18 -- 客户不接电话
+where
+    pct.created_at >= '2023-01-01'
+    and pct.state = 6;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 收件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+    and dp.store_category not in (8,12)
+#     and pi.pno = 'P1904TZZ96AO'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 收件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+#     and dp.store_category not in (8,12)
+    and pi.pno = 'P61022HXGYAD'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    de.pno
+    ,pi.cod_amount/100 cod_amount
+from dwm.dwd_ex_ph_parcel_details de
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+where
+    de.dst_routed_at < date_sub(curdate(), interval 2 day )
+    and de.cod_enabled = 'YES'
+    and de.parcel_state not in (5,7,8,9);
+;-- -. . -..- - / . -. - .-. -.--
+set @begin_time = '2023-05-01';
+;-- -. . -..- - / . -. - .-. -.--
+set @end_time = '2023-05-08';
+;-- -. . -..- - / . -. - .-. -.--
+set @begin_time = '2023-05-01'
+ @end_time = '2023-05-08';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+    (
+        select
+            pi.pno
+            ,pi.client_id
+            ,pi2.ticket_pickup_store_id
+            ,ss.name as ticket_pickup_store_name
+            ,convert_tz(pi2.created_at, '+00:00', '+08:00') 退件时间
+        from ph_staging.parcel_info pi
+        join ph_staging.parcel_info pi2 on pi2.pno = pi.returned_pno
+        join ph_staging.sys_store ss on ss.id =pi2.ticket_pickup_store_id
+        join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name = 'tiktok'
+        where
+            pi.state = 7
+            and pi2.created_at >=date_sub(current_date,interval 37 day)
+            and pi2.created_at < current_time
+    )
+
+select
+    t.pno
+    ,t.ticket_pickup_store_name
+    ,pr.store_name
+    ,pr.staff_info_id
+    ,pr.staff_info_name
+    ,pr.remark 待退件备注
+    ,mark.remark 最后一次包裹备注
+    ,job_name 职位
+    ,sd.name 部门
+    ,case
+        when xs.pno is not null then '协商退件'
+        when di.pno is not null and xs.pno is null then '拒收直接退回'
+#       when xs.pno is null and di.pno is null and (pcr.remark != 'Wait for replace order and return' or dai.pno is not null ) then '三次派送失败退件'
+        when xs.pno is null and di.pno is null and sd.name in ('Flash Express Customer Service','Overseas Business Project') then 'MS操作中断运输并退回'
+        when xs.pno is null and di.pno is null and pr.staff_info_id in ('10000','10001') then '三次派送失败退件'
+        end 退件原因
+    ,if(di2.pno is not null , '是', '否') 是否有收件人拒收派件标记
+    ,dai.delivery_attempt_num 尝试派送天数
+    ,t.退件时间
+    ,ssd.sla as 时效天数
+    ,ssd.end_date as 包裹普通超时时效截止日_整体
+    ,ssd.end_7_date as 包裹严重超时时效截止日_整体
+#     ,if(xs.pno is not null, 'y', 'n') 是否协商退件
+#     ,if(di.pno is not null and xs.pno is null , 'y', 'n') 是否策略直接退回
+#     ,if(xs.pno is null and di.pno is null and (pcr.remark != 'Wait for replace order and return' or dai.pno is not null ), '三次派送失败退件', 'MS操作中断运输并退回') 是否尝试三次派送失败退件
+from t
+left join
+    (
+        select
+            di.pno
+            ,cdt.operator_id
+        from ph_staging.diff_info di
+        join t on di.pno = t.pno
+        left join ph_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        where
+            cdt.negotiation_result_category in (3,4)
+            and cdt.operator_id not in ('10000','10001')
+        group by 1
+    ) xs on xs.pno = t.pno
+left join
+    (
+        select
+            di.pno
+        from ph_staging.diff_info di
+        join t on di.pno = t.pno
+        left join ph_staging.ka_profile kp on kp.id = t.client_id
+        left join ph_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        where
+            di.diff_marker_category in (2,17)
+            and kp.reject_return_strategy_category = 2 -- 退件策略：直接退回
+            and cdt.negotiation_result_category in (3,4)
+            and cdt.operator_id in ('10000','10001')
+        group by 1
+    ) di on di.pno = t.pno
+# left join
+#     (
+#         select
+#             pcr.pno
+#             ,pcr.remark
+#         from ph_staging.parcel_change_record pcr
+#         join t on t.pno = pcr.pno
+#         where
+#             pcr.change_type = 0
+#     ) pcr on pcr.pno = t.pno
+left join
+    (
+        select
+            dai.pno
+            ,dai.delivery_attempt_num
+        from ph_staging.delivery_attempt_info dai
+        join t on dai.pno = t.pno
+        where
+            dai.delivery_attempt_num >= 3
+    ) dai on dai.pno = t.pno
+left join dwm.dwd_ex_ph_tiktok_sla_detail ssd on ssd.pno = t.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.staff_info_id
+             ,pr.store_name
+            ,pr.staff_info_name
+            ,pr.remark
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
+        from ph_staging.parcel_route pr
+        join t on pr.pno = t.pno
+        where
+            pr.route_action = 'PENDING_RETURN'
+    ) pr on pr.pno = t.pno and pr.rn = 1
+left join
+    (
+        select
+            td.pno
+        from ph_staging.ticket_delivery_marker tdm
+        left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
+        join t on td.pno = t.pno
+        where
+            tdm.marker_id in (2,17)
+        group by 1
+    ) di2 on di2.pno = t.pno
+left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pr.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_bi.sys_department sd on sd.id = hsi.sys_department_id
+left join
+    (
+        select
+            pr.pno
+            ,pr.remark
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn2
+        from ph_staging.parcel_route pr
+        join t on pr.pno = t.pno
+        where
+            pr.route_action = 'MANUAL_REMARK'
+    ) mark on mark.pno = t.pno and mark.rn2 = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(*)
+from
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+            ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    ) a
+where
+    a.parcel_value > 10000;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(*)
+from
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+            ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    ) a
+where
+    a.parcel_value > 20000;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+            ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    a.ticket_pickup_store_id
+    ,count(a.pno)
+from a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+            ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    a.ticket_pickup_store_id
+    ,count(a.pno)
+from a
+where
+    a.parcel_value > 10000
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+            ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 10000
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+            ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 20000
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 20000
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 10000
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 10000
+    and a.state not in (5,7,8,9)
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.name
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 10000
+#     and a.state not in (5,7,8,9)
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 10000
+#     and a.state not in (5,7,8,9)
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno) 包裹数
+    ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+    ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+group by 1
+order by 3 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno) 包裹数
+    ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+    ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+group by 1
+order by 4 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno) 包裹数
+    ,count(if(a.parcel_value > 20000, a.pno, null)) 高价值包裹数
+    ,count(if(a.parcel_value > 20000, a.pno, null))/count(a.pno) 高价值占比
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+group by 1
+having count(a.pno) > 10000
+order by 4 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno) 包裹数
+    ,count(if(a.parcel_value > 15000, a.pno, null)) 高价值包裹数
+    ,count(if(a.parcel_value > 15000, a.pno, null))/count(a.pno) 高价值占比
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+group by 1
+having count(a.pno) > 10000
+order by 4 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+select
+    ss.name
+    ,count(a.pno) 包裹数
+    ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+    ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+group by 1
+having count(a.pno) > 10000
+order by 4 desc;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    ss.name
+    ,a.ticket_pickup_staff_info_id
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 10000
+    and a.ticket_pickup_store_id
+    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+group by 1,2
+order by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    ss.name
+    ,a.ticket_pickup_staff_info_id
+    ,count(a.pno)
+from a
+left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+where
+    a.parcel_value > 10000
+    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+group by 1,2
+order by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    *
+from
+    (
+                select
+            a.*
+            ,row_number() over (partition by a.ticket_pickup_store_id, a.ticket_pickup_staff_info_id order by a.num desc ) rk
+        from
+            (
+                select
+                    ss.name
+                    ,a.ticket_pickup_staff_info_id
+                    ,count(a.pno) num
+                from a
+                left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+                where
+                    a.parcel_value > 10000
+                    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+                group by 1,2
+                order by 1,2
+            ) a
+    ) b
+where
+    b.rk < 6;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    *
+from
+    (
+                select
+            a.*
+            ,row_number() over (partition by a.name, a.ticket_pickup_staff_info_id order by a.num desc ) rk
+        from
+            (
+                select
+                    ss.name
+                    ,a.ticket_pickup_staff_info_id
+                    ,count(a.pno) num
+                from a
+                left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+                where
+                    a.parcel_value > 10000
+                    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+                group by 1,2
+                order by 1,2
+            ) a
+    ) b
+where
+    b.rk < 6;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.name, a.ticket_pickup_staff_info_id order by a.num desc ) rk
+        from
+            (
+                select
+                    ss.name
+                    ,a.ticket_pickup_staff_info_id
+                    ,count(a.pno) num
+                from a
+                left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+                where
+                    a.parcel_value > 10000
+                    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+                group by 1,2
+            ) a
+    ) b
+where
+    b.rk < 6;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.name order by a.num desc ) rk
+        from
+            (
+                select
+                    ss.name
+                    ,a.ticket_pickup_staff_info_id
+                    ,count(a.pno) num
+                from a
+                left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+                where
+                    a.parcel_value > 10000
+                    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+                group by 1,2
+            ) a
+    ) b
+where
+    b.rk < 6;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.name order by a.num desc ) rk
+        from
+            (
+                select
+                    ss.name
+                    ,a.ticket_pickup_staff_info_id
+                    ,count(a.pno) num
+                from a
+                left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+                where
+                    a.parcel_value > 15000
+                    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+                group by 1,2
+            ) a
+    ) b
+where
+    b.rk < 6;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+    (
+        select
+            pi.pno
+            ,pi.state
+            ,pi.ticket_pickup_store_id
+            ,pi.ticket_pickup_staff_info_id
+#             ,if(pi.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) parcel_value
+            ,pi.cod_amount/100 parcel_value
+        from ph_staging.parcel_info pi
+        left join ph_staging.order_info oi on oi.pno = pi.pno
+        where
+            pi.created_at >= '2023-03-31 16:00:00'
+            and pi.created_at < '2023-04-30 16:00:00'
+    )
+# select
+#     ss.name
+#     ,count(a.pno) 包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null)) 高价值包裹数
+#     ,count(if(a.parcel_value > 10000, a.pno, null))/count(a.pno) 高价值占比
+# from a
+# left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+# group by 1
+# having count(a.pno) > 10000
+# order by 4 desc
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.name order by a.num desc ) rk
+        from
+            (
+                select
+                    ss.name
+                    ,a.ticket_pickup_staff_info_id
+                    ,count(a.pno) num
+                from a
+                left join ph_staging.sys_store ss on ss.id = a.ticket_pickup_store_id
+                where
+                    a.parcel_value > 20000
+                    and ss.name in ('11 PN5-HUB_Santa Rosa','PSA_PDC','CLB_PDC','TOA_PDC','NOP_PDC')
+                group by 1,2
+            ) a
+    ) b
+where
+    b.rk < 6;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno
+from ph_bi.parcel_lose_task plt
+left join ph_staging.parcel_info pi on pi.pno = plt.pno
+where
+    pi.dst_phone = '09918919066'
+    or pi.src_phone = '09918919066';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno
+from ph_bi.parcel_lose_task plt
+left join ph_staging.parcel_info pi on pi.pno = plt.pno
+where
+    plt.state in (5,6)
+    and (pi.dst_phone = '09918919066'
+    or pi.src_phone = '09918919066');
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 收件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+#     and dp.store_category not in (8,12)
+#     and pi.pno = 'P61022HXGYAD'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        de.pno
+        ,pcd.created_at
+    from dwm.dwd_ex_ph_parcel_details de
+    left join ph_staging.parcel_info pi on pi.pno = de.pno
+    left join ph_staging.parcel_change_detail pcd  on de.pno = pcd.pno
+    left join ph_staging.parcel_route pr on pr.pno = de.pno and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN' and pr.routed_at > pcd.created_at
+    where
+        pi.dst_store_id in  ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13') -- 目的地网点是拍卖仓
+        and pcd.field_name = 'dst_store_id'
+        and pcd.new_value = 'PH19040F05'
+        and de.parcel_state not in (5,7,8,9)
+        and pr.pno is null
+)
+, b as
+(
+    select
+            a.pno
+            ,a.store_name store
+            ,'弃件未发出包裹' type
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_name
+                    ,row_number() over (partition by pr.pno order by pr.id desc ) rn
+                from ph_staging.parcel_route pr
+                join t on t.pno = pr.pno
+                where
+                    pr.store_category is not null
+                    and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
+            ) a
+        where
+            a.rn = 1
+
+
+        union
+
+        -- 目的地网点在仓未达终态
+        select
+            de.pno
+            ,de.last_store_name store
+            ,'目的地在仓未终态' type
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info p2 on p2.pno = de.pno
+        where
+            de.dst_routed_at is not null
+            and p2.state not in (5,7,8,9) -- 未终态，且目的地网点有路由
+            and p2.dst_store_id  not in ('PH19040F05', 'PH19040F04', 'PH19040F06', 'PH19040F07', 'PH19280F10', 'PH19280F13')   -- 目的地网点不是拍卖仓,PN5-CS1,2,3,4,5 为拍卖仓
+
+        union
+        -- 退件未发出
+
+        select
+            de.pno
+            ,de.src_store store
+            ,'退件未发出包裹' type
+        from dwm.dwd_ex_ph_parcel_details de
+        join ph_staging.parcel_info pi2 on pi2.pno = de.pno
+        where
+            de.returned = 1
+            and de.last_store_id = de.src_store_id
+            and pi2.state not in (2,5,7,8,9)
+)
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 收件人地址
+    ,b.type 类型
+    ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join b on b.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = b.pno
+where
+    pi.state not in (5,7,8,9)
+    and dp.store_category not in (8,12)
+#     and pi.pno = 'P61022HXGYAD'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(*)
+from
+    (
+        select
+            de.*
+            ,case bc.client_name
+                when 'lazada' then dl.delievey_end_date
+                when 'shopee' then ds.end_date
+                when 'tiktok' then dt.end_date
+            end end_date
+        from dwm.dwd_ex_ph_parcel_details de
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = de.pno
+        left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = de.pno
+        left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = de.pno
+    ) a
+where
+    a.parcel_state not in (5,7,8,9)
+    and a.end_date < curdate();
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(*)
+from
+    (
+        select
+            de.*
+            ,case bc.client_name
+                when 'lazada' then dl.delievey_end_date
+                when 'shopee' then ds.end_date
+                when 'tiktok' then dt.end_date
+            end end_date
+            ,pi.cod_amount/100 cod_num
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info pi on pi.pno = de.pno
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = de.pno
+        left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = de.pno
+        left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = de.pno
+    ) a
+where
+    a.parcel_state not in (5,7,8,9)
+    and a.end_date < curdate()
+    and a.cod_num > 10000;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            de.*
+            ,case bc.client_name
+                when 'lazada' then dl.delievey_end_date
+                when 'shopee' then ds.end_date
+                when 'tiktok' then dt.end_date
+            end end_date
+            ,pi.cod_amount/100 cod_num
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info pi on pi.pno = de.pno
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = de.pno
+        left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = de.pno
+        left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = de.pno
+    ) a
+where
+    a.parcel_state not in (5,7,8,9)
+    and a.end_date < curdate()
+    and a.cod_num > 10000;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,a.cod_num cod金额
+    ,a.end_date 派送时效
+    ,a.client_id
+    ,a.parcel_state_name 包裹状态
+    ,a.pickup_time 揽收时间
+    ,a.last_cn_route_action 最后一条有效路由
+    ,a.last_route_time 最后一条有效路由时间
+    ,a.last_store_name 包裹当前网点
+    ,a.last_store_id 包裹当前网点ID
+    ,a.dst_routed_at 目的地网点的第一次有效路由时间
+    ,a.first_cn_marker_category 第一次尝试派送失败原因
+    ,a.first_marker_at 第一次尝试派送失败时间
+    ,a.dst_store 目的地网点
+    ,a.dst_region 目的地网点大区
+    ,a.dst_piece 目的地网点片区
+from
+    (
+        select
+            de.*
+            ,case bc.client_name
+                when 'lazada' then dl.delievey_end_date
+                when 'shopee' then ds.end_date
+                when 'tiktok' then dt.end_date
+            end end_date
+            ,pi.cod_amount/100 cod_num
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info pi on pi.pno = de.pno
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = de.pno
+        left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = de.pno
+        left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = de.pno
+    ) a
+where
+    a.parcel_state not in (5,7,8,9)
+    and a.end_date < curdate()
+    and a.cod_num > 10000;
+;-- -. . -..- - / . -. - .-. -.--
+ore_name 包裹当前网点
+    ,a.last_store_id 包裹当前网点ID
+    ,a.dst_routed_at 目的地网点的第一次有效路由时间
+    ,a.first_cn_marker_category 第一次尝试派送失败原因
+    ,a.first_marker_at 第一次尝试派送失败时间
+    ,a.dst_store 目的地网点
+    ,a.dst_region 目的地网点大区
+    ,a.dst_piece 目的地网点片区
+    ,if(plt.pno is not null , '是', '否') 是否人工无需追责过
+from
+    (
+        select
+            de.*
+            ,case bc.client_name
+                when 'lazada' then dl.delievey_end_date
+                when 'shopee' then ds.end_date
+                when 'tiktok' then dt.end_date
+            end end_date
+            ,pi.cod_amount/100 cod_num
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info pi on pi.pno = de.pno
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = de.pno
+        left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = de.pno
+        left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = de.pno
+    ) a
+left join ph_bi.parcel_lose_task plt on plt.pno = a.pno and plt.state = 6 and plt.operator_id not in (10000,10001)
+where
+    a.parcel_state not in (5,7,8,9)
+    and a.end_date < curdate()
+    and a.cod_num > 10000
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,a.cod_num cod金额
+    ,a.end_date 派送时效
+    ,a.client_id
+    ,a.parcel_state_name 包裹状态
+    ,a.pickup_time 揽收时间
+    ,a.last_cn_route_action 最后一条有效路由
+    ,a.last_route_time 最后一条有效路由时间
+    ,a.last_store_name 包裹当前网点
+    ,a.last_store_id 包裹当前网点ID
+    ,a.dst_routed_at 目的地网点的第一次有效路由时间
+    ,a.first_cn_marker_category 第一次尝试派送失败原因
+    ,a.first_marker_at 第一次尝试派送失败时间
+    ,a.dst_store 目的地网点
+    ,a.dst_region 目的地网点大区
+    ,a.dst_piece 目的地网点片区
+    ,if(plt.pno is not null , '是', '否') 是否人工无需追责过
+from
+    (
+        select
+            de.*
+            ,case bc.client_name
+                when 'lazada' then dl.delievey_end_date
+                when 'shopee' then ds.end_date
+                when 'tiktok' then dt.end_date
+            end end_date
+            ,pi.cod_amount/100 cod_num
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info pi on pi.pno = de.pno
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = de.pno
+        left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = de.pno
+        left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = de.pno
+    ) a
+left join ph_bi.parcel_lose_task plt on plt.pno = a.pno and plt.state = 6 and plt.operator_id not in (10000,10001)
+where
+    a.parcel_state not in (5,7,8,9)
+    and a.end_date < curdate()
+    and a.cod_num > 10000
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pack_no
+from ph_staging.pack_info pi
+left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+left join ph_staging.parcel_route pr on pr.store_id = pi.unseal_store_id
+where
+    pi.created_at >= '2023-05-07 16:00:00'
+    and pi.created_at < '2023-05-08 16:00:00'
+    and pr.pno is null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pack_no
+from ph_staging.pack_info pi
+left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+left join ph_staging.parcel_route pr on pr.store_id = pi.unseal_store_id and pr.routed_at >  '2023-05-07 16:00:00'
+where
+    pi.created_at >= '2023-05-07 16:00:00'
+    and pi.created_at < '2023-05-08 16:00:00'
+    and pr.pno is null
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pack_no
+from ph_staging.pack_info pi
+left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.unseal_store_id and pr.routed_at >  '2023-05-07 16:00:00'
+where
+    pi.created_at >= '2023-05-07 16:00:00'
+    and pi.created_at < '2023-05-08 16:00:00'
+    and pr.pno is null
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.unseal_store_id and pr.routed_at >  '2023-05-07 16:00:00'
+        where
+            pi.created_at >= '2023-05-07 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+            and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.unseal_store_id and pr.routed_at >  '2023-05-07 16:00:00'
+        where
+            pi.created_at >= '2023-04-25 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+            and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.unseal_store_id and pr.routed_at >  '2023-05-07 16:00:00'
+        where
+            pi.created_at >= '2023-04-25 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at >  '2023-05-07 16:00:00'
+        where
+            pi.created_at >= '2023-04-25 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id
+        where
+            pi.created_at >= '2023-04-25 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+            and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+#             and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.state
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+#             and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            pi.pack_no
+            ,pi.state
+            ,pi.seal_count
+            ,pr.pno
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+#             and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+            and pi.pack_no = 'P57573245'
+            and pr.pno is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.state
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pack_no
+    ,pi.state
+    ,pi.seal_count
+    ,pr.pno
+from ph_staging.pack_info pi
+left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+where
+    pi.created_at >= '2023-04-26 16:00:00'
+    and pi.created_at < '2023-05-08 16:00:00'
+#             and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+    and pi.pack_no = 'P57372981'
+    and pr.pno is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pack_no
+    ,pi.state
+    ,pi.seal_count
+    ,psd.pno
+    ,pr.pno
+from ph_staging.pack_info pi
+left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+where
+    pi.created_at >= '2023-04-26 16:00:00'
+    and pi.created_at < '2023-05-08 16:00:00'
+#             and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+    and pi.pack_no = 'P57372981'
+    and pr.pno is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.state
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > pi.created_at
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.state
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > pi.created_at
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.state
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > pi.created_at and pr.routed_at > '2023-04-26 16:00:00'
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pack_no
+    ,pi.state
+    ,pi.seal_count
+    ,psd.pno
+    ,pr.pno
+from ph_staging.pack_info pi
+left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00'
+where
+    pi.created_at >= '2023-04-26 16:00:00'
+    and pi.created_at < '2023-05-08 16:00:00'
+#             and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+    and pi.pack_no = 'P56802609'
+    and pr.pno is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            pi.pack_no
+            ,pi.state
+            ,pi.seal_count
+            ,count(distinct pr.pno) num
+        from ph_staging.pack_info pi
+        left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+        left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > pi.created_at and pr.routed_at > '2023-04-26 16:00:00' and pr.route_action in ('RECEIVED' ,'RECEIVE_WAREHOUSE_SCAN', 'SORTING_SCAN', 'DELIVERY_TICKET_CREATION_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SHIPMENT_WAREHOUSE_SCAN', 'DETAIN_WAREHOUSE', 'DELIVERY_CONFIRM', 'DIFFICULTY_HANDOVER', 'DELIVERY_MARKER', 'REPLACE_PNO','SEAL', 'UNSEAL', 'STAFF_INFO_UPDATE_WEIGHT', 'STORE_KEEPER_UPDATE_WEIGHT', 'STORE_SORTER_UPDATE_WEIGHT', 'DISCARD_RETURN_BKK', 'DELIVERY_TRANSFER', 'PICKUP_RETURN_RECEIPT', 'FLASH_HOME_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SORTING_SCAN ', 'DELIVERY_PICKUP_STORE_SCAN', 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE', 'REFUND_CONFIRM', 'ACCEPT_PARCEL')
+        where
+            pi.created_at >= '2023-04-26 16:00:00'
+            and pi.created_at < '2023-05-08 16:00:00'
+#             and pr.pno is null
+        group by 1
+    ) a
+where
+    a.num > 0
+    and a.num < a.seal_count;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pack_no
+    ,pi.state
+    ,pi.seal_count
+    ,psd.pno
+    ,pr.pno
+from ph_staging.pack_info pi
+left join ph_staging.pack_seal_detail psd on psd.pack_no = pi.pack_no
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = psd.pno
+left join ph_staging.parcel_route pr on pr.pno = psd.pno and pr.store_id = pi.es_unseal_store_id and pr.routed_at > '2023-04-26 16:00:00' and pr.route_action in ('RECEIVED' ,'RECEIVE_WAREHOUSE_SCAN', 'SORTING_SCAN', 'DELIVERY_TICKET_CREATION_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SHIPMENT_WAREHOUSE_SCAN', 'DETAIN_WAREHOUSE', 'DELIVERY_CONFIRM', 'DIFFICULTY_HANDOVER', 'DELIVERY_MARKER', 'REPLACE_PNO','SEAL', 'UNSEAL', 'STAFF_INFO_UPDATE_WEIGHT', 'STORE_KEEPER_UPDATE_WEIGHT', 'STORE_SORTER_UPDATE_WEIGHT', 'DISCARD_RETURN_BKK', 'DELIVERY_TRANSFER', 'PICKUP_RETURN_RECEIPT', 'FLASH_HOME_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SORTING_SCAN ', 'DELIVERY_PICKUP_STORE_SCAN', 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE', 'REFUND_CONFIRM', 'ACCEPT_PARCEL')
+where
+    pi.created_at >= '2023-04-26 16:00:00'
+    and pi.created_at < '2023-05-08 16:00:00'
+#             and pi.created_at < '2023-04-27 16:00:00'
+#             and pr.pno is null
+    and pi.pack_no = 'P55500745'
+    and pr.pno is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,a.cod_num cod金额
+    ,a.end_date 派送时效
+    ,a.client_id
+    ,a.parcel_state_name 包裹状态
+    ,a.pickup_time 揽收时间
+    ,a.last_cn_route_action 最后一条有效路由
+    ,a.last_route_time 最后一条有效路由时间
+    ,a.last_store_name 包裹当前网点
+    ,a.last_store_id 包裹当前网点ID
+    ,a.dst_routed_at 目的地网点的第一次有效路由时间
+    ,a.first_cn_marker_category 第一次尝试派送失败原因
+    ,a.first_marker_at 第一次尝试派送失败时间
+    ,a.dst_store 目的地网点
+    ,a.dst_region 目的地网点大区
+    ,a.dst_piece 目的地网点片区
+    ,if(plt.pno is not null , '是', '否') 是否人工无需追责过
+from
+    (
+        select
+            de.*
+            ,case bc.client_name
+                when 'lazada' then dl.delievey_end_date
+                when 'shopee' then ds.end_date
+                when 'tiktok' then dt.end_date
+            end end_date
+            ,pi.cod_amount/100 cod_num
+        from dwm.dwd_ex_ph_parcel_details de
+        left join ph_staging.parcel_info pi on pi.pno = de.pno
+        left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+        left join dwm.dwd_ex_shopee_pno_period ds on ds.pno = de.pno
+        left join dwm.dwd_ex_ph_lazada_pno_period dl on dl.pno = de.pno
+        left join dwm.dwd_ex_ph_tiktok_sla_detail dt on dt.pno = de.pno
+    ) a
+left join ph_bi.parcel_lose_task plt on plt.pno = a.pno and plt.state = 5 and plt.operator_id not in (10000,10001)
+where
+    a.parcel_state not in (5,7,8,9)
+    and a.end_date < curdate()
+    and a.cod_num > 10000
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+set @begin_time = '2023-05-01',@end_time = '2023-05-08';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(plt.created_at)
+from ph_bi.parcel_lose_task plt
+where
+    plt.created_at >= @begin_time
+    and plt.created_at < @end_time
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+, b as
+(
+    select
+        pr2.pno
+        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        ,pr2.staff_info_id
+        ,pr2.store_id
+    from ph_staging.parcel_route pr2
+    join
+        (
+            select a.pno from a group by 1
+        ) b on pr2.pno = b.pno
+    where
+        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+        and pr2.routed_at >= '2023-03-31 16:00:00'
+)
+select
+    a.pno 包裹
+    ,a.date_d 待退件操作日期
+    ,dp.store_name 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,pi.cod_amount/100 COD金额
+    ,group_concat(distinct b2.staff_info_id) 交接员工id
+from a
+join
+    (
+        select
+            b.pno
+            ,b.date_d
+            ,b.store_id
+        from b
+        group by 1,2,3
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = b.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+where
+    pi.state not in (5,7,8,9)
+    and a.date_d < curdate()
 group by 1;

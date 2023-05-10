@@ -1084,3 +1084,296 @@ with a as
         where
             a2.ratio = 1
             and a2.seal_num > 1
+
+
+;
+
+
+
+select
+    *
+from dw_dmd.parcel_store_stage_new pssn
+where
+    pssn.van_arrived_at >= date_sub(curdate(), interval 32 hour )
+    and pssn.van_arrived_at < date_sub(curdate(), interval 8 hour)
+    and pssn.arrival_pack_no is not null
+    and pssn.van_arrived_at is null
+;
+
+
+
+
+
+
+
+
+
+with t as
+(
+    select
+        pcol.task_id
+        ,pcol.action
+        ,pcol.operator_id
+        ,pcol.created_at
+    from ph_bi.parcel_claim_task pct
+    left join ph_bi.parcel_cs_operation_log pcol on pcol.task_id = pct.id and pcol.type = 2
+    where
+        pct.created_at >= '2023-01-01'
+        and pct.state = 6
+)
+
+select
+    pct.id 理赔任务ID
+    ,pct.client_id 客户ID
+    ,pct.pno 单号
+    ,json_unquote(json_extract(pcn.neg_result,'$.money')) 理赔金额
+    ,t4.created_at 电话号码不对时间
+    ,t5.created_at 客户不接电话时间
+    ,t1.created_at 待重新协商时间
+    ,t2.created_at 审核通过时间
+    ,t2.operator_id 审核通过员工
+    ,t3.created_at 已联系时间
+    ,t3.created_at 已联系员工
+from ph_bi.parcel_claim_task pct
+left join
+    (
+        select
+            pcn.task_id
+            ,pcn.neg_result
+            ,row_number() over (partition by pcn.task_id order by pcn.created_at desc ) rk
+        from ph_bi.parcel_claim_task pct
+        left join ph_bi.parcel_claim_negotiation pcn on pcn.task_id = pct.id
+        where
+            pct.created_at >= '2023-01-01'
+            and pct.state = 6
+    ) pcn on pcn.task_id = pct.id and pcn.rk = 1
+left join t t1 on t1.task_id = pct.id and t1.action = 7 -- 待重新协商
+left join t t2 on t2.task_id = pct.id and t2.action = 14 -- 审核通过
+left join t t3 on t3.task_id = pct.id and t3.action = 21 -- 已联系
+left join t t4 on t4.task_id = pct.id and t4.action = 19 -- 电话号码不对
+left join t t5 on t5.task_id = pct.id and t5.action = 18 -- 客户不接电话
+where
+    pct.created_at >= '2023-01-01'
+    and pct.state = 6
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;
+
+
+with a as
+(
+    select
+        pr.pno
+        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+    from ph_staging.parcel_route pr
+    where
+        pr.route_action = 'PENDING_RETURN'
+        and pr.routed_at >= '2023-03-31 16:00:00'
+    group by 1,2
+)
+, b as
+(
+    select
+        pr2.pno
+        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+        ,pr2.staff_info_id
+        ,pr2.store_id
+    from ph_staging.parcel_route pr2
+    join
+        (
+            select a.pno from a group by 1
+        ) b on pr2.pno = b.pno
+    where
+        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+        and pr2.routed_at >= '2023-03-31 16:00:00'
+)
+select
+    a.pno 包裹
+    ,a.date_d 待退件操作日期
+    ,dp.store_name 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,pi.cod_amount/100 COD金额
+    ,group_concat(distinct b2.staff_info_id) 交接员工id
+from a
+join
+    (
+        select
+            b.pno
+            ,b.date_d
+            ,b.store_id
+        from b
+        group by 1,2,3
+    ) b on a.pno = b.pno and a.date_d = b.date_d
+left join ph_staging.parcel_info pi on pi.pno = a.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = b.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+where
+    pi.state not in (5,7,8,9)
+    and a.date_d < curdate()
+group by 1
+
+
+
+
+;
+with t as
+    (
+        select
+            pi.pno
+            ,pi.client_id
+            ,pi2.ticket_pickup_store_id
+            ,ss.name as ticket_pickup_store_name
+            ,convert_tz(pi2.created_at, '+00:00', '+08:00') 退件时间
+        from ph_staging.parcel_info pi
+        join ph_staging.parcel_info pi2 on pi2.pno = pi.returned_pno
+        join ph_staging.sys_store ss on ss.id =pi2.ticket_pickup_store_id
+        join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id and bc.client_name = 'tiktok'
+        where
+            pi.state = 7
+            and pi2.created_at >=date_sub(current_date,interval 37 day)
+            and pi2.created_at < current_time
+    )
+
+select
+    t.pno
+    ,t.ticket_pickup_store_name
+    ,pr.store_name
+    ,pr.staff_info_id
+    ,pr.staff_info_name
+    ,pr.remark 待退件备注
+    ,mark.remark 最后一次包裹备注
+    ,job_name 职位
+    ,sd.name 部门
+    ,case
+        when xs.pno is not null then '协商退件'
+        when di.pno is not null and xs.pno is null then '拒收直接退回'
+#       when xs.pno is null and di.pno is null and (pcr.remark != 'Wait for replace order and return' or dai.pno is not null ) then '三次派送失败退件'
+        when xs.pno is null and di.pno is null and sd.name in ('Flash Express Customer Service','Overseas Business Project') then 'MS操作中断运输并退回'
+        when xs.pno is null and di.pno is null and pr.staff_info_id in ('10000','10001') then '三次派送失败退件'
+        end 退件原因
+    ,if(di2.pno is not null , '是', '否') 是否有收件人拒收派件标记
+    ,dai.delivery_attempt_num 尝试派送天数
+    ,t.退件时间
+    ,ssd.sla as 时效天数
+    ,ssd.end_date as 包裹普通超时时效截止日_整体
+    ,ssd.end_7_date as 包裹严重超时时效截止日_整体
+#     ,if(xs.pno is not null, 'y', 'n') 是否协商退件
+#     ,if(di.pno is not null and xs.pno is null , 'y', 'n') 是否策略直接退回
+#     ,if(xs.pno is null and di.pno is null and (pcr.remark != 'Wait for replace order and return' or dai.pno is not null ), '三次派送失败退件', 'MS操作中断运输并退回') 是否尝试三次派送失败退件
+from t
+left join
+    (
+        select
+            di.pno
+            ,cdt.operator_id
+        from ph_staging.diff_info di
+        join t on di.pno = t.pno
+        left join ph_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        where
+            cdt.negotiation_result_category in (3,4)
+            and cdt.operator_id not in ('10000','10001')
+        group by 1
+    ) xs on xs.pno = t.pno
+left join
+    (
+        select
+            di.pno
+        from ph_staging.diff_info di
+        join t on di.pno = t.pno
+        left join ph_staging.ka_profile kp on kp.id = t.client_id
+        left join ph_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        where
+            di.diff_marker_category in (2,17)
+            and kp.reject_return_strategy_category = 2 -- 退件策略：直接退回
+            and cdt.negotiation_result_category in (3,4)
+            and cdt.operator_id in ('10000','10001')
+        group by 1
+    ) di on di.pno = t.pno
+# left join
+#     (
+#         select
+#             pcr.pno
+#             ,pcr.remark
+#         from ph_staging.parcel_change_record pcr
+#         join t on t.pno = pcr.pno
+#         where
+#             pcr.change_type = 0
+#     ) pcr on pcr.pno = t.pno
+left join
+    (
+        select
+            dai.pno
+            ,dai.delivery_attempt_num
+        from ph_staging.delivery_attempt_info dai
+        join t on dai.pno = t.pno
+        where
+            dai.delivery_attempt_num >= 3
+    ) dai on dai.pno = t.pno
+left join dwm.dwd_ex_ph_tiktok_sla_detail ssd on ssd.pno = t.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.staff_info_id
+             ,pr.store_name
+            ,pr.staff_info_name
+            ,pr.remark
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc) rn
+        from ph_staging.parcel_route pr
+        join t on pr.pno = t.pno
+        where
+            pr.route_action = 'PENDING_RETURN'
+    ) pr on pr.pno = t.pno and pr.rn = 1
+left join
+    (
+        select
+            td.pno
+        from ph_staging.ticket_delivery_marker tdm
+        left join ph_staging.ticket_delivery td on tdm.delivery_id = td.id
+        join t on td.pno = t.pno
+        where
+            tdm.marker_id in (2,17)
+        group by 1
+    ) di2 on di2.pno = t.pno
+left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pr.staff_info_id
+left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
+left join ph_bi.sys_department sd on sd.id = hsi.sys_department_id
+left join
+    (
+        select
+            pr.pno
+            ,pr.remark
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn2
+        from ph_staging.parcel_route pr
+        join t on pr.pno = t.pno
+        where
+            pr.route_action = 'MANUAL_REMARK'
+    ) mark on mark.pno = t.pno and mark.rn2 = 1
+;
+
+
+
+
+
+
+
+
+
+
+

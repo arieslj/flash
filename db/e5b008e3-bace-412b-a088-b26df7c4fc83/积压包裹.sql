@@ -205,8 +205,7 @@ with t as
                 from ph_staging.parcel_route pr
                 join t on t.pno = pr.pno
                 where
-                    pr.routed_at < t.created_at
-                    and pr.store_category is not null
+                    pr.store_category is not null
                     and pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN')
             ) a
         where
@@ -294,7 +293,7 @@ left join
 where
     pi.state not in (5,7,8,9)
     and dp.store_category not in (8,12)
-#     and pi.pno = 'P1904TZZ96AO'
+#     and pi.pno = 'P61022HXGYAD'
 group by 1
 
 

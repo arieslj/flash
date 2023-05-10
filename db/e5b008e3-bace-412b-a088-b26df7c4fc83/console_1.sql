@@ -545,7 +545,7 @@ select
     end as 最后一条有效路由
     ,ss.name 最后有效路由操作网点
 from ph_staging.parcel_info pi
-join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pi.pno
+join tmpale.tmp_ph_pno_lj_0506 t on t.pno = pi.pno
 left join
     (
         select
@@ -554,7 +554,7 @@ left join
             ,pr.store_id
             ,row_number() over (partition by pr.pno order by pr.routed_at desc) rk
         from ph_staging.parcel_route pr
-        join tmpale.tmp_ph_pno_lj_0504 t on t.pno = pr.pno
+        join tmpale.tmp_ph_pno_lj_0506 t on t.pno = pr.pno
         where
             pr.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','seal.ARRIVAL_WAREHOUSE_SCAN','INVENTORY','SORTING_SCAN','DELIVERY_PICKUP_STORE_SCAN','DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE','REFUND_CONFIRM','ACCEPT_PARCEL')
     ) pr on pr.pno = pi.pno and pr.rk = 1
@@ -566,5 +566,6 @@ left join
             ,psd.pack_no
             ,row_number() over (partition by psd.pno order by psd.created_at desc ) rk
         from ph_staging.pack_seal_detail psd
-        join tmpale.tmp_ph_pno_lj_0504 t on t.pno = psd.pno
+        join tmpale.tmp_ph_pno_lj_0506 t on t.pno = psd.pno
     ) seal on seal.pno = pi.pno and seal.rk = 1
+;
