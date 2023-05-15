@@ -186,8 +186,8 @@ left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id
 left join ph_staging.sys_manage_piece smp on ss.manage_piece =smp.id
 where
 #     swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
-    mw.created_at >= date_add(curdate(), interval -day(curdate()) + 1 day)
-    and mw.type_code = 'warning_27'
-#     mw.created_at >= '2023-03-01'
-#     and mw.created_at < '2023-04-01'
+#     mw.created_at >= date_add(curdate(), interval -day(curdate()) + 1 day)
+#     and mw.type_code = 'warning_27'
+    mw.created_at >= '2023-04-01'
+    and mw.created_at < '2023-05-01'
     and mw.is_delete = 0

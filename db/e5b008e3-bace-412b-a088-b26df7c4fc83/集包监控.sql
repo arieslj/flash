@@ -157,3 +157,82 @@ from (-- 最后一条路由是车货关联出港
  where convert_tz(pr.routed_at,'+00:00','+08:00') >= date_sub(curdate(),interval 7 day)
 and convert_tz(pr.routed_at,'+00:00','+08:00') < curdate()
 GROUP by 1
+
+
+
+;
+
+select
+    count(distinct pss.pno) num
+from dw_dmd.parcel_store_stage_new pss
+where
+    pss.van_out_proof_id = 'DMTL23109M3'
+;
+
+select distinct
+    REPLACE(json_extract(pr.extra_value,'$.proofId'),'\"','') proof_id
+    ,pr.store_name
+    ,pr.next_store_name
+    ,pr.pno
+    ,replace(json_extract(pr.extra_value, '$.packPno'),'\"','') packpno
+    FROM ph_staging.parcel_route pr
+    where pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+    and  pr.routed_at >= date_sub(curdate(),interval 6 day)
+    and pr.store_name = 'DMT_SP'
+    ;
+
+
+
+
+
+
+
+
+
+
+
+with ft as
+(
+    select
+        ft.proof_id
+        ,ft.store_id
+        ,ft.store_name
+        ,ft.next_store_id
+        ,ft.next_store_name
+    from ph_bi.fleet_time ft
+    where
+        ft.real_arrive_time >= date_sub(curdate(), interval 1 day )
+        and ft.real_arrive_time < curdate()
+        and ft.store_id is not null
+#         and ft.proof_id = 'DMTL23109M3'
+)
+-- 各网点应到包裹
+# ,sh_ar as
+# (
+#     select
+#         ft1.proof_id
+#         ,pssn.next_store_id
+#         ,pssn.next_store_name
+#         ,pssn.pno
+#     from dw_dmd.parcel_store_stage_new pssn
+#     join ft ft1 on ft1.store_id = pssn.store_id and ft1.proof_id = pssn.van_out_proof_id
+# #     group by 1,2,3
+# )
+# ,re_ar as
+# (
+    select
+        ft2.proof_id
+        ,pssn.store_id
+        ,pssn.store_name
+        ,count(pssn.pno)
+    from dw_dmd.parcel_store_stage_new pssn
+    join ft ft2 on ft2.proof_id = pssn.van_in_proof_id and ft2.next_store_id = pssn.store_id
+    where
+        ft2.proof_id = 'DMTL23109M3'
+    group by 1,2,3
+)
+
+
+
+
+    ;

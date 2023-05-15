@@ -306,3 +306,18 @@ where
 #             and pr.pno is null
     and pi.pack_no = 'P55500745'
     and pr.pno is not null
+;
+
+
+
+
+select
+    pi.pno
+    ,pssn.first_valid_routed_at 目的地网点的第一次有效路由时间
+    ,pssn.last_valid_routed_at 目的地网点的最后一次有效路由时间
+    ,datediff(curdate(), pssn.first_valid_routed_at) 在仓天数
+from ph_staging.parcel_info pi
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = pi.pno and pi.dst_store_id = pssn.store_id and pssn.valid_store_order is not null
+where
+    pi.state not in (5,7,8,9)
+    and pssn.first_valid_routed_at < date_sub(curdate(), interval  2 day )
