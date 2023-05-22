@@ -62,7 +62,7 @@ left join `ph_staging`.`parcel_info` pi on dt.`pno` = pi.`pno`
 left join `ph_staging`.`sys_store` ss on dt.`store_id`  = ss.`id`
 LEFT JOIN `ph_bi`.`hr_staff_info`  hr on hr.`staff_info_id` =dt.`staff_info_id`
 LEFT JOIN ph_bi.`hr_job_title` jt on jt.`id` =hr.`job_title`
-where date(convert_tz(dt.`delivery_at`,'+00:00','+08:00'))= date_sub(CURRENT_DATE,interval 1 day)
+where date(convert_tz(dt.`delivery_at`,'+00:00','+08:00'))= '2023-05-10'
 and dt.`transfered` = 0
 and dt.`state` in (0,1,2)
 GROUP BY 3
@@ -321,3 +321,67 @@ left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = pi.pno and pi.dst_sto
 where
     pi.state not in (5,7,8,9)
     and pssn.first_valid_routed_at < date_sub(curdate(), interval  2 day )
+
+
+;
+
+
+
+
+select
+    de.pno
+    ,oi.src_name 寄件人姓名
+    ,oi.src_detail_address 寄件人地址
+    ,oi.dst_name 收件人姓名
+    ,oi.dst_detail_address 收件人地址
+#     ,b.type 类型
+#     ,b.store 当前网点
+    ,dp.piece_name 当前网点所属片区
+    ,dp.region_name 当前网点所属大区
+    ,de.parcel_state_name 当前状态
+    ,if(de.returned = 1, '退件', '正向') 流向
+    ,if(de.client_id in ('AA0050','AA0121','AA0139','AA0051','AA0080'), oi.insure_declare_value/100, oi.cogs_amount/100) 正向物品价值
+    ,oi.cod_amount/100 COD金额
+    ,de.pickup_time 揽收时间
+    ,de.src_store 揽收网点
+    ,dp2.store_name 目的地网点
+    ,last_cn_route_action 最后一条有效路由
+    ,last_route_time 最后一条有效路由时间
+    ,de.last_store_name 最后一条有效路由网点
+    ,src_piece 揽件网点所属片区
+    ,src_region 揽件网点所属大区
+    ,de.discard_enabled 是否为丢弃
+    ,inventorys 盘库次数
+    ,if(pr.pno is null ,'否', '是') 是否有效盘库
+    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
+from dwm.dwd_ex_ph_parcel_details de
+join tmpale.tmp_ph_pno_lj_0516 t on de.pno = t.pno
+# join b on b.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_name = de.last_store_name and dp.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )
+left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
+left join
+    (
+        select
+            b.*
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rn
+                from ph_staging.parcel_route pr
+                join tmpale.tmp_ph_pno_lj_0516 t on t.pno = pr.pno
+                where
+                    pr.route_action = 'INVENTORY'
+                    and pr.routed_at >= date_add(curdate(), interval 8 hour)
+            ) b
+        where
+            b.rn = 1
+    ) pr on pr.pno = de.pno
+# where
+#     pi.state not in (5,7,8,9)
+#     and dp.store_category not in (8,12)
+#     and pi.pno = 'P61022HXGYAD'
+group by 1

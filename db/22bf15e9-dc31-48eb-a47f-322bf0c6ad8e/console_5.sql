@@ -1,0 +1,1 @@
+select * from tmpale.tmp_th_pno_0515

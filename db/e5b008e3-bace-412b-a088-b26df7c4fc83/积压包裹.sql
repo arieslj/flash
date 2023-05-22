@@ -245,8 +245,8 @@ select
     ,oi.src_detail_address 寄件人地址
     ,oi.dst_name 收件人姓名
     ,oi.dst_detail_address 收件人地址
-    ,b.type 类型
-    ,b.store 当前网点
+#     ,b.type 类型
+#     ,b.store 当前网点
     ,dp.piece_name 当前网点所属片区
     ,dp.region_name 当前网点所属大区
     ,de.parcel_state_name 当前状态
@@ -258,6 +258,7 @@ select
     ,dp2.store_name 目的地网点
     ,last_cn_route_action 最后一条有效路由
     ,last_route_time 最后一条有效路由时间
+    ,de.last_store_name 最后一条有效路由网点
     ,src_piece 揽件网点所属片区
     ,src_region 揽件网点所属大区
     ,de.discard_enabled 是否为丢弃
@@ -265,7 +266,8 @@ select
     ,if(pr.pno is null ,'否', '是') 是否有效盘库
     ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一次盘库时间
 from dwm.dwd_ex_ph_parcel_details de
-join b on b.pno = de.pno
+join tmpale.tmp_ph_pno_lj_0516 t on de.pno = t.pno
+# join b on b.pno = de.pno
 left join dwm.dim_ph_sys_store_rd dp on dp.store_name = b.store and dp.stat_date = date_sub(curdate(), interval 1 day )
 left join ph_staging.parcel_info pi on pi.pno = de.pno
 left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.dst_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day )

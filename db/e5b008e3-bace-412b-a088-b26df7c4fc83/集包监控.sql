@@ -207,32 +207,122 @@ with ft as
 #         and ft.proof_id = 'DMTL23109M3'
 )
 -- 各网点应到包裹
-# ,sh_ar as
-# (
-#     select
-#         ft1.proof_id
-#         ,pssn.next_store_id
-#         ,pssn.next_store_name
-#         ,pssn.pno
-#     from dw_dmd.parcel_store_stage_new pssn
-#     join ft ft1 on ft1.store_id = pssn.store_id and ft1.proof_id = pssn.van_out_proof_id
-# #     group by 1,2,3
-# )
-# ,re_ar as
-# (
+,sh_ar as
+(
+    select
+        ft1.proof_id
+        ,pssn.next_store_id
+        ,pssn.next_store_name
+        ,pssn.pno
+    from dw_dmd.parcel_store_stage_new pssn
+    join ft ft1 on ft1.store_id = pssn.store_id and ft1.proof_id = pssn.van_out_proof_id
+    group by 1,2,3,4
+)
+,re_ar as
+(
     select
         ft2.proof_id
         ,pssn.store_id
         ,pssn.store_name
-        ,count(pssn.pno)
+        ,pssn.pno
     from dw_dmd.parcel_store_stage_new pssn
     join ft ft2 on ft2.proof_id = pssn.van_in_proof_id and ft2.next_store_id = pssn.store_id
-    where
-        ft2.proof_id = 'DMTL23109M3'
-    group by 1,2,3
+    group by 1,2,3,4
 )
-
-
+, pack_sh as
+(
+    select
+        ft3.proof_id
+        ,pr.next_store_id
+        ,pr.next_store_name
+        ,replace(json_extract(pr.extra_value, '$.packPno'), '"','') pack_pno
+    from ph_staging.parcel_route pr
+    join ft ft3 on ft3.proof_id = json_extract(pr.extra_value, '$.proofId') and ft3.next_store_id = pr.next_store_id
+    where
+        pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+        and pr.routed_at > date_sub(curdate(), interval 5 day )
+    group by 1,2,3,4
+)
+, pack_re as
+(
+    select
+        ft4.proof_id
+        ,pr.store_id
+        ,pr.store_name
+        ,replace(json_extract(pr.extra_value, '$.packPno'), '"', '') pack_pno
+    from ph_staging.parcel_route pr
+    join ft ft4 on ft4.proof_id = json_extract(pr.extra_value, '$.proofId') and ft4.next_store_id = pr.store_id
+    where
+        pr.route_action in ('ARRIVAL_WAREHOUSE_SCAN','ARRIVAL_GOODS_VAN_CHECK_SCAN')
+        and pr.routed_at > date_sub(curdate(), interval 5 day )
+        and json_extract(pr.extra_value, '$.packPno') is not null
+    group by 1,2,3,4
+)
+select
+    f1.proof_id 出车凭证
+    ,f1.next_store_id 网点ID
+    ,f1.next_store_name 网点
+    ,sh_not_ar.pno_num 应到未到包裹数
+    ,ar_not_sh.pno_num 实到不应到包裹数
+    ,pack_sh_not_ar.pack_num 应到未到集包数
+    ,pack_ar_not_sh.pack_num 实到不应到集包数
+from ft f1
+left join
+    (
+        select
+            f.next_store_id store_id
+            ,f.next_store_name store_name
+            ,f.proof_id
+            ,count(sr.pno) pno_num
+        from ft f
+        left join sh_ar sr on sr.proof_id = f.proof_id and f.next_store_id = sr.next_store_id
+        left join re_ar rr on rr.proof_id = sr.proof_id and rr.store_id = sr.next_store_id and rr.pno = sr.pno
+        where
+            rr.pno is null
+        group by 1,2,3
+    ) sh_not_ar on f1.proof_id = sh_not_ar.proof_id and f1.next_store_id = sh_not_ar.store_id
+left join
+    (
+        select
+            f.next_store_id store_id
+            ,f.next_store_name store_name
+            ,f.proof_id
+            ,count(rr.pno) pno_num
+        from ft f
+        left join re_ar rr on rr.proof_id = f.proof_id and rr.store_id = f.next_store_id
+        left join sh_ar sr on sr.proof_id = rr.proof_id and sr.next_store_id = rr.store_id and rr.pno = sr.pno
+        where
+            sr.pno is null
+        group by 1,2,3
+    ) ar_not_sh on ar_not_sh.proof_id = f1.proof_id and ar_not_sh.store_id = f1.next_store_id
+left join
+    (
+        select
+            f.proof_id
+            ,f.next_store_id store_id
+            ,f.next_store_name store_name
+            ,count(ps.pack_pno) pack_num
+        from ft f
+        left join pack_sh ps on ps.proof_id = f.proof_id and ps.next_store_id = f.next_store_id
+        left join pack_re pr on pr.proof_id = f.proof_id and pr.store_id = ps.next_store_id and pr.pack_pno = ps.pack_pno
+        where
+            pr.pack_pno is null
+        group by 1,2,3
+    ) pack_sh_not_ar on pack_sh_not_ar.proof_id = f1.proof_id and pack_sh_not_ar.store_id = f1.next_store_id
+left join
+    (
+        select
+            pr.proof_id
+            ,pr.store_id
+            ,pr.store_name
+            ,count(pr.pack_pno) pack_num
+        from ft f
+        left join pack_re pr on pr.proof_id = f.proof_id and pr.store_id = f.next_store_id
+        left join pack_sh ps on ps.proof_id = pr.proof_id and ps.next_store_id = pr.store_id and ps.pack_pno = pr.pack_pno
+        where
+            ps.pack_pno is null
+        group by 1,2,3
+    ) pack_ar_not_sh on pack_ar_not_sh.proof_id = f1.proof_id and pack_ar_not_sh.store_id = f1.next_store_id
 
 
     ;

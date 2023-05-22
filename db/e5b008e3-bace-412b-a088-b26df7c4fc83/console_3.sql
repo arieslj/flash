@@ -1175,58 +1175,58 @@ where
 ;
 
 
-with a as
-(
-    select
-        pr.pno
-        ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
-    from ph_staging.parcel_route pr
-    where
-        pr.route_action = 'PENDING_RETURN'
-        and pr.routed_at >= '2023-03-31 16:00:00'
-    group by 1,2
-)
-, b as
-(
-    select
-        pr2.pno
-        ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
-        ,pr2.staff_info_id
-        ,pr2.store_id
-    from ph_staging.parcel_route pr2
-    join
-        (
-            select a.pno from a group by 1
-        ) b on pr2.pno = b.pno
-    where
-        pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-        and pr2.routed_at >= '2023-03-31 16:00:00'
-)
-select
-    a.pno 包裹
-    ,a.date_d 待退件操作日期
-    ,dp.store_name 网点
-    ,dp.piece_name 片区
-    ,dp.region_name 大区
-    ,pi.cod_amount/100 COD金额
-    ,group_concat(distinct b2.staff_info_id) 交接员工id
-from a
-join
+    with a as
     (
         select
-            b.pno
-            ,b.date_d
-            ,b.store_id
-        from b
-        group by 1,2,3
-    ) b on a.pno = b.pno and a.date_d = b.date_d
-left join ph_staging.parcel_info pi on pi.pno = a.pno
-left join dwm.dim_ph_sys_store_rd dp on dp.store_id = b.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
-left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
-where
-    pi.state not in (5,7,8,9)
-    and a.date_d < curdate()
-group by 1
+            pr.pno
+            ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) date_d
+        from ph_staging.parcel_route pr
+        where
+            pr.route_action = 'PENDING_RETURN'
+            and pr.routed_at >= '2023-03-31 16:00:00'
+        group by 1,2
+    )
+    , b as
+    (
+        select
+            pr2.pno
+            ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) date_d
+            ,pr2.staff_info_id
+            ,pr2.store_id
+        from ph_staging.parcel_route pr2
+        join
+            (
+                select a.pno from a group by 1
+            ) b on pr2.pno = b.pno
+        where
+            pr2.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+            and pr2.routed_at >= '2023-03-31 16:00:00'
+    )
+    select
+        a.pno 包裹
+        ,a.date_d 待退件操作日期
+        ,dp.store_name 网点
+        ,dp.piece_name 片区
+        ,dp.region_name 大区
+        ,pi.cod_amount/100 COD金额
+        ,group_concat(distinct b2.staff_info_id) 交接员工id
+    from a
+    join
+        (
+            select
+                b.pno
+                ,b.date_d
+                ,b.store_id
+            from b
+            group by 1,2,3
+        ) b on a.pno = b.pno and a.date_d = b.date_d
+    left join ph_staging.parcel_info pi on pi.pno = a.pno
+    left join dwm.dim_ph_sys_store_rd dp on dp.store_id = b.store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
+    left join b b2 on b2.pno = a.pno and b2.date_d = a.date_d
+    where
+        pi.state not in (5,7,8,9)
+        and a.date_d < curdate()
+    group by 1
 
 
 

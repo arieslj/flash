@@ -127,6 +127,12 @@ select
         hsi.staff_info_id
         ,hsi.name 姓名
         ,hjt.job_name 职位
+        ,mw.operator_name 操作人
+        ,case swm.type
+            when 1 then '派件低效'
+            when 3 then '虚假操作'
+            when 4 then '虚假打卡'
+        end 违规类型
         ,case
             when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
             when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
@@ -180,6 +186,7 @@ select
         end as 警告类型
 from ph_backyard.message_warning mw
 left join ph_bi.hr_staff_info hsi  on mw.staff_info_id=hsi.staff_info_id
+left join ph_backyard.staff_warning_message swm on swm.id = mw.staff_warning_message_id
 left join ph_bi.hr_job_title hjt on hjt.id = hsi.job_title
 left join ph_staging.sys_store ss on hsi.sys_store_id =ss.id
 left join ph_staging.sys_manage_region smr on ss.manage_region =smr.id

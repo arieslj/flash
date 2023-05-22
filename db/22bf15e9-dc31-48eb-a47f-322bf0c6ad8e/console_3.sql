@@ -326,6 +326,8 @@ where
 
 select
     plt.pno
+    ,plt.id 闪速任务ID
+    ,if(t.id is null, '是', '否' ) 是否人工上报
     ,pi.customary_pno 原单号
     ,ss.name  上报网点
     ,plt.parcel_created_at 揽收时间
@@ -425,6 +427,7 @@ select
     ,pssn.arrived_at ‘到件入仓时间（目的地网点）’
     ,plt.created_at 闪速任务生成时间
 from bi_pro.parcel_lose_task plt
+left join tmpale.tmp_th_plt_id_0515 t on t.id = plt.id
 left join fle_staging.parcel_info pi on pi.pno = plt.pno
 left join fle_staging.customer_diff_ticket cdt on cdt.id = plt.source_id
 left join fle_staging.diff_info di on di.id = cdt.diff_info_id
@@ -436,11 +439,44 @@ left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = plt.pno and pssn.stor
 where
     plt.source = 1
     and plt.state not in (5,6)
+    and plt.created_at >= '2023-01-01'
+    and plt.created_at < curdate()
 
 
 
 ;
 
+
+select
+    min(plt.created_at)
+from bi_pro.parcel_lose_task plt
+# left join fle_staging.customer_diff_ticket cdt on cdt.id = plt.source_id
+# left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+# left join
+where
+    plt.state in (1,2,3,4)
+    and plt.created_at >= '2023-01-01'
+    and plt.source = 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;
 
 select
     pi.pno
@@ -726,7 +762,7 @@ left join bi_pro.abnormal_message am on am.pno = t.pno and am.punish_category = 
 
 
 
-；
+;
 
 select
     pr.pno
@@ -736,3 +772,15 @@ join bi_pro.hr_staff_info hsi on pr.staff_info_id = hsi.staff_info_id and hsi.jo
 where
     pr.route_action = 'PHONE'
     and pr.routed_at > '2023-05-10'
+
+
+;
+
+
+
+
+
+
+select
+    *
+from

@@ -21717,3 +21717,447 @@ left join pho1 p2 on p2.pno = t.pno and p2.cal_total = 0 and p2.rk2 = 1
 left join pho2 p3 on p3.pno = t.pno and p3.cal_total > 0 and p3.rk1 = 1
 left join pho2 p4 on p4.pno = t.pno and p4.cal_total = 0 and p4.rk2 = 1
 left join bi_pro.abnormal_message am on am.pno = t.pno and am.punish_category = '53';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    min(plt.parcel_created_at)
+from bi_pro.parcel_lose_task plt
+left join fle_staging.customer_diff_ticket cdt on cdt.id = plt.source_id
+where
+    plt.state in (1,2,3,4)
+    and plt.created_at >= '2023-01-01'
+    and plt.source = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    min(plt.parcel_created_at)
+from bi_pro.parcel_lose_task plt
+# left join fle_staging.customer_diff_ticket cdt on cdt.id = plt.source_id
+# left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+# left join
+where
+    plt.state in (1,2,3,4)
+    and plt.created_at >= '2023-01-01'
+    and plt.source = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    min(plt.created_at)
+from bi_pro.parcel_lose_task plt
+# left join fle_staging.customer_diff_ticket cdt on cdt.id = plt.source_id
+# left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+# left join
+where
+    plt.state in (1,2,3,4)
+    and plt.created_at >= '2023-01-01'
+    and plt.source = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno
+    ,plt.id 闪速任务ID
+    ,if(t.id is null, '是', '否' ) 是否人工上报
+    ,pi.customary_pno 原单号
+    ,ss.name  上报网点
+    ,plt.parcel_created_at 揽收时间
+    ,case plt.last_valid_action
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end 最后有效操作路由
+    ,plt.last_valid_staff_info_id 最后有效路由操作人ID
+    ,hjt.job_name 最后有效路由操作人职位
+    ,pi.cod_amount/100  COD金额
+    ,concat_ws('*', pi.exhibition_length, pi.exhibition_width, pi.exhibition_height) 包裹尺寸
+    ,pssn.arrived_at ‘到件入仓时间（目的地网点）’
+    ,plt.created_at 闪速任务生成时间
+from bi_pro.parcel_lose_task plt
+left join tmpale.tmp_th_plt_id_0515 t on t.id = plt.id
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join fle_staging.customer_diff_ticket cdt on cdt.id = plt.source_id
+left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = plt.last_valid_staff_info_id
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+left join fle_staging.sys_store ss on ss.id = di.store_id
+left join fle_staging.sys_store ss2 on ss2.id = plt.last_valid_store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = plt.pno and pssn.store_id = pi.dst_store_id
+where
+    plt.source = 1
+    and plt.state not in (5,6)
+    and plt.created_at >= '2023-01-01'
+    and plt.created_at < curdate();
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(convert_tz(ft.`created_at`,'+00:00','+07:00')) 日期
+    ,ss.name 网点
+    ,smr.staff_info_id 快递员
+    ,ft.input_by 审核人员
+    ,case ft.input_state
+        when 0 then '未审核'
+        when 1 then '审核中'
+        when 2 then '通过'
+        when 3 then '模糊'
+        when 4 then '虚假'
+        when 5 then '任务回收'
+    end  审批状态
+from `wrs_production`.`fuel_task` ft
+left join backyard_pro.staff_mileage_record smr on smr.id = ft.smr_id
+left join fle_staging.sys_store ss on ss.id = smr.store_id
+where
+    ft.`created_at` >= convert_tz(CURRENT_DATE-interval 7 day,'+07:00','+00:00');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(convert_tz(smr.`created_at`,'+00:00','+07:00')) 日期
+    ,ss.name 网点
+    ,smr.staff_info_id 快递员
+    ,smr.input_by 审核人员
+    ,case smr.input_state
+        when 0 then '未审核'
+        when 1 then '审核中'
+        when 2 then '通过'
+        when 3 then '模糊'
+        when 4 then '虚假'
+    end  审批状态
+from  backyard_pro.staff_mileage_record smr
+left join fle_staging.sys_store ss on ss.id = smr.store_id
+where
+    smr.`created_at` >= convert_tz(CURRENT_DATE-interval 7 day,'+07:00','+00:00');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(convert_tz(smr.`created_at`,'+00:00','+07:00')) 日期
+    ,ss.name 网点
+    ,smr.staff_info_id 快递员
+    ,smr.input_by 审核人员
+    ,case smr.input_state
+        when 0 then '未审核'
+        when 1 then '审核中'
+        when 2 then '通过'
+        when 3 then '模糊'
+        when 4 then '虚假'
+    end  审批状态
+from  backyard_pro.staff_mileage_record smr
+left join fle_staging.sys_store ss on ss.id = smr.store_id
+where
+#     smr.`created_at` >= convert_tz(CURRENT_DATE-interval 7 day,'+07:00','+00:00')
+    smr.created_at >= '2023-05-02 17:00:00'
+    and smr.created_at < '2023-05-12 17:00:00';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,pwr.after_weight
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.drds_parcel_weight_revise_record_d pwr on pwr.pno = fvp.relation_no
+where
+    fvp.proof_id = 'SAMQQ9A63';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,pwr.after_weight
+    ,sum(pwr.id) over (partition by fvp.relation_no) num
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.drds_parcel_weight_revise_record_d pwr on pwr.pno = fvp.relation_no
+where
+    fvp.proof_id = 'SAMQQ9A63';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,pwr.after_weight
+    ,count(pwr.id) over (partition by fvp.relation_no) num
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.drds_parcel_weight_revise_record_d pwr on pwr.pno = fvp.relation_no
+where
+    fvp.proof_id = 'SAMQQ9A63';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+     ,pwr.before_weight
+    ,pwr.after_weight
+    ,pwr.after_weight - pwr.before_weight chaju
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.drds_parcel_weight_revise_record_d pwr on pwr.pno = fvp.relation_no
+where
+    fvp.proof_id = 'SAMQQ9A63';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+        SELECT
+        t.*
+        from
+        (
+        SELECT
+                di.pno
+                ,pi.dst_phone
+                ,count(di.pno)over(partition by pi.dst_phone) 拒收量
+                ,pi2.总量
+        from fle_staging.diff_info di
+        left join fle_staging.parcel_info pi
+        on di.pno=pi.pno
+        left JOIN
+        (
+                select
+                        pi.pno
+                        ,pi.dst_phone
+                        ,count(pi.pno)over(partition by pi.dst_phone) 总量
+                from fle_staging.parcel_info pi
+                where pi.created_at>=convert_tz('2023-04-30','+07:00','+00:00')
+                group by 1,2
+        )pi2 on pi.dst_phone= pi2.dst_phone
+        where di.diff_marker_category=17
+        and di.created_at>=convert_tz('2023-05-01','+07:00','+00:00')
+        and pi2.总量 is not null
+        group by 1,2
+        )t where t.拒收量/t.总量>0.15
+),
+di AS
+(
+SELECT
+        t.*
+        ,di.created_at
+from t
+left join
+(
+        select
+                di.pno
+                ,max(di.created_at) created_at
+        from fle_staging.diff_info di
+        where di.created_at>=convert_tz('2023-05-01','+07:00','+00:00')
+        and di.diff_marker_category=17
+        group by 1
+)di on t.pno=di.pno
+)
+SELECT
+        di.pno
+        ,convert_tz(di.created_at,'+00:00','+07:00') 最后一次标记时间
+        ,pr.ct 最后一次标记拒收前电话次数
+        ,pr.callduration '有效通话次数（>=15s）次数'
+        ,pr.diaboloduration '响有效通话次数（>=15s）且铃时长为3s\2s\4s的通话次数'
+from di
+left join
+(
+        select
+       pr.pno
+       ,date(pr.routed_at) routed_at
+       ,count(pr.diaboloduration)over(partition by pr.pno) ct
+       ,count(if(pr.callduration >=15,pr.pno,null))over(partition by pr.pno,date(pr.routed_at)) callduration
+       ,count(if(pr.callduration >=15 and pr.diaboloduration in (2,3,4),pr.pno,null))over(partition by pr.pno, date(pr.routed_at)) diaboloduration
+    from
+    (
+                select
+                pr.pno
+                ,convert_tz(pr.routed_at,'+00:00','+07:00') routed_at
+                ,json_extract(pr.extra_value,'$.callDuration') callduration
+                ,json_extract(pr.extra_value,'$.diaboloDuration') diaboloduration
+            from rot_pro.parcel_route pr
+            left join di on di.pno=pr.pno
+            where pr.route_action = 'PHONE'
+            and pr.routed_at>='2023-04-20'
+            and pr.routed_at<di.created_at
+          -- and pr.pno='P13261HD7UQAB'
+            group by 1,2
+         )pr
+)pr on di.pno=pr.pno
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with di as
+(SELECT
+        di.*
+        /*,pr.ct
+        -- ,convert_tz(cdt.updated_at,'+00:00','+08:00') 协商继续派送时间
+        ,pr.callduration '有效通话次数（>=15s）'
+    ,pr.diaboloduration '响有效通话次数（>=15s）且铃时长为3s\2s\4s的通话次数'*/
+from
+(
+        select
+                di.*
+                ,pr.routed_at
+                ,pr.remark
+        from
+        (
+                select
+                        di.pno
+                        ,di.created_at
+                        ,row_number()over(partition by di.pno order by di.created_at) rn
+                from fle_staging.diff_info di
+                left join fle_staging.customer_diff_ticket cdt
+                on cdt.diff_info_id =di.id
+                where di.diff_marker_category=17
+                and cdt.negotiation_result_category=5
+                -- and di.pno='P27151JVT29AC'
+                and di.created_at>=convert_tz('2023-05-01','+08:00','+00:00')
+        )di
+        left join
+        (
+                select
+                        pr.pno
+                        ,pr.routed_at
+                        ,pr.remark
+                        ,json_extract(pr.extra_value,'$.deliveryAttemptNum') deliveryAttemptNum
+                from rot_pro.parcel_route pr
+                where pr.route_action ='DELIVERY_MARKER'
+        )pr on di.pno=pr.pno
+        where di.rn=1
+        and pr.deliveryAttemptNum=1
+        and pr.routed_at>di.created_at
+)di
+)
+SELECT
+di.pno
+,convert_tz(di.created_at,'+00:00','+08:00') 提交疑难时间
+,convert_tz(di.routed_at,'+00:00','+08:00') 二次派送失败时间
+,di.remark 二次派送后标记原因
+,pr.ct 继续派送后电话次数
+,pr.callduration '有效通话次数（>=15s）次数'
+,pr.diaboloduration '响有效通话次数（>=15s）且铃时长为3s\2s\4s的通话次数'
+from di
+left join
+(
+   select
+   pr.pno
+   ,date(pr.routed_at) routed_at
+   ,count(pr.diaboloduration)over(partition by pr.pno) ct
+   ,count(if(pr.callduration >=15,pr.pno,null))over(partition by pr.pno) callduration
+   ,count(if(pr.callduration >=15 and pr.diaboloduration in (2,3,4),pr.pno,null))over(partition by pr.pno) diaboloduration
+   from
+   (
+    select
+        pr.pno
+        ,convert_tz(pr.routed_at,'+00:00','+08:00') routed_at
+        ,json_extract(pr.extra_value,'$.callDuration') callduration
+        ,json_extract(pr.extra_value,'$.diaboloDuration') diaboloduration
+    from rot_pro.parcel_route pr
+    left join di on pr.pno=di.pno
+    where pr.route_action = 'PHONE'
+    and pr.routed_at>='2023-04-20'
+    -- and pr.pno='P27151JVT29AC'
+    and pr.routed_at>di.created_at
+    and  pr.routed_at< di.routed_at
+    group by 1,2
+    )pr
+)pr on pr.pno=di.pno
+group by 1,2,3,4,5,6,7;
+;-- -. . -..- - / . -. - .-. -.--
+SELECT
+        t.*
+from
+(
+        SELECT
+                di.pno
+                ,pi2.dst_phone 收件人电话
+                ,convert_tz(di.created_at,'+00:00','+08:00') 提交拒收时间
+                ,pr.callduration '有效通话次数（>=15s）'
+            ,pr.diaboloduration '响有效通话次数（>=15s）且铃时长为3s\2s\4s的通话次数'
+            ,count(di.pno)over(partition by pi2.dst_phone) 拒收次数
+        FROM fle_staging.diff_info di
+        left join fle_staging.parcel_info pi2
+        on di.pno =pi2.pno
+        left join
+        (
+           select
+           pr.pno
+           ,date(pr.routed_at) routed_at
+           ,count(if(pr.callduration >=15,pr.pno,null))over(partition by pr.pno,date(pr.routed_at)) callduration
+           ,count(if(pr.callduration >=15 and pr.diaboloduration in (2,3,4),pr.pno,null))over(partition by pr.pno, date(pr.routed_at)) diaboloduration
+           from
+           (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at,'+00:00','+08:00') routed_at
+                ,json_extract(pr.extra_value,'$.callDuration') callduration
+                ,json_extract(pr.extra_value,'$.diaboloDuration') diaboloduration
+            from rot_pro.parcel_route pr
+            where pr.route_action = 'PHONE'
+            and pr.routed_at>='2023-04-20'
+          -- and pr.pno='P13261HD7UQAB'
+            group by 1,2
+            )pr
+
+        )pr on pr.pno=di.pno and date(convert_tz(di.created_at,'+00:00','+08:00'))=pr.routed_at
+
+        where pi2.cod_enabled=1
+        and di.diff_marker_category=17
+        and di.created_at>=convert_tz('2023-05-01','+08:00','+00:00')
+ -- and di.pno='P47211HMYR8AW'
+        group by 1,2,3,4,5
+)t where t.拒收次数>=3;
+;-- -. . -..- - / . -. - .-. -.--
+select * from tmpale.tmp_th_pno_0515;
