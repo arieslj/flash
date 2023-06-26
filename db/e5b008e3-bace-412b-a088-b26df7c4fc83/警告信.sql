@@ -133,6 +133,7 @@ select
             when 3 then '虚假操作'
             when 4 then '虚假打卡'
         end 违规类型
+        ,json_extract(swm.data_bucket, '$.false_type') 虚假类型
         ,case
             when hsi.`state`=1 and hsi.`wait_leave_state`=0 then '在职'
             when hsi.`state`=1 and hsi.`wait_leave_state`=1 then '待离职'
@@ -195,6 +196,6 @@ where
 #     swm.date_at >= date_add(curdate(),interval -day(curdate())+1 day)
 #     mw.created_at >= date_add(curdate(), interval -day(curdate()) + 1 day)
 #     and mw.type_code = 'warning_27'
-    mw.created_at >= '2023-04-01'
-    and mw.created_at < '2023-05-01'
+    mw.created_at >= '2023-06-01'
+#     and mw.created_at < '2023-05-01'
     and mw.is_delete = 0

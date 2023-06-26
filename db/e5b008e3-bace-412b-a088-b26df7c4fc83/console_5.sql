@@ -87,3 +87,321 @@ where
     and pi.finished_at > date_sub(convert_tz(dp.attendance_end_at, '+08:00', '+00:00'), interval 10 minute )
 group by 1
 having count(pi.pno) > 20
+
+;
+
+
+with ft as
+(
+    select
+        ft.proof_id
+        ,ft.store_id
+        ,ft.store_name
+        ,ft.next_store_id
+        ,ft.next_store_name
+    from ph_bi.fleet_time ft
+    where
+        ft.real_arrive_time >= date_sub(curdate(), interval 1 day )
+        and ft.real_arrive_time < curdate()
+        and ft.store_id is not null
+#         and ft.proof_id = 'DMTL23109M3'
+)
+-- 各网点应到包裹
+,sh_ar as
+(
+    select
+        ft1.proof_id
+        ,pssn.next_store_id
+        ,pssn.next_store_name
+        ,pssn.pno
+    from dw_dmd.parcel_store_stage_new pssn
+    join ft ft1 on ft1.store_id = pssn.store_id and ft1.proof_id = pssn.van_out_proof_id
+    group by 1,2,3,4
+)
+,re_ar as
+(
+    select
+        ft2.proof_id
+        ,pssn.store_id
+        ,pssn.store_name
+        ,pssn.pno
+    from dw_dmd.parcel_store_stage_new pssn
+    join ft ft2 on ft2.proof_id = pssn.van_in_proof_id and ft2.next_store_id = pssn.store_id
+    group by 1,2,3,4
+)
+, pack_sh as
+(
+    select
+        ft3.proof_id
+        ,pr.next_store_id
+        ,pr.next_store_name
+        ,replace(json_extract(pr.extra_value, '$.packPno'), '"','') pack_pno
+    from ph_staging.parcel_route pr
+    join ft ft3 on ft3.proof_id = json_extract(pr.extra_value, '$.proofId') and ft3.next_store_id = pr.next_store_id
+    where
+        pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+        and pr.routed_at > date_sub(curdate(), interval 5 day )
+    group by 1,2,3,4
+)
+, pack_re as
+(
+    select
+        ft4.proof_id
+        ,pr.store_id
+        ,pr.store_name
+        ,replace(json_extract(pr.extra_value, '$.packPno'), '"', '') pack_pno
+    from ph_staging.parcel_route pr
+    join ft ft4 on ft4.proof_id = json_extract(pr.extra_value, '$.proofId') and ft4.next_store_id = pr.store_id
+    where
+        pr.route_action in ('ARRIVAL_WAREHOUSE_SCAN','ARRIVAL_GOODS_VAN_CHECK_SCAN')
+        and pr.routed_at > date_sub(curdate(), interval 5 day )
+        and json_extract(pr.extra_value, '$.packPno') is not null
+    group by 1,2,3,4
+)
+select
+    pr.proof_id
+    ,pr.store_id
+    ,pr.store_name
+    ,pr.pack_pno
+from ft f
+left join pack_re pr on pr.proof_id = f.proof_id and pr.store_id = f.next_store_id
+left join pack_sh ps on ps.proof_id = pr.proof_id and ps.next_store_id = pr.store_id and ps.pack_pno = pr.pack_pno
+where
+    ps.pack_pno is null
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;
+
+
+
+select
+    de.pno 运单号
+    ,de.src_store 揽件网点
+    ,de.src_piece 片区
+    ,de.src_region 大区
+    ,de.client_id 客户ID
+    ,de.pickup_time 揽件时间
+    ,de.dst_store 目的网点
+    ,case pi.article_category
+        when '0' then '文件'
+        when '1' then '干燥食品'
+        when '10' then '家居用具'
+        when '11' then '水果'
+        when '2' then '日用品'
+        when '3' then '数码产品'
+        when '4' then '衣物'
+        when '5' then '书刊'
+        when '6' then '汽车配件'
+        when '7' then '鞋包'
+        when '8' then '体育器材'
+        when '9' then '化妆品'
+        when '99' then '其它'
+    end  as 物品类型
+    ,pi.exhibition_weight 物品重量
+    ,pi.exhibition_length*pi.exhibition_width*pi.exhibition_height 物品体积
+    ,pi.cod_amount/100 COD金额
+    ,de.last_cn_route_action 最后一步有效路由
+    ,de.last_route_time 操作时间
+    ,de.last_staff_info_id 操作ID
+#     ,'普通' type
+from dwm.dwd_ex_ph_parcel_details de
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.ticket_pickup_store_id and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+left join ph_staging.sys_store ss on ss.id = de.src_store_id
+where
+    pr.routed_at is null
+    and de.pickup_time < curdate()
+    and de.dst_store != de.src_store -- 剔除自揽自派
+    and de.parcel_state not in (5,7,8,9)
+    and de.client_id != 'AA0038' -- 物料仓
+    and ss.category != 6
+    and de.last_store_id = de.src_store_id
+
+union
+-- 物料仓
+select
+     de.pno 运单号
+    ,de.src_store 揽件网点
+    ,de.src_piece 片区
+    ,de.src_region 大区
+    ,de.client_id 客户ID
+    ,de.pickup_time 揽件时间
+    ,de.dst_store 目的网点
+    ,case pi.article_category
+        when '0' then '文件'
+        when '1' then '干燥食品'
+        when '10' then '家居用具'
+        when '11' then '水果'
+        when '2' then '日用品'
+        when '3' then '数码产品'
+        when '4' then '衣物'
+        when '5' then '书刊'
+        when '6' then '汽车配件'
+        when '7' then '鞋包'
+        when '8' then '体育器材'
+        when '9' then '化妆品'
+        when '99' then '其它'
+    end  as 物品类型
+    ,pi.exhibition_weight 物品重量
+    ,pi.exhibition_length*pi.exhibition_width*pi.exhibition_height 物品体积
+    ,pi.cod_amount/100 COD金额
+    ,de.last_cn_route_action 最后一步有效路由
+    ,de.last_route_time 操作时间
+    ,de.last_staff_info_id 操作ID
+#     ,'物料' type
+from dwm.dwd_ex_ph_parcel_details de
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+# left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.ticket_pickup_store_id and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+left join ph_staging.sys_store ss on ss.id = de.src_store_id
+where
+    de.src_hub_out_time is null
+    and de.pickup_time < curdate()
+    and de.dst_store != de.src_store -- 剔除自揽自派
+    and de.parcel_state not in (5,7,8,9)
+    and de.client_id = 'AA0038' -- 物料仓
+    and ss.category != 6 -- 非FH
+
+union all
+
+select
+    de.pno 运单号
+    ,de.src_store 揽件网点
+    ,de.src_piece 片区
+    ,de.src_region 大区
+    ,de.client_id 客户ID
+    ,de.pickup_time 揽件时间
+    ,de.dst_store 目的网点
+    ,case pi.article_category
+        when '0' then '文件'
+        when '1' then '干燥食品'
+        when '10' then '家居用具'
+        when '11' then '水果'
+        when '2' then '日用品'
+        when '3' then '数码产品'
+        when '4' then '衣物'
+        when '5' then '书刊'
+        when '6' then '汽车配件'
+        when '7' then '鞋包'
+        when '8' then '体育器材'
+        when '9' then '化妆品'
+        when '99' then '其它'
+    end  as 物品类型
+    ,pi.exhibition_weight 物品重量
+    ,pi.exhibition_length*pi.exhibition_width*pi.exhibition_height 物品体积
+    ,pi.cod_amount/100 COD金额
+    ,de.last_cn_route_action 最后一步有效路由
+    ,de.last_route_time 操作时间
+    ,de.last_staff_info_id 操作ID
+#     ,'fh' type
+from dwm.dwd_ex_ph_parcel_details de
+left join ph_staging.parcel_info pi on pi.pno = de.pno
+left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.ticket_pickup_store_id and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+left join ph_staging.parcel_route pr2 on pr2.pno = pi.pno and pr2.route_action = 'FLASH_HOME_SCAN'
+left join ph_staging.sys_store ss on ss.id = de.src_store_id
+where
+    coalesce(pr.routed_at, pr2.routed_at) is null
+    and de.pickup_time < curdate()
+    and de.dst_store != de.src_store -- 剔除自揽自派
+    and de.last_store_id = pi.ticket_pickup_store_id
+    and de.parcel_state not in (5,7,8,9)
+    and de.client_id != 'AA0038' -- 物料仓
+    and ss.category = 6 -- 非FH
+
+
+
+
+
+;
+
+
+
+
+
+
+
+
+
+
+select
+    datediff(convert_tz(pi.finished_at, '+00:00', '+07:00'), convert_tz(pr.routed_at, '+00:00', '+07:00')) Hloding到妥投天数
+    ,count(pi.pno) 包裹数
+from
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,pr.store_id
+            ,pr.store_name
+        from ph_staging.parcel_route pr
+        where
+            pr.route_action = 'REFUND_CONFIRM'
+            and pr.routed_at >= '2023-04-30 17:00:00'
+            and pr.routed_at < '2023-05-31 17:00:00'
+    ) pr
+join ph_staging.parcel_info pi on pi.pno = pr.pno
+where
+    pi.state = 5
+group by 1
+
+;
+
+
+select
+    a.*
+from
+    (
+        select
+            pr.pno
+            ,pr2.store_name
+            ,row_number() over (partition by pr2.pno order by pr2.routed_at desc) rk
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.routed_at
+                    ,pr.store_id
+                    ,pr.store_name
+                from ph_staging.parcel_route pr
+                where
+                    pr.route_action = 'REFUND_CONFIRM'
+                    and pr.routed_at >= '2023-04-30 17:00:00'
+                    and pr.routed_at < '2023-05-31 17:00:00'
+            ) pr
+        left join ph_staging.parcel_route pr2 on pr2.pno = pr.pno
+        where
+            pr2.routed_at < pr.routed_at
+            and pr2.route_action in ('RECEIVED','RECEIVE_WAREHOUSE_SCAN','SORTING_SCAN','DELIVERY_TICKET_CREATION_SCAN',
+                                                                               'ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM',
+                                                                               'DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED',
+                                                                               'STAFF_INFO_UPDATE_WEIGHT','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT',
+                                                                               'DISCARD_RETURN_BKK','DELIVERY_TRANSFER','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN',
+                                                                               'ARRIVAL_WAREHOUSE_SCAN','SORTING_SCAN', 'INVENTORY')
+
+    ) a
+where
+    a.rk = 1
+
+
+
+
+
+
+
+
+

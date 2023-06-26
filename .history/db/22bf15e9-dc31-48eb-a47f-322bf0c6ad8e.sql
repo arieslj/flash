@@ -19691,8 +19691,6 @@ left join fle_staging.user_info ui
 on ui.id=krw.client_id
 WHERE krw.`created_at` >= '2023-05-08' AND krw.`forbid_status` IN (1,2,3);
 ;-- -. . -..- - / . -. - .-. -.--
-select  * from tmpale.d_th_excelToJSON;
-;-- -. . -..- - / . -. - .-. -.--
 select
     plt.pno
     ,di.store_id
@@ -22161,3 +22159,5817 @@ from
 )t where t.拒收次数>=3;
 ;-- -. . -..- - / . -. - .-. -.--
 select * from tmpale.tmp_th_pno_0515;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    date(convert_tz(smr.`created_at`,'+00:00','+07:00')) 日期
+    ,ss.name 网点
+    ,smr.staff_info_id 快递员
+    ,smr.input_by 审核人员
+    ,case smr.input_state
+        when 0 then '未审核'
+        when 1 then '审核中'
+        when 2 then '通过'
+        when 3 then '模糊'
+        when 4 then '虚假'
+    end  审批状态
+from  backyard_pro.staff_mileage_record smr
+left join fle_staging.sys_store ss on ss.id = smr.store_id
+where
+#     smr.`created_at` >= convert_tz(CURRENT_DATE-interval 7 day,'+07:00','+00:00')
+    smr.created_at >= '2023-05-14 17:00:00'
+    and smr.created_at < '2023-05-21 17:00:00';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_lj_0522 t on t.pno = pi.pno
+left join fle_staging.ka_profile kp on kp.id = pi.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    oi.pno
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+from fle_staging.order_info oi
+join tmpale.tmp_th_pno_lj_0522 t on t.pno = oi.pno
+left join fle_staging.ka_profile kp on kp.id = oi.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = oi.client_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_lj_0522 t on t.pno = pi.pno
+left join fle_staging.ka_profile kp on kp.id = pi.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+
+union
+
+select
+    pi.recent_pno
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_lj_0522 t on t.pno = pi.recent_pno
+left join fle_staging.ka_profile kp on kp.id = pi.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    dt.store_name 网点名称
+    ,dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_type 网点类型
+    ,if(dd.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,count(distinct coalesce(am.average_merge_key, am.average_merge_key)) 生成处罚总量
+    ,count(distinct if(pssn.store_id in ('TH02030121', 'TH46010401', 'TH02030307') or pssn.store_category = 14, pssn.pno, null)) '揽件网点没有收件入仓但包裹发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pssn.store_id not in ('TH02030121', 'TH46010401', 'TH02030307') and  pssn.store_category != 14, pssn.pno, null)) '揽件网点没有收件入仓且未发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pi.dst_store_id = pi.ticket_pickup_store_id, pi.pno, null)) 自揽自派总量
+    ,count(if(am.isappeal in (2,3,4,5), coalesce(am.average_merge_key, am.average_merge_key), null)) 网点申诉总量
+from bi_pro.abnormal_message am
+left join fle_staging.parcel_info pi on pi.pno = am.merge_column
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = am.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_th_network_spill_detl_rd dd on dd.统计日期 = am.abnormal_time and dd.网点ID = am.store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = am.merge_column and pssn.valid_store_order = 2
+where
+    am.punish_category = 39 -- 不揽收包裹未入仓
+    and am.created_at >= '2023-04-19'
+    and am.created_at < '2023-05-20'
+group by 1,2,3,4,5;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    dt.store_name 网点名称
+    ,dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_type 网点类型
+    ,if(dd.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,count(distinct coalesce(am.average_merge_key, am.average_merge_key)) 生成处罚总量
+    ,count(distinct if(pssn.store_id in ('TH02030121', 'TH46010401', 'TH02030307') or pssn.store_category = 14, pssn.pno, null)) '揽件网点没有收件入仓但包裹发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pssn.store_id not in ('TH02030121', 'TH46010401', 'TH02030307') and  pssn.store_category != 14, pssn.pno, null)) '揽件网点没有收件入仓且未发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pi.dst_store_id = pi.ticket_pickup_store_id, pi.pno, null)) 自揽自派总量
+    ,count(distinct if(am.isappeal in (2,3,4,5), coalesce(am.average_merge_key, am.average_merge_key), null)) 网点申诉总量
+from bi_pro.abnormal_message am
+left join fle_staging.parcel_info pi on pi.pno = am.merge_column
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = am.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_th_network_spill_detl_rd dd on dd.统计日期 = am.abnormal_time and dd.网点ID = am.store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = am.merge_column and pssn.valid_store_order = 2
+where
+    am.punish_category = 39 -- 不揽收包裹未入仓
+    and am.created_at >= '2023-04-19'
+    and am.created_at < '2023-05-20'
+group by 1,2,3,4,5;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    dt.store_name 网点名称
+    ,dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_type 网点类型
+    ,if(dd.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,count(distinct coalesce(am.average_merge_key, am.average_merge_key)) 生成处罚总量
+    ,count(distinct if(pssn.store_id in ('TH02030121', 'TH46010401', 'TH02030307') or pssn.store_category = 14, pssn.pno, null)) '揽件网点没有收件入仓但包裹发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pssn.store_id not in ('TH02030121', 'TH46010401', 'TH02030307') and  pssn.store_category != 14, pssn.pno, null)) '揽件网点没有收件入仓且未发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pi.dst_store_id = pi.ticket_pickup_store_id, pi.pno, null)) 自揽自派总量
+    ,count(distinct if(am.isappeal in (2,3,4,5), coalesce(am.average_merge_key, am.average_merge_key), null)) 网点申诉总量
+    ,count(distinct if((am.state = 1 and am.isdel = 0, coalesce(am.average_merge_key, am.average_merge_key), null))) 实际处罚量
+from bi_pro.abnormal_message am
+left join fle_staging.parcel_info pi on pi.pno = am.merge_column
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = am.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_th_network_spill_detl_rd dd on dd.统计日期 = am.abnormal_time and dd.网点ID = am.store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = am.merge_column and pssn.valid_store_order = 2
+where
+    am.punish_category = 39 -- 不揽收包裹未入仓
+    and am.created_at >= '2023-04-19'
+    and am.created_at < '2023-05-20'
+group by 1,2,3,4,5;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    dt.store_name 网点名称
+    ,dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_type 网点类型
+    ,if(dd.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,count(distinct coalesce(am.average_merge_key, am.average_merge_key)) 生成处罚总量
+    ,count(distinct if(pssn.store_id in ('TH02030121', 'TH46010401', 'TH02030307') or pssn.store_category = 14, pssn.pno, null)) '揽件网点没有收件入仓但包裹发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pssn.store_id not in ('TH02030121', 'TH46010401', 'TH02030307') and  pssn.store_category != 14, pssn.pno, null)) '揽件网点没有收件入仓且未发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pi.dst_store_id = pi.ticket_pickup_store_id, pi.pno, null)) 自揽自派总量
+    ,count(distinct if(am.isappeal in (2,3,4,5), coalesce(am.average_merge_key, am.average_merge_key), null)) 网点申诉总量
+    ,count(distinct if(am.state = 1 and am.isdel = 0, coalesce(am.average_merge_key, am.average_merge_key), null)) 实际处罚量
+from bi_pro.abnormal_message am
+left join fle_staging.parcel_info pi on pi.pno = am.merge_column
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = am.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_th_network_spill_detl_rd dd on dd.统计日期 = am.abnormal_time and dd.网点ID = am.store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = am.merge_column and pssn.valid_store_order = 2
+where
+    am.punish_category = 39 -- 不揽收包裹未入仓
+    and am.created_at >= '2023-04-19'
+    and am.created_at < '2023-05-20'
+group by 1,2,3,4,5;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    dt.store_name
+    ,am.merge_column
+from bi_pro.abnormal_message am
+left join fle_staging.parcel_info pi on pi.pno = am.merge_column
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = am.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_th_network_spill_detl_rd dd on dd.统计日期 = am.abnormal_time and dd.网点ID = am.store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = am.merge_column and pssn.valid_store_order = 2
+where
+    am.punish_category = 39 -- 不揽收包裹未入仓
+    and am.created_at >= '2023-04-19'
+    and am.created_at < '2023-05-20'
+    and dt.store_name in ('2LPW_BDC-ลาดพร้าว', '2LLK_BDC-ลำลูกกา', 'TMI_SP-ท่าไม้')
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select  * from tmpale.d_th_excelToJSON;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,de.parcel_state_name 包裹当前状态
+    ,de.last_store_name 包裹当前网点
+
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+where
+    fvp.proof_id = 'PETQWM527';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,de.parcel_state_name 包裹当前状态
+    ,de.last_store_name 包裹当前网点
+    ,pi.state
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+where
+    fvp.proof_id = 'PETQWM527';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,de.parcel_state_name 包裹当前状态
+    ,de.last_store_name 包裹当前网点
+    ,pi.state
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.recent_pno = fvp.recent_pno
+where
+    fvp.proof_id = 'PETQWM527';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,de.parcel_state_name 包裹当前状态
+    ,de.last_store_name 包裹当前网点
+    ,pi.state
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.recent_pno = fvp.recent_pno
+where
+    fvp.proof_id = 'PETQWM527'
+    and fvp.relation_category = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,de.parcel_state_name 包裹当前状态
+    ,de.parcel_state
+    ,de.last_store_name 包裹当前网点
+    ,pi.state
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.recent_pno = fvp.recent_pno
+where
+    fvp.proof_id = 'PETQWM527'
+    and fvp.relation_category = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,de.last_store_name 包裹当前网点
+    ,de.last_cn_route_action 最后一条有效路由
+    ,de.last_route_time 最后一条有效路由时间
+    ,de.last_cn_marker_category 最近一次派送失败原因
+    ,de.last_inventory_at 最后一次盘库时间
+    ,de.dst_routed_at 目的地网点第一次有效路由时间
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.recent_pno = fvp.recent_pno
+where
+    fvp.proof_id = 'PETQWM527'
+    and fvp.relation_category = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,de.last_store_name 包裹当前网点
+    ,de.last_cn_route_action 最后一条有效路由
+    ,de.last_route_time 最后一条有效路由时间
+    ,de.last_cn_marker_category 最近一次派送失败原因
+    ,de.last_inventory_at 最后一次盘库时间
+    ,de.dst_routed_at 目的地网点第一次有效路由时间
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.recent_pno = fvp.recent_pno
+where
+    fvp.proof_id = 'BKKOWZF63'
+    and fvp.relation_category = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    fvp.relation_no
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,de.last_store_name 包裹当前网点
+    ,de.last_cn_route_action 最后一条有效路由
+    ,de.last_route_time 最后一条有效路由时间
+    ,de.last_cn_marker_category 最近一次派送失败原因
+    ,de.last_inventory_at 最后一次盘库时间
+    ,de.dst_routed_at 目的地网点第一次有效路由时间
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.recent_pno = fvp.recent_pno
+where
+    fvp.proof_id = 'BKKQWZF63'
+    and fvp.relation_category = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(pi.pno) num
+from fle_staging.parcel_info pi
+where
+    pi.ticket_delivery_store_id in ('TH20040247','TH20040268','TH20040248')
+    and pi.state = 5
+    and pi.finished_at >= date_sub(curdate(), interval 3 month );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno 单号
+    ,pi.client_id 客户ID
+    ,ss.name 揽收网点
+    ,pi.exhibition_weight 揽收重量
+    ,concat_ws('*', pi.exhibition_length, pi.exhibition_width, pi.exhibition_height) 揽收尺寸
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_0529 t on t.pno = pi.pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    sci.pno
+    ,sci.third_sorting_code
+from dwm.drds_parcel_sorting_code_info sci
+where
+    sci.pno in ('TH01163Z321U1B1','THT01168SH8K0Z','THT01168JCBZ6Z','THT01168KH1V3Z','THT01168MMGQ0Z','THT01168G7AZ3Z','TH01163UDK146B0','TH01163YZSKJ3B0','TH01163YJXN05B0','TH011640X70B6B0','TH01163XX6QJ8B0','TH44113ZM9YY7H','TH011641T8K26B0','TH011641MCHR6B0','TH01163WCPTN9B0','THT011695SZF5Z','TH011641TC963B0','TH011641E6FW5B0','TH011641HUT08B0','TH011641ACGA7B0','TH01163ZACAE4B0','SSLT730008335006','THT01169ERA97Z','TH011641HQG02B0','TH011640XBF10B0','TH01163ZNAHK6B1','TH011641G4AF3B0','TH011640RTZ36B0','TH01163Z3X1C6B0','TH014440FU9Z3C','SSLT730007989946','THT01169BSST8Z','TH0116415HE72B0','TH011640XJYC5B0','THT011694NU44Z','TH01163Z4H946B0','TH011641F8X54B0','TH0116412DGJ4B0','THT011693H079Z','TH01163YU4SA2B0','TH0116410AEE2B0','THT0116944XR6Z','TH01163Z8AQ52B0','THT011693C138Z','TH01163U8AS92B1','TH01163V4P9B1B0','TH01163YPJJK1B0','TH01163YFXKU7B0','TH01163VVJEV9B0','TH01163VVG5Z8B0','TH01163W1Z2G0B0','TH01163XECHM9B0','TH01163XEMYM6B0','TH01163WJ3SE5B0','TH01163XPM448B0','TH01163X5R432B0','TH01163XKNPK6B0','TH01163WDM636B0','TH01163X1XU37B0','TH01163XKDJT1B0','TH01163YFNVM9B0','TH01163W1BWH9B0','TH01163TFSU52B0','TH01163YERXH0B0','TH01163ZYV9K2B0','TH01163Y4F6D1B0','TH01163X5CY06B0','TH01163V870R5B1','TH01163ZRNS77B0','TH011640SD2J2B0','TH01163ZSJ6A5B0','TH01163YGPGH9B0','TH01163XMGGD6B0','TH01163XHH8Z6B0','TH01163YK6DV0B0','TH011641A59K8B0','THT011692RHV2Z','TH011640MB5K0B0','TH011641FFXZ5B0','TH01163ZNYRR4B0','TH011641696Q8B0','TH01163YXHA96B0','TH011640ZUWK0B0','TH0116417Y4G6B0','TH011641UVPQ4B0','THT01168M6S30Z','TH01163ZU2009B0','TH0116412NCN2B0','THT011691FUY7Z','TH011640CS7T9B0','TH01163ZRX9P7B0','TH011640HNKB3B0','TH01163Z4Q9Y3B0','TH01163Y03VW4B0','TH011640B07U7B0','TH01163YY4Q26B0','TH011640XBR69B0','TH0116426S4S4B0','TH011640PXDH6B0','TH01163YJTZY2B0','TH011640TVZU2B0','TH011640JYYM4B0','THT011694KBF8Z','TH011640J6KM1B0','TH01163YK04S2B0','TH01163YAFFN1B0','TH011640VJTR6B0','TH01163ZREAK9B0','TH0116401T7A7B0','TH0116428EE16B0','THT01169CVMQ8Z','TH01163YGKDK4B0','TH01163VFVQC4B0','THT01169E7G27Z','THT01169JPCJ9Z','TH01164228NA7B0','TH01163ZVW7D0B0','THT01169AM808Z','TH011642TXUS2B0','THT011696VJM3Z','TH01163Z4EWR5B0','THT01169CH5H2Z','THT01169C2H82Z','TH01163ZFHPA6B0','TH011642M3HJ2B0','TH011642HSP27B0','TH011642HS7P5B0','TH01164269QN5B0','TH01163ZMSW42B0','TH014441F6TH6C','TH011642280Y2B0','TH01163ZZ4FK1B0','TH0116426Z1Z7B0','TH011641NAMW9B0','TH0116421XA09B0','TH01164292EJ0B0','TH0202427TB98A','TH011641SHSE2B0','TH01164293RY1B0','TH01163ZSXPT0B0','TH011641X3CF9B0','TH011641KFEP2B0','TH01163VT71R2B0','TH011642EYYR7B0','TH011641FTUK0B0','TH011641HRX92B0','TH01163Z49Q99B0','TH01163NA6864B0','THT011699E4P5Z','TH011641SQ2M6B0','TH0116415KV91B0','TH011641B7R16B0','TH0116419B5M5B0','TH011641R6NX2B0','TH01163ZGR9T1B0','TH01164213YJ4B0','THT01169617J0Z','TH0116411SNE2B0','TH011640WJQH1B0','TH011641B33Y0B0','TH011641RZ6D0B0','TH0116414MCT8B0','THT01169Y1HE6Z','TH011643NH6Z6B0','TH011640YSG47B1','TH0116436Q271B0','TH01163VUKT30B0','TH011642744Q5B0','THT01169KYFT3Z','TH0116425G4D4B0','TH0116439WQW7B0','TH011643B5SU1B0','TH011643D1WK0B0','TH011642XXJ00B0','TH011643C43V7B0','TH011642U32U0B0','TH011642SXT32B0','TH0116414Z417B0','TH01163Y3ERR3B0','TH01163Y6TZ62B0','TH01163WXE178B0','TH0116416GCT9B0','THT01169M06D7Z','TH011643BPY21B0','TH0116437G3M5B1','TH011642XZ343B0','TH01164093PE1B0','TH0116410VAA8A1','THT01169WR6B1Z','TH011642KNMY2B0','TH01164269567A0','TH01163ZADFQ4B0','TH011642ZTKJ4B0','THT01169JAPN9Z','TH01163Z2GD33B0','TH011642NVB14B0','TH011642VQFB9B0','TH020342BRYB6B0','TH011641Y33E8B0');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    sci.pno
+    ,sci.third_sorting_code
+    ,sci.sorting_code
+from dwm.drds_parcel_sorting_code_info sci
+where
+    sci.pno in ('TH01163Z321U1B1','THT01168SH8K0Z','THT01168JCBZ6Z','THT01168KH1V3Z','THT01168MMGQ0Z','THT01168G7AZ3Z','TH01163UDK146B0','TH01163YZSKJ3B0','TH01163YJXN05B0','TH011640X70B6B0','TH01163XX6QJ8B0','TH44113ZM9YY7H','TH011641T8K26B0','TH011641MCHR6B0','TH01163WCPTN9B0','THT011695SZF5Z','TH011641TC963B0','TH011641E6FW5B0','TH011641HUT08B0','TH011641ACGA7B0','TH01163ZACAE4B0','SSLT730008335006','THT01169ERA97Z','TH011641HQG02B0','TH011640XBF10B0','TH01163ZNAHK6B1','TH011641G4AF3B0','TH011640RTZ36B0','TH01163Z3X1C6B0','TH014440FU9Z3C','SSLT730007989946','THT01169BSST8Z','TH0116415HE72B0','TH011640XJYC5B0','THT011694NU44Z','TH01163Z4H946B0','TH011641F8X54B0','TH0116412DGJ4B0','THT011693H079Z','TH01163YU4SA2B0','TH0116410AEE2B0','THT0116944XR6Z','TH01163Z8AQ52B0','THT011693C138Z','TH01163U8AS92B1','TH01163V4P9B1B0','TH01163YPJJK1B0','TH01163YFXKU7B0','TH01163VVJEV9B0','TH01163VVG5Z8B0','TH01163W1Z2G0B0','TH01163XECHM9B0','TH01163XEMYM6B0','TH01163WJ3SE5B0','TH01163XPM448B0','TH01163X5R432B0','TH01163XKNPK6B0','TH01163WDM636B0','TH01163X1XU37B0','TH01163XKDJT1B0','TH01163YFNVM9B0','TH01163W1BWH9B0','TH01163TFSU52B0','TH01163YERXH0B0','TH01163ZYV9K2B0','TH01163Y4F6D1B0','TH01163X5CY06B0','TH01163V870R5B1','TH01163ZRNS77B0','TH011640SD2J2B0','TH01163ZSJ6A5B0','TH01163YGPGH9B0','TH01163XMGGD6B0','TH01163XHH8Z6B0','TH01163YK6DV0B0','TH011641A59K8B0','THT011692RHV2Z','TH011640MB5K0B0','TH011641FFXZ5B0','TH01163ZNYRR4B0','TH011641696Q8B0','TH01163YXHA96B0','TH011640ZUWK0B0','TH0116417Y4G6B0','TH011641UVPQ4B0','THT01168M6S30Z','TH01163ZU2009B0','TH0116412NCN2B0','THT011691FUY7Z','TH011640CS7T9B0','TH01163ZRX9P7B0','TH011640HNKB3B0','TH01163Z4Q9Y3B0','TH01163Y03VW4B0','TH011640B07U7B0','TH01163YY4Q26B0','TH011640XBR69B0','TH0116426S4S4B0','TH011640PXDH6B0','TH01163YJTZY2B0','TH011640TVZU2B0','TH011640JYYM4B0','THT011694KBF8Z','TH011640J6KM1B0','TH01163YK04S2B0','TH01163YAFFN1B0','TH011640VJTR6B0','TH01163ZREAK9B0','TH0116401T7A7B0','TH0116428EE16B0','THT01169CVMQ8Z','TH01163YGKDK4B0','TH01163VFVQC4B0','THT01169E7G27Z','THT01169JPCJ9Z','TH01164228NA7B0','TH01163ZVW7D0B0','THT01169AM808Z','TH011642TXUS2B0','THT011696VJM3Z','TH01163Z4EWR5B0','THT01169CH5H2Z','THT01169C2H82Z','TH01163ZFHPA6B0','TH011642M3HJ2B0','TH011642HSP27B0','TH011642HS7P5B0','TH01164269QN5B0','TH01163ZMSW42B0','TH014441F6TH6C','TH011642280Y2B0','TH01163ZZ4FK1B0','TH0116426Z1Z7B0','TH011641NAMW9B0','TH0116421XA09B0','TH01164292EJ0B0','TH0202427TB98A','TH011641SHSE2B0','TH01164293RY1B0','TH01163ZSXPT0B0','TH011641X3CF9B0','TH011641KFEP2B0','TH01163VT71R2B0','TH011642EYYR7B0','TH011641FTUK0B0','TH011641HRX92B0','TH01163Z49Q99B0','TH01163NA6864B0','THT011699E4P5Z','TH011641SQ2M6B0','TH0116415KV91B0','TH011641B7R16B0','TH0116419B5M5B0','TH011641R6NX2B0','TH01163ZGR9T1B0','TH01164213YJ4B0','THT01169617J0Z','TH0116411SNE2B0','TH011640WJQH1B0','TH011641B33Y0B0','TH011641RZ6D0B0','TH0116414MCT8B0','THT01169Y1HE6Z','TH011643NH6Z6B0','TH011640YSG47B1','TH0116436Q271B0','TH01163VUKT30B0','TH011642744Q5B0','THT01169KYFT3Z','TH0116425G4D4B0','TH0116439WQW7B0','TH011643B5SU1B0','TH011643D1WK0B0','TH011642XXJ00B0','TH011643C43V7B0','TH011642U32U0B0','TH011642SXT32B0','TH0116414Z417B0','TH01163Y3ERR3B0','TH01163Y6TZ62B0','TH01163WXE178B0','TH0116416GCT9B0','THT01169M06D7Z','TH011643BPY21B0','TH0116437G3M5B1','TH011642XZ343B0','TH01164093PE1B0','TH0116410VAA8A1','THT01169WR6B1Z','TH011642KNMY2B0','TH01164269567A0','TH01163ZADFQ4B0','TH011642ZTKJ4B0','THT01169JAPN9Z','TH01163Z2GD33B0','TH011642NVB14B0','TH011642VQFB9B0','TH020342BRYB6B0','TH011641Y33E8B0');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,ss.name 退件网点
+    ,case pi.state
+        when '1' then '已揽收'
+        when '2' then '运输中'
+        when '3' then '派送中'
+        when '4' then '已滞留'
+        when '5' then '已签收'
+        when '6' then '疑难件处理中'
+        when '7' then '已退件'
+        when '8' then '异常关闭'
+        when '9' then '已撤销'
+    end as `退件包裹状态`
+    ,if(pi.state = 5, pi.finished_at, null) 退件妥投时间
+    ,if(pi.state = 5, pi.ticket_delivery_staff_info_id, null) 妥投员工
+    ,pi2.cod_amount/100 正向包裹COD金额
+    ,pi2.client_id 客户ID
+from fle_staging.parcel_info pi -- 退件单号
+join tmpale.tmp_th_pno_0531 t on t.pno = pi.pno
+left join fle_staging.parcel_info pi2 on pi2.pno = pi.customary_pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,ss.name 退件网点
+    ,case pi.state
+        when '1' then '已揽收'
+        when '2' then '运输中'
+        when '3' then '派送中'
+        when '4' then '已滞留'
+        when '5' then '已签收'
+        when '6' then '疑难件处理中'
+        when '7' then '已退件'
+        when '8' then '异常关闭'
+        when '9' then '已撤销'
+    end as `退件包裹状态`
+    ,if(pi.state = 5, pi.finished_at, null) 退件妥投时间
+    ,if(pi.state = 5, pi.ticket_delivery_staff_info_id, null) 妥投员工
+    ,pi2.cod_amount/100 正向包裹COD金额
+    ,pi2.client_id 客户ID
+from fle_staging.parcel_info pi -- 退件单号
+join tmpale.tmp_th_pno_0530 t on t.pno = pi.pno
+left join fle_staging.parcel_info pi2 on pi2.pno = pi.customary_pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.name
+    ,ss.id
+from fle_staging.sys_store ss
+where
+    ss.id in ('TH20040247','TH20040268','TH20040248');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,ss.name 退件网点
+    ,case pi.state
+        when '1' then '已揽收'
+        when '2' then '运输中'
+        when '3' then '派送中'
+        when '4' then '已滞留'
+        when '5' then '已签收'
+        when '6' then '疑难件处理中'
+        when '7' then '已退件'
+        when '8' then '异常关闭'
+        when '9' then '已撤销'
+    end as `退件包裹状态`
+    ,if(pi.state = 5, pi.finished_at, null) 退件妥投时间
+    ,if(pi.state = 5, pi.ticket_delivery_staff_info_id, null) 妥投员工
+    ,case
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =0 then '在职'
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =1 then '待离职'
+        when hsi.`state` =2 then '离职'
+        when hsi.`state` =3 then '停职'
+    end 在职状态
+    ,pi2.cod_amount/100 正向包裹COD金额
+    ,pi2.client_id 客户ID
+from fle_staging.parcel_info pi -- 退件单号
+join tmpale.tmp_th_pno_0530 t on t.pno = pi.pno
+left join fle_staging.parcel_info pi2 on pi2.pno = pi.customary_pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,if(pi.state = 5, ss.name, null) 退件妥投网点
+    ,case pi.state
+        when '1' then '已揽收'
+        when '2' then '运输中'
+        when '3' then '派送中'
+        when '4' then '已滞留'
+        when '5' then '已签收'
+        when '6' then '疑难件处理中'
+        when '7' then '已退件'
+        when '8' then '异常关闭'
+        when '9' then '已撤销'
+    end as `退件包裹状态`
+    ,if(pi.state = 5, pi.finished_at, null) 退件妥投时间
+    ,if(pi.state = 5, pi.ticket_delivery_staff_info_id, null) 妥投员工
+    ,case
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =0 then '在职'
+        when  hsi.`state`=1 and hsi.`wait_leave_state` =1 then '待离职'
+        when hsi.`state` =2 then '离职'
+        when hsi.`state` =3 then '停职'
+    end 在职状态
+    ,pi2.cod_amount/100 正向包裹COD金额
+    ,pi2.client_id 客户ID
+from fle_staging.parcel_info pi -- 退件单号
+join tmpale.tmp_th_pno_0530 t on t.pno = pi.pno
+left join fle_staging.parcel_info pi2 on pi2.pno = pi.customary_pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_delivery_store_id
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    di.diff_marker_category
+    ,case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,if(cdt.operator_id in (10000,10001,10002), '自动处理', '人工处理') 处理方式
+    ,di.created_at 创建时间
+    ,cdt.updated_at 更新时间
+    ,bc.client_name 客户名称
+    ,cdt.first_operated_at 第一次处理时间
+    ,case
+        when 0 then '客服未处理'
+        when 1 then '已处理完毕'
+        when 2 then '正在沟通中'
+        when 3 then '财务驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end as 处理状态
+    ,case cdt.negotiation_result_category
+        when 1 then '赔偿'
+        when 2 then '关闭订单(不赔偿不退货)'
+        when 3 then '退货'
+        when 4 then '退货并赔偿'
+        when 5 then '继续配送'
+        when 6 then '继续配送并赔偿'
+        when 7 then '正在沟通中'
+        when 8 then '丢弃包裹的，换单后寄回BKK'
+        when 9 then '货物找回，继续派送'
+        when 10 then '改包裹状态'
+        when 11 then '需客户修改信息'
+        when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+        when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+    end as 协商结果
+    ,case  cdt.service_type
+        when 1 then '总部客服'
+        when 2 then 'miniCS客服'
+        when 3 then 'FH客服'
+    end  客服类型
+    ,case cdt.hand_over_normal_cs_reason # 状态
+        when 1 then '协商不一致'
+        when 2 then '无法联系客户'
+    end as 转交总部cs理由
+    ,timestampdiff(hour, di.created_at, cdt.updated_at)/24 处理时效_天数
+    ,timestampdiff(hour, di.created_at, cdt.first_operated_at)/24 第一次处理时效_天数
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and cdt.state = 1 -- 已处理
+    and cdt.operator_id not in (10000,10003,10002);
+;-- -. . -..- - / . -. - .-. -.--
+select count(*) from
+(
+select
+    di.diff_marker_category
+    ,case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,if(cdt.operator_id in (10000,10001,10002), '自动处理', '人工处理') 处理方式
+    ,di.created_at 创建时间
+    ,cdt.updated_at 更新时间
+    ,bc.client_name 客户名称
+    ,cdt.first_operated_at 第一次处理时间
+    ,case
+        when 0 then '客服未处理'
+        when 1 then '已处理完毕'
+        when 2 then '正在沟通中'
+        when 3 then '财务驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end as 处理状态
+    ,case cdt.negotiation_result_category
+        when 1 then '赔偿'
+        when 2 then '关闭订单(不赔偿不退货)'
+        when 3 then '退货'
+        when 4 then '退货并赔偿'
+        when 5 then '继续配送'
+        when 6 then '继续配送并赔偿'
+        when 7 then '正在沟通中'
+        when 8 then '丢弃包裹的，换单后寄回BKK'
+        when 9 then '货物找回，继续派送'
+        when 10 then '改包裹状态'
+        when 11 then '需客户修改信息'
+        when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+        when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+    end as 协商结果
+    ,case  cdt.service_type
+        when 1 then '总部客服'
+        when 2 then 'miniCS客服'
+        when 3 then 'FH客服'
+    end  客服类型
+    ,case cdt.hand_over_normal_cs_reason # 状态
+        when 1 then '协商不一致'
+        when 2 then '无法联系客户'
+    end as 转交总部cs理由
+    ,timestampdiff(hour, di.created_at, cdt.updated_at)/24 处理时效_天数
+    ,timestampdiff(hour, di.created_at, cdt.first_operated_at)/24 第一次处理时效_天数
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and cdt.state = 1 -- 已处理
+    and cdt.operator_id not in (10000,10003,10002)
+);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,if(cdt.operator_id in (10000,10001,10002,10003), '自动处理', '人工处理') 处理方式
+#     ,di.created_at 创建时间
+#     ,cdt.updated_at 更新时间
+    ,bc.client_name 客户名称
+    ,count(distinct di.id) 个数
+#     ,cdt.first_operated_at 第一次处理时间
+#     ,case
+#         when 0 then '客服未处理'
+#         when 1 then '已处理完毕'
+#         when 2 then '正在沟通中'
+#         when 3 then '财务驳回'
+#         when 4 then '客户未处理'
+#         when 5 then '转交闪速系统'
+#         when 6 then '转交QAQC'
+#     end as 处理状态
+#     ,case cdt.negotiation_result_category
+#         when 1 then '赔偿'
+#         when 2 then '关闭订单(不赔偿不退货)'
+#         when 3 then '退货'
+#         when 4 then '退货并赔偿'
+#         when 5 then '继续配送'
+#         when 6 then '继续配送并赔偿'
+#         when 7 then '正在沟通中'
+#         when 8 then '丢弃包裹的，换单后寄回BKK'
+#         when 9 then '货物找回，继续派送'
+#         when 10 then '改包裹状态'
+#         when 11 then '需客户修改信息'
+#         when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+#         when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+#     end as 协商结果
+#     ,case  cdt.service_type
+#         when 1 then '总部客服'
+#         when 2 then 'miniCS客服'
+#         when 3 then 'FH客服'
+#     end  客服类型
+#     ,case cdt.hand_over_normal_cs_reason # 状态
+#         when 1 then '协商不一致'
+#         when 2 then '无法联系客户'
+#     end as 转交总部cs理由
+#     ,timestampdiff(hour, di.created_at, cdt.updated_at)/24 处理时效_天数
+#     ,timestampdiff(hour, di.created_at, cdt.first_operated_at)/24 第一次处理时效_天数
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and cdt.state = 1 -- 已处理
+#     and cdt.operator_id not in (10000,10003,10002)
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,if(cdt.operator_id in (10000,10001,10002,10003), '自动处理', '人工处理') 处理方式
+#     ,di.created_at 创建时间
+#     ,cdt.updated_at 更新时间
+    ,bc.client_name 客户名称
+    ,count(distinct di.id) 个数
+#     ,cdt.first_operated_at 第一次处理时间
+    ,case
+        when 0 then '客服未处理'
+        when 1 then '已处理完毕'
+        when 2 then '正在沟通中'
+        when 3 then '财务驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end as 处理状态
+    ,case cdt.negotiation_result_category
+        when 1 then '赔偿'
+        when 2 then '关闭订单(不赔偿不退货)'
+        when 3 then '退货'
+        when 4 then '退货并赔偿'
+        when 5 then '继续配送'
+        when 6 then '继续配送并赔偿'
+        when 7 then '正在沟通中'
+        when 8 then '丢弃包裹的，换单后寄回BKK'
+        when 9 then '货物找回，继续派送'
+        when 10 then '改包裹状态'
+        when 11 then '需客户修改信息'
+        when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+        when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+    end as 协商结果
+#     ,case  cdt.service_type
+#         when 1 then '总部客服'
+#         when 2 then 'miniCS客服'
+#         when 3 then 'FH客服'
+#     end  客服类型
+#     ,case cdt.hand_over_normal_cs_reason # 状态
+#         when 1 then '协商不一致'
+#         when 2 then '无法联系客户'
+#     end as 转交总部cs理由
+#     ,timestampdiff(hour, di.created_at, cdt.updated_at)/24 处理时效_天数
+#     ,timestampdiff(hour, di.created_at, cdt.first_operated_at)/24 第一次处理时效_天数
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and cdt.state = 1 -- 已处理
+#     and cdt.operator_id not in (10000,10003,10002)
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and cdt.operator_id like '1000%'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,if(cdt.operator_id in (10000,10001,10002,10003), '自动处理', '人工处理') 处理方式
+#     ,di.created_at 创建时间
+#     ,cdt.updated_at 更新时间
+    ,bc.client_name 客户名称
+#     ,cdt.first_operated_at 第一次处理时间
+    ,case
+        when 0 then '客服未处理'
+        when 1 then '已处理完毕'
+        when 2 then '正在沟通中'
+        when 3 then '财务驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end as 处理状态
+#     ,case cdt.negotiation_result_category
+#         when 1 then '赔偿'
+#         when 2 then '关闭订单(不赔偿不退货)'
+#         when 3 then '退货'
+#         when 4 then '退货并赔偿'
+#         when 5 then '继续配送'
+#         when 6 then '继续配送并赔偿'
+#         when 7 then '正在沟通中'
+#         when 8 then '丢弃包裹的，换单后寄回BKK'
+#         when 9 then '货物找回，继续派送'
+#         when 10 then '改包裹状态'
+#         when 11 then '需客户修改信息'
+#         when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+#         when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+#     end as 协商结果
+#     ,case  cdt.service_type
+#         when 1 then '总部客服'
+#         when 2 then 'miniCS客服'
+#         when 3 then 'FH客服'
+#     end  客服类型
+#     ,case cdt.hand_over_normal_cs_reason # 状态
+#         when 1 then '协商不一致'
+#         when 2 then '无法联系客户'
+#     end as 转交总部cs理由
+    ,case
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 1  then '1小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 1 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 2 then '1-2小时'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 2 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 3 then '2-3小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 3 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 4 then '3-4小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 4 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 5 then '4-5小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 5 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 6 then '5-6小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 6 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 12 then '6-12小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 12 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 24 then '12-24小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 24 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 49 then '1-2天内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 48 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 168 then '2-7天内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 168  then '7天以上'
+    end 处理时效
+#     ,timestampdiff(hour, di.created_at, cdt.first_operated_at)/24 第一次处理时效_天数
+    ,count(distinct di.id) 个数
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and cdt.state = 1 -- 已处理
+#     and cdt.operator_id not in (10000,10003,10002)
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,if(cdt.operator_id in (10000,10001,10002,10003), '自动处理', '人工处理') 处理方式
+#     ,di.created_at 创建时间
+#     ,cdt.updated_at 更新时间
+    ,bc.client_name 客户名称
+#     ,cdt.first_operated_at 第一次处理时间
+    ,case
+        when 0 then '客服未处理'
+        when 1 then '已处理完毕'
+        when 2 then '正在沟通中'
+        when 3 then '财务驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end as 处理状态
+#     ,case cdt.negotiation_result_category
+#         when 1 then '赔偿'
+#         when 2 then '关闭订单(不赔偿不退货)'
+#         when 3 then '退货'
+#         when 4 then '退货并赔偿'
+#         when 5 then '继续配送'
+#         when 6 then '继续配送并赔偿'
+#         when 7 then '正在沟通中'
+#         when 8 then '丢弃包裹的，换单后寄回BKK'
+#         when 9 then '货物找回，继续派送'
+#         when 10 then '改包裹状态'
+#         when 11 then '需客户修改信息'
+#         when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+#         when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+#     end as 协商结果
+#     ,case  cdt.service_type
+#         when 1 then '总部客服'
+#         when 2 then 'miniCS客服'
+#         when 3 then 'FH客服'
+#     end  客服类型
+#     ,case cdt.hand_over_normal_cs_reason # 状态
+#         when 1 then '协商不一致'
+#         when 2 then '无法联系客户'
+#     end as 转交总部cs理由
+    ,case
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 1  then '1小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 1 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 2 then '1-2小时'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 2 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 3 then '2-3小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 3 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 4 then '3-4小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 4 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 5 then '4-5小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 5 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 6 then '5-6小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 6 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 12 then '6-12小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 12 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 24 then '12-24小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 24 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 49 then '1-2天内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 48 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 168 then '2-7天内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 168  then '7天以上'
+    end 处理时效
+#     ,timestampdiff(hour, di.created_at, cdt.first_operated_at)/24 第一次处理时效_天数
+    ,count(distinct di.id) 个数
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and cdt.state = 1 -- 已处理
+#     and cdt.operator_id not in (10000,10003,10002)
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,if(cdt.operator_id in (10000,10001,10002,10003), '自动处理', '人工处理') 处理方式
+#     ,di.created_at 创建时间
+#     ,cdt.updated_at 更新时间
+    ,bc.client_name 客户名称
+#     ,cdt.first_operated_at 第一次处理时间
+    ,case
+        when 0 then '客服未处理'
+        when 1 then '已处理完毕'
+        when 2 then '正在沟通中'
+        when 3 then '财务驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end as 处理状态
+#     ,case cdt.negotiation_result_category
+#         when 1 then '赔偿'
+#         when 2 then '关闭订单(不赔偿不退货)'
+#         when 3 then '退货'
+#         when 4 then '退货并赔偿'
+#         when 5 then '继续配送'
+#         when 6 then '继续配送并赔偿'
+#         when 7 then '正在沟通中'
+#         when 8 then '丢弃包裹的，换单后寄回BKK'
+#         when 9 then '货物找回，继续派送'
+#         when 10 then '改包裹状态'
+#         when 11 then '需客户修改信息'
+#         when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+#         when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+#     end as 协商结果
+#     ,case  cdt.service_type
+#         when 1 then '总部客服'
+#         when 2 then 'miniCS客服'
+#         when 3 then 'FH客服'
+#     end  客服类型
+#     ,case cdt.hand_over_normal_cs_reason # 状态
+#         when 1 then '协商不一致'
+#         when 2 then '无法联系客户'
+#     end as 转交总部cs理由
+    ,case
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 1  then '1小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 1 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 2 then '1-2小时'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 2 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 3 then '2-3小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 3 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 4 then '3-4小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 4 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 5 then '4-5小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 5 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 6 then '5-6小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 6 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 12 then '6-12小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 12 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 24 then '12-24小时内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 24 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 49 then '1-2天内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 48 and timestampdiff(second , di.created_at, cdt.updated_at)/3600 <= 168 then '2-7天内'
+        when timestampdiff(second , di.created_at, cdt.updated_at)/3600 > 168  then '7天以上'
+    end 处理时效
+#     ,timestampdiff(hour, di.created_at, cdt.first_operated_at)/24 第一次处理时效_天数
+    ,count(distinct di.id) 个数
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on di.id = cdt.diff_info_id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and cdt.state = 1 -- 已处理
+#     and cdt.operator_id not in (10000,10003,10002)
+group by 1,2,3,4,5;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pr.store_name
+    ,count(distinct pr.pno) holding包裹数
+from
+    (
+        select
+            pr.pno
+            ,pr.routed_at
+            ,pr.store_id
+            ,pr.store_name
+        from rot_pro.parcel_route pr
+        where
+            pr.route_action = 'REFUND_CONFIRM'
+            and pr.routed_at > '2023-04-30 17:00:00'
+            and pr.routed_at < '2023-05-31 17:00:00'
+    ) pr
+# left join fle_staging.parcel_info pi on pi.pno = pr.pno
+group by 1
+order by 2 desc;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,if(floor(a.pickup_weight) = floor(a.double_weight), 0, 1) 是否跨公斤段
+    ,if(abs(a.double_weight - a.pickup_weight) > 1, 1, 0) 是否超1kg以上
+    ,if(abs(a.double_weight - a.pickup_weight) > 2, 1, 0) 是否超2kg以上
+from
+    (
+        select
+            pi.pno
+            ,pi.weight/1000 pickup_weight
+            ,pwr.after_weight double_weight
+        from fle_staging.parcel_info pi
+        join tmpale.tmp_th_pno_0602 t on t.pno = pi.pno
+        left join
+            (
+                select
+                    pwr.pno
+                    ,pwr.after_weight
+                    ,row_number() over (partition by pwr.pno order by pwr.created_at desc ) rk
+                from dwm.drds_parcel_weight_revise_record_d pwr
+                join tmpale.tmp_th_pno_0602 t on t.pno = pwr.pno
+            ) pwr on pi.pno = pwr.pno and pwr.rk = 1
+    ) a;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,a.pickup_weight 揽收重量
+    ,a.double_weight 最后一次复称重量
+    ,if(floor(a.pickup_weight) = floor(a.double_weight), 0, 1) 是否跨公斤段
+    ,if(abs(a.double_weight - a.pickup_weight) > 1, 1, 0) 是否超1kg以上
+    ,if(abs(a.double_weight - a.pickup_weight) > 2, 1, 0) 是否超2kg以上
+from
+    (
+        select
+            pi.pno
+            ,pi.exhibition_weight/1000 pickup_weight
+            ,pwr.after_weight double_weight
+        from fle_staging.parcel_info pi
+        join tmpale.tmp_th_pno_0602 t on t.pno = pi.pno
+        left join
+            (
+                select
+                    pwr.pno
+                    ,pwr.after_weight
+                    ,row_number() over (partition by pwr.pno order by pwr.created_at desc ) rk
+                from dwm.drds_parcel_weight_revise_record_d pwr
+                join tmpale.tmp_th_pno_0602 t on t.pno = pwr.pno
+            ) pwr on pi.pno = pwr.pno and pwr.rk = 1
+    ) a;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno
+    ,a.pickup_weight 揽收重量
+    ,a.double_weight 最后一次复称重量
+    ,if(floor(a.pickup_weight) = floor(a.double_weight), 0, 1) 是否跨公斤段
+    ,if(abs(a.double_weight - a.pickup_weight) > 1, 1, 0) 是否超1kg以上
+    ,if(abs(a.double_weight - a.pickup_weight) > 2, 1, 0) 是否超2kg以上
+from
+    (
+        select
+            pi.pno
+            ,pi.exhibition_weight/1000 pickup_weight
+            ,pwr.after_weight/1000 double_weight
+        from fle_staging.parcel_info pi
+        join tmpale.tmp_th_pno_0602 t on t.pno = pi.pno
+        left join
+            (
+                select
+                    pwr.pno
+                    ,pwr.after_weight
+                    ,row_number() over (partition by pwr.pno order by pwr.created_at desc ) rk
+                from dwm.drds_parcel_weight_revise_record_d pwr
+                join tmpale.tmp_th_pno_0602 t on t.pno = pwr.pno
+            ) pwr on pi.pno = pwr.pno and pwr.rk = 1
+    ) a;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(distinct pi.pno)
+from fle_staging.parcel_info pi
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id and bc.client_name = 'tiktok'
+where
+    pi.created_at >= '2023-03-31 17:00:00'
+    and pi.created_at < '2023-04-30 17:00:00';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(distinct pi.pno)
+from fle_staging.parcel_info pi
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id and bc.client_name = 'tiktok'
+where
+    pi.created_at >= '2023-03-31 17:00:00'
+    and pi.created_at < '2023-04-30 17:00:00'
+    and pi.returned = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_0602 t on t.pno = pi.pno
+where
+   ( pi.exhibition_weight = 5000 and pi.exhibition_length = 20 and pi.exhibition_width = 20 and pi.exhibition_height = 20 )
+    or ( pi.exhibition_weight = 10000 and pi.exhibition_length = 50 and pi.exhibition_width = 50 and pi.exhibition_height = 50);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,pi.exhibition_weight 重量
+    ,concat_ws('*',pi.exhibition_length, pi.exhibition_width, pi.exhibition_height) 尺寸
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_0602 t on t.pno = pi.pno
+where
+   ( pi.exhibition_weight = 5000 and pi.exhibition_length = 20 and pi.exhibition_width = 20 and pi.exhibition_height = 20 )
+    or ( pi.exhibition_weight = 10000 and pi.exhibition_length = 50 and pi.exhibition_width = 50 and pi.exhibition_height = 50);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难件原因
+    ,bc.client_name
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+#     and di.diff_marker_category = 39 -- 多次尝试派送失败
+    and cdt.operator_id not in (10000,10001,10002,10003)
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 39 -- 多次尝试派送失败
+    and cdt.operator_id not in (10000,10001,10002,10003)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,di.pno
+    ,di.id
+#     ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 39 -- 多次尝试派送失败
+    and cdt.operator_id not in (10000,10001,10002,10003)
+    and cdt.operator_id = '3331921';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,ss.name
+
+#     ,di.pno
+#     ,di.id
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = cdt.operator_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 39 -- 多次尝试派送失败
+    and cdt.operator_id not in (10000,10001,10002,10003)
+#     and cdt.operator_id = '3331921'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,ss.name
+    ,count(distinct  di.id) deal_num
+#     ,di.pno
+#     ,di.id
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = cdt.operator_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 39 -- 多次尝试派送失败
+    and cdt.operator_id not in (10000,10001,10002,10003)
+#     and cdt.operator_id = '3331921'
+group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#     cdt.operator_id
+#     ,ss.name
+    case cdt.negotiation_result_category
+        when 1 then '赔偿'
+        when 2 then '关闭订单(不赔偿不退货)'
+        when 3 then '退货'
+        when 4 then '退货并赔偿'
+        when 5 then '继续配送'
+        when 6 then '继续配送并赔偿'
+        when 7 then '正在沟通中'
+        when 8 then '丢弃包裹的，换单后寄回BKK'
+        when 9 then '货物找回，继续派送'
+        when 10 then '改包裹状态'
+        when 11 then '需客户修改信息'
+        when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+        when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+    end as 协商结果
+    ,count(distinct  di.id) deal_num
+#     ,di.pno
+#     ,di.id
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = cdt.operator_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 39 -- 多次尝试派送失败
+    and cdt.operator_id not in (10000,10001,10002,10003)
+#     and cdt.operator_id = '3331921'
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,ss.name
+    ,hjt.job_name
+#     case cdt.negotiation_result_category
+#         when 1 then '赔偿'
+#         when 2 then '关闭订单(不赔偿不退货)'
+#         when 3 then '退货'
+#         when 4 then '退货并赔偿'
+#         when 5 then '继续配送'
+#         when 6 then '继续配送并赔偿'
+#         when 7 then '正在沟通中'
+#         when 8 then '丢弃包裹的，换单后寄回BKK'
+#         when 9 then '货物找回，继续派送'
+#         when 10 then '改包裹状态'
+#         when 11 then '需客户修改信息'
+#         when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+#         when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+#     end as 协商结果
+    ,count(distinct  di.id) deal_num
+#     ,di.pno
+#     ,di.id
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = cdt.operator_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 39 -- 多次尝试派送失败
+    and cdt.operator_id not in (10000,10001,10002,10003)
+#     and cdt.operator_id = '3331921'
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    di.pno
+
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    cdt.operator_id = '68683';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    di.pno
+
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    cdt.operator_id = '68683'
+    and di.diff_marker_category = 39;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    di.pno
+    ,di.id
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+where
+    cdt.operator_id = '68683'
+    and di.diff_marker_category = 39;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,ss.name
+    ,hjt.job_name
+#     case cdt.negotiation_result_category
+#         when 1 then '赔偿'
+#         when 2 then '关闭订单(不赔偿不退货)'
+#         when 3 then '退货'
+#         when 4 then '退货并赔偿'
+#         when 5 then '继续配送'
+#         when 6 then '继续配送并赔偿'
+#         when 7 then '正在沟通中'
+#         when 8 then '丢弃包裹的，换单后寄回BKK'
+#         when 9 then '货物找回，继续派送'
+#         when 10 then '改包裹状态'
+#         when 11 then '需客户修改信息'
+#         when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+#         when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+#     end as 协商结果
+    ,count(distinct  di.id) deal_num
+#     ,di.pno
+#     ,di.id
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = cdt.operator_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 17 --
+    and cdt.operator_id not in (10000,10001,10002,10003)
+#     and cdt.operator_id = '3331921'
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,ss.name
+    ,hjt.job_name
+#     case cdt.negotiation_result_category
+#         when 1 then '赔偿'
+#         when 2 then '关闭订单(不赔偿不退货)'
+#         when 3 then '退货'
+#         when 4 then '退货并赔偿'
+#         when 5 then '继续配送'
+#         when 6 then '继续配送并赔偿'
+#         when 7 then '正在沟通中'
+#         when 8 then '丢弃包裹的，换单后寄回BKK'
+#         when 9 then '货物找回，继续派送'
+#         when 10 then '改包裹状态'
+#         when 11 then '需客户修改信息'
+#         when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+#         when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+#     end as 协商结果
+    ,count(distinct  di.id) deal_num
+#     ,di.pno
+#     ,di.id
+    ,sum(timestampdiff(second , di.created_at, cdt.updated_at)/3600)/count(distinct di.id) 平均处理时长_小时
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = cdt.operator_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 17
+    and cdt.operator_id not in (10000,10001,10002,10003)
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,di.pno
+    ,di.id
+    ,case cdt.negotiation_result_category
+        when 1 then '赔偿'
+        when 2 then '关闭订单(不赔偿不退货)'
+        when 3 then '退货'
+        when 4 then '退货并赔偿'
+        when 5 then '继续配送'
+        when 6 then '继续配送并赔偿'
+        when 7 then '正在沟通中'
+        when 8 then '丢弃包裹的，换单后寄回BKK'
+        when 9 then '货物找回，继续派送'
+        when 10 then '改包裹状态'
+        when 11 then '需客户修改信息'
+        when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+        when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+    end as 协商结果
+    ,timestampdiff(second , di.created_at, cdt.updated_at)/3600 处理时长_h
+    ,if(vrv.id is not null , 1, 0) 是否进入回访
+    ,vrv.data_source 回访逻辑
+    ,vrv.visit_num 回访次数
+    ,vrv.visit_staff_id 回访员工
+    ,timestampdiff(second , vrv.created_at, vrv.updated_at)/3600 回访时长_h
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join nl_production.violation_return_visit vrv on di.id = json_extract(vrv.extra_value, '$.diff_id');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,di.pno
+    ,di.id
+    ,case cdt.negotiation_result_category
+        when 1 then '赔偿'
+        when 2 then '关闭订单(不赔偿不退货)'
+        when 3 then '退货'
+        when 4 then '退货并赔偿'
+        when 5 then '继续配送'
+        when 6 then '继续配送并赔偿'
+        when 7 then '正在沟通中'
+        when 8 then '丢弃包裹的，换单后寄回BKK'
+        when 9 then '货物找回，继续派送'
+        when 10 then '改包裹状态'
+        when 11 then '需客户修改信息'
+        when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+        when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+    end as 协商结果
+    ,timestampdiff(second , di.created_at, cdt.updated_at)/3600 处理时长_h
+    ,if(vrv.id is not null , 1, 0) 是否进入回访
+    ,vrv.data_source 回访逻辑
+    ,vrv.visit_num 回访次数
+    ,vrv.visit_staff_id 回访员工
+    ,timestampdiff(second , vrv.created_at, vrv.updated_at)/3600 回访时长_h
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join nl_production.violation_return_visit vrv on di.id = json_extract(vrv.extra_value, '$.diff_id')
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 17;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    cdt.operator_id
+    ,di.pno
+    ,bc.client_name 客户平台
+    ,case pi.returned
+        when 1 then '退件'
+        when 0 then '正向'
+    end 方向
+    ,di.id
+    ,case cdt.negotiation_result_category
+        when 1 then '赔偿'
+        when 2 then '关闭订单(不赔偿不退货)'
+        when 3 then '退货'
+        when 4 then '退货并赔偿'
+        when 5 then '继续配送'
+        when 6 then '继续配送并赔偿'
+        when 7 then '正在沟通中'
+        when 8 then '丢弃包裹的，换单后寄回BKK'
+        when 9 then '货物找回，继续派送'
+        when 10 then '改包裹状态'
+        when 11 then '需客户修改信息'
+        when 12 then '丢弃并赔偿（包裹发到内部拍卖仓）'
+        when 13 then 'TT退件新增“holding（15天后丢弃）”协商结果'
+    end as 协商结果
+    ,case cdt.organization_type
+        when 1 then '网点'
+        when 2 then sd.name
+    end 处理机构
+    ,ss.name 处理网点
+    ,case cdt.user_ticket_state
+        when 0 then '未启用客户处理'
+        when 0 then '启用但未处理'
+        when 0 then '启用且已处理'
+    end 客户处理状态
+    ,timestampdiff(second , di.created_at, cdt.updated_at)/3600 处理时长_h
+    ,if(vrv.id is not null , 1, 0) 是否进入回访
+    ,vrv.data_source 回访逻辑
+    ,vrv.visit_num 回访次数
+    ,vrv.visit_staff_id 回访员工
+    ,timestampdiff(second , vrv.created_at, vrv.updated_at)/3600 回访时长_h
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = cdt.client_id and bc.client_name in ('lazada', 'shopee', 'tiktok')
+left join fle_staging.parcel_info pi on pi.pno = di.pno
+left join nl_production.violation_return_visit vrv on di.id = json_extract(vrv.extra_value, '$.diff_id')
+left join bi_pro.sys_department sd on sd.id = cdt.organization_id
+left join fle_staging.sys_store ss on ss.id = cdt.organization_id
+where
+    di.created_at >= '2023-04-30 17:00:00'
+    and di.created_at < '2023-05-31 17:00:00'
+    and di.diff_marker_category = 17;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    acc.pno
+    ,acc.abnormal_time
+    ,acc.client_id
+    ,kp.courier_id
+    ,kp.store_id
+    ,acc.store_id
+    ,acc.channel_type
+    ,acc.complaints_type
+    ,acc.complaints_sub_type
+from bi_pro.abnormal_customer_complaint acc
+left join fle_staging.parcel_info pi2 on acc.pno = pi2.pno
+left join fle_staging.ka_profile  AS kp on kp.id = pi2.client_id
+left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+left join fle_staging.sys_store  as ss on ss.id = pi2.ticket_pickup_store_id
+left join fle_staging.ka_profile kp3 on pi2.`agent_id`  =kp3.`id`
+left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+where
+    acc.ticket_type = 2 -- 派件
+    and
+        (
+            if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) in (4,34,40,13)
+            or (kp.id is null and ss.category in (1,10,13,4,5,7))
+        );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    acc.state
+from bi_pro.abnormal_customer_complaint acc
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,toi.shop_id seller_id
+    ,toi.shop_name seller_name
+    ,pi.exhibition_weight 重量
+    ,concat_ws('*',pi.exhibition_length, pi.exhibition_width, pi.exhibition_height) 尺寸
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_0602 t on t.pno = pi.pno
+left join dwm.drds_tiktok_order_info toi on toi.pno=pi.pno
+where
+   ( pi.exhibition_weight = 5000 and pi.exhibition_length = 20 and pi.exhibition_width = 20 and pi.exhibition_height = 20 )
+    or ( pi.exhibition_weight = 10000 and pi.exhibition_length = 50 and pi.exhibition_width = 50 and pi.exhibition_height = 50);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno '运单号/任务号'
+    ,case a.ticket_type
+        when 1 then '揽件'
+        when 2 then '派件'
+    end 揽派件类型
+    ,a.abnormal_time 投诉日期
+    ,a.client_id 客户ID
+    ,ss.name 客户所属网点
+    ,a.courier_id 客户所属快递员
+    ,smr.name 客户所属大区
+    ,ss2.name 被投诉网点
+    ,case
+        when a.`channel_type` =1 then 'APP揽件任务'
+        when a.`channel_type` =2 then 'APP派件任务'
+        when a.`channel_type` =3 then 'APP投诉'
+        when a.`channel_type` =4 then '短信揽件投诉'
+        when a.`channel_type` =5 then '短信派件投诉'
+        when a.`channel_type` =6 then '短信妥投投诉'
+        when a.`channel_type` =7 then 'MS问题记录本'
+        when a.`channel_type` =8 then '新增处罚记录'
+        when a.`channel_type` =9 then 'KA投诉'
+        when a.`channel_type` =10 then '官网投诉'
+        when a.`channel_type` =12 then 'BS问题记录本'
+    end as '投诉渠道'
+    ,case a.`complaints_type`
+        when 6 then '服务态度类投诉 1级'
+        when 2 then '虚假揽件改约时间/取消揽件任务 2级'
+        when 1 then '虚假妥投 3级'
+        when 3 then '派件虚假留仓件/问题件 4级'
+        when 7 then '操作规范类投诉 5级'
+        when 5 then '其他 6级'
+        when 4 then '普通客诉 已弃用，仅供展示历史'
+    end as 投诉大类
+    ,case a.complaints_sub_type
+        when 1 then '业务不熟练'
+        when 2 then '虚假签收'
+        when 3 then '以不礼貌的态度对待客户'
+        when 4   then '揽/派件动作慢'
+        when 5 then '未经客户同意投递他处'
+        when 6   then '未经客户同意改约时间'
+        when 7 then '不接客户电话'
+        when 8   then '包裹丢失 没有数据'
+        when 9 then '改约的时间和客户沟通的时间不一致'
+        when 10   then '未提前电话联系客户'
+        when 11   then '包裹破损 没有数据'
+        when 12   then '未按照改约时间派件'
+        when 13    then '未按订单带包装'
+        when 14   then '不找零钱'
+        when 15    then '客户通话记录内未看到员工电话'
+        when 16    then '未经客户允许取消揽件任务'
+        when 17   then '未给客户回执'
+        when 18   then '拨打电话时间太短，客户来不及接电话'
+        when 19   then '未经客户允许退件'
+        when 20    then '没有上门'
+        when 21    then '其他'
+        when 22   then '未经客户同意改约揽件时间'
+        when 23    then '改约的揽件时间和客户要求的时间不一致'
+        when 24    then '没有按照改约时间揽件'
+        when 25    then '揽件前未提前联系客户'
+        when 26    then '答应客户揽件，但最终没有揽'
+        when 27    then '很晚才打电话联系客户'
+        when 28    then '货物多/体积大，因骑摩托而拒绝上门揽收'
+        when 29    then '因为超过当日截单时间，要求客户取消'
+        when 30    then '声称不是自己负责的区域，要求客户取消'
+        when 31    then '拨打电话时间太短，客户来不及接电话'
+        when 32    then '不接听客户回复的电话'
+        when 33    then '答应客户今天上门，但最终没有揽收'
+        when 34    then '没有上门揽件，也没有打电话联系客户'
+        when 35    then '货物不属于超大件/违禁品'
+        when 36    then '没有收到包裹，且快递员没有联系客户'
+        when 37    then '快递员拒绝上门派送'
+        when 38    then '快递员擅自将包裹放在门口或他处'
+        when 39    then '快递员没有按约定的时间派送'
+        when 40    then '代替客户签收包裹'
+        when   41   then '快说话不礼貌/没有礼貌/不愿意服务'
+        when 42    then '说话不礼貌/没有礼貌/不愿意服务'
+        when   43    then '快递员抛包裹'
+        when   44    then '报复/骚扰客户'
+        when 45   then '快递员收错COD金额'
+        when   46   then '虚假妥投'
+        when   47    then '派件虚假留仓件/问题件'
+        when 48   then '虚假揽件改约时间/取消揽件任务'
+        when   49   then '抛客户包裹'
+        when 50    then '录入客户信息不正确'
+        when 51    then '送货前未电话联系'
+        when 52    then '未在约定时间上门'
+        when   53    then '上门前不电话联系'
+        when   54    then '以不礼貌的态度对待客户'
+        when   55    then '录入客户信息不正确'
+        when   56    then '与客户发生肢体接触'
+        when   57    then '辱骂客户'
+        when   58    then '威胁客户'
+        when   59    then '上门揽件慢'
+        when   60    then '快递员拒绝上门揽件'
+        when 61    then '未经客户同意标记收件人拒收'
+        when 62    then '未按照系统地址送货导致收件人拒收'
+        when 63 then '情况不属实，快递员虚假标记'
+        when 64 then '情况不属实，快递员诱导客户改约时间'
+        when 65 then '包裹长时间未派送'
+        when 66 then '未经同意拒收包裹'
+        when 67 then '已交费仍索要COD'
+        when 68 then '投递时要求开箱'
+        when 69 then '不当场扫描揽收'
+        when 70 then '揽派件速度慢'
+    end as 投诉原因
+    ,case
+        when a.isdel = 1 then '已删除'
+        when a.state = 1 then '责任已认定'
+        when a.state = 2 then '未处理'
+        when a.state = 3 then '无需追责'
+        when a.state = 5 then '重复投诉'
+    end 状态
+from
+    (
+        select
+            acc.pno
+            ,acc.ticket_type
+            ,acc.abnormal_time
+            ,acc.client_id
+            ,kp.courier_id
+            ,kp.store_id
+            ,acc.store_id duty_store_id
+            ,acc.channel_type
+            ,acc.complaints_type
+            ,acc.complaints_sub_type
+            ,acc.state
+            ,am.isdel
+        from bi_pro.abnormal_customer_complaint acc
+        left join bi_pro.abnormal_message am on am.id = acc.abnormal_message_id
+        left join fle_staging.parcel_info pi2 on acc.pno = pi2.pno
+        left join fle_staging.ka_profile  AS kp on kp.id = pi2.client_id
+        left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+        left join fle_staging.sys_store  as ss on ss.id = pi2.ticket_pickup_store_id
+        left join fle_staging.ka_profile kp3 on pi2.`agent_id`  =kp3.`id`
+        left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+        where
+            acc.ticket_type = 2 -- 派件
+            and
+                (
+                    if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) in (4,34,40,13)
+                    or (kp.id is null and ss.category in (1,10,13,4,5,7))
+                ) -- retail
+            and acc.abnormal_time >= '2023-06-04'
+            and acc.abnormal_time <= '2023-06-05'
+        union all
+
+        select
+            acc.pno
+            ,acc.ticket_type
+            ,acc.abnormal_time
+            ,acc.client_id
+            ,kp.courier_id
+            ,kp.store_id
+            ,acc.store_id duty_store_id
+            ,acc.channel_type
+            ,acc.complaints_type
+            ,acc.complaints_sub_type
+            ,acc.state
+            ,am.isdel
+        from bi_pro.abnormal_customer_complaint acc
+        left join bi_pro.abnormal_message am on am.id = acc.abnormal_message_id
+        left join fle_staging.ticket_pickup  pi2 on acc.pno = pi2.id
+        left join fle_staging.ka_profile  AS kp on kp.id = pi2.client_id
+        left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+        left join fle_staging.sys_store  as ss on ss.id = pi2.store_id
+        left join fle_staging.ka_profile kp3 on pi2.`agent_id`  =kp3.`id`
+        left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+        where
+            acc.ticket_type = 1 -- 派件
+            and
+                (
+                    if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) in (4,34,40,13)
+                    or (kp.id is null and ss.category in (1,10,13,4,5,7))
+                ) -- retail
+            and acc.abnormal_time >= '2023-06-04'
+            and acc.abnormal_time <= '2023-06-05'
+    ) a
+left join fle_staging.sys_store ss on ss.id = a.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_store ss2 on ss2.id = a.duty_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            fvp.proof_id
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(ss2.id) over (partition by fvp.proof_id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.proof_id) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 1
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour )
+    ) a
+where
+    a.ss_num < a.pno_num;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            fvp.proof_id
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(ss2.id) over (partition by fvp.proof_id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.proof_id) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 1
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour );
+;-- -. . -..- - / . -. - .-. -.--
+select
+            fvp.proof_id
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(fvp.relation_no) over (partition by fvp.proof_id, ss2.id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.proof_id) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 1
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            fvp.proof_id
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(fvp.relation_no) over (partition by fvp.proof_id, ss2.id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.proof_id) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 1
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour )
+    ) a
+where
+    a.ss_num < a.pno_num;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            fvp.proof_id
+            ,fvp.pack_no
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(fvp.relation_no) over (partition by fvp.pack_no, ss2.id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.pack_no) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 1
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour )
+    ) a
+where
+    a.ss_num < a.pno_num;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            fvp.proof_id
+            ,fvp.pack_no
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(fvp.relation_no) over (partition by fvp.pack_no, ss2.id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.pack_no) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 1
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour )
+            and fvp.pack_no is not null
+    ) a
+where
+    a.ss_num < a.pno_num;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            fvp.proof_id
+            ,fvp.pack_no
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(fvp.relation_no) over (partition by fvp.pack_no, ss2.id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.pack_no) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 1
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour )
+            and fvp.pack_no is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+            fvp.proof_id
+            ,fvp.pack_no
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(fvp.relation_no) over (partition by fvp.pack_no, ss2.id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.pack_no) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 3
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour )
+            and fvp.pack_no is not null;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.*
+from
+    (
+        select
+            fvp.proof_id
+            ,fvp.pack_no
+            ,fvp.relation_no
+            ,ss2.id
+            ,ss2.name
+            ,count(fvp.relation_no) over (partition by fvp.pack_no, ss2.id) ss_num
+            ,count(fvp.relation_no) over (partition by fvp.pack_no) pno_num
+        from fleet_van_proof_parcel_detail fvp
+        left join fle_staging.parcel_info pi on pi.pno = fvp.relation_no
+        left join fle_staging.sys_store ss on ss.id = pi.dst_store_id
+        left join fle_staging.sys_store ss2 on ss2.id = if(ss.category in (8,12), ss.id, substring_index(ss.ancestry, '/', -1))
+        where
+            fvp.relation_category = 3
+            and fvp.created_at < date_sub(curdate(), interval 7 hour )
+            and fvp.created_at >= date_sub(curdate(), interval 31 hour )
+            and fvp.pack_no is not null
+    ) a
+where
+    a.ss_num < a.pno_num;
+;-- -. . -..- - / . -. - .-. -.--
+select * from tmpale.tmp_th_lost_client_new_retail;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno '运单号/任务号'
+    ,case a.ticket_type
+        when 1 then '揽件'
+        when 2 then '派件'
+    end 揽派件类型
+    ,a.abnormal_time 投诉日期
+    ,a.client_id 客户ID
+    ,if(a.归属部门 = 'retail-Sales', a.staff_info_id, ss.name) '客户所属网点-工号'
+    ,smr.name 客户所属大区
+    ,ss2.name 被投诉网点
+    ,case
+        when a.`channel_type` =1 then 'APP揽件任务'
+        when a.`channel_type` =2 then 'APP派件任务'
+        when a.`channel_type` =3 then 'APP投诉'
+        when a.`channel_type` =4 then '短信揽件投诉'
+        when a.`channel_type` =5 then '短信派件投诉'
+        when a.`channel_type` =6 then '短信妥投投诉'
+        when a.`channel_type` =7 then 'MS问题记录本'
+        when a.`channel_type` =8 then '新增处罚记录'
+        when a.`channel_type` =9 then 'KA投诉'
+        when a.`channel_type` =10 then '官网投诉'
+        when a.`channel_type` =12 then 'BS问题记录本'
+    end as '投诉渠道'
+    ,case a.`complaints_type`
+        when 6 then '服务态度类投诉 1级'
+        when 2 then '虚假揽件改约时间/取消揽件任务 2级'
+        when 1 then '虚假妥投 3级'
+        when 3 then '派件虚假留仓件/问题件 4级'
+        when 7 then '操作规范类投诉 5级'
+        when 5 then '其他 6级'
+        when 4 then '普通客诉 已弃用，仅供展示历史'
+    end as 投诉大类
+    ,case a.complaints_sub_type
+        when 1 then '业务不熟练'
+        when 2 then '虚假签收'
+        when 3 then '以不礼貌的态度对待客户'
+        when 4   then '揽/派件动作慢'
+        when 5 then '未经客户同意投递他处'
+        when 6   then '未经客户同意改约时间'
+        when 7 then '不接客户电话'
+        when 8   then '包裹丢失 没有数据'
+        when 9 then '改约的时间和客户沟通的时间不一致'
+        when 10   then '未提前电话联系客户'
+        when 11   then '包裹破损 没有数据'
+        when 12   then '未按照改约时间派件'
+        when 13    then '未按订单带包装'
+        when 14   then '不找零钱'
+        when 15    then '客户通话记录内未看到员工电话'
+        when 16    then '未经客户允许取消揽件任务'
+        when 17   then '未给客户回执'
+        when 18   then '拨打电话时间太短，客户来不及接电话'
+        when 19   then '未经客户允许退件'
+        when 20    then '没有上门'
+        when 21    then '其他'
+        when 22   then '未经客户同意改约揽件时间'
+        when 23    then '改约的揽件时间和客户要求的时间不一致'
+        when 24    then '没有按照改约时间揽件'
+        when 25    then '揽件前未提前联系客户'
+        when 26    then '答应客户揽件，但最终没有揽'
+        when 27    then '很晚才打电话联系客户'
+        when 28    then '货物多/体积大，因骑摩托而拒绝上门揽收'
+        when 29    then '因为超过当日截单时间，要求客户取消'
+        when 30    then '声称不是自己负责的区域，要求客户取消'
+        when 31    then '拨打电话时间太短，客户来不及接电话'
+        when 32    then '不接听客户回复的电话'
+        when 33    then '答应客户今天上门，但最终没有揽收'
+        when 34    then '没有上门揽件，也没有打电话联系客户'
+        when 35    then '货物不属于超大件/违禁品'
+        when 36    then '没有收到包裹，且快递员没有联系客户'
+        when 37    then '快递员拒绝上门派送'
+        when 38    then '快递员擅自将包裹放在门口或他处'
+        when 39    then '快递员没有按约定的时间派送'
+        when 40    then '代替客户签收包裹'
+        when   41   then '快说话不礼貌/没有礼貌/不愿意服务'
+        when 42    then '说话不礼貌/没有礼貌/不愿意服务'
+        when   43    then '快递员抛包裹'
+        when   44    then '报复/骚扰客户'
+        when 45   then '快递员收错COD金额'
+        when   46   then '虚假妥投'
+        when   47    then '派件虚假留仓件/问题件'
+        when 48   then '虚假揽件改约时间/取消揽件任务'
+        when   49   then '抛客户包裹'
+        when 50    then '录入客户信息不正确'
+        when 51    then '送货前未电话联系'
+        when 52    then '未在约定时间上门'
+        when   53    then '上门前不电话联系'
+        when   54    then '以不礼貌的态度对待客户'
+        when   55    then '录入客户信息不正确'
+        when   56    then '与客户发生肢体接触'
+        when   57    then '辱骂客户'
+        when   58    then '威胁客户'
+        when   59    then '上门揽件慢'
+        when   60    then '快递员拒绝上门揽件'
+        when 61    then '未经客户同意标记收件人拒收'
+        when 62    then '未按照系统地址送货导致收件人拒收'
+        when 63 then '情况不属实，快递员虚假标记'
+        when 64 then '情况不属实，快递员诱导客户改约时间'
+        when 65 then '包裹长时间未派送'
+        when 66 then '未经同意拒收包裹'
+        when 67 then '已交费仍索要COD'
+        when 68 then '投递时要求开箱'
+        when 69 then '不当场扫描揽收'
+        when 70 then '揽派件速度慢'
+    end as 投诉原因
+    ,case
+        when a.isdel = 1 then '已删除'
+        when a.state = 1 then '责任已认定'
+        when a.state = 2 then '未处理'
+        when a.state = 3 then '无需追责'
+        when a.state = 5 then '重复投诉'
+    end 状态
+
+from
+    (
+        select
+            acc.pno
+            ,acc.ticket_type
+            ,acc.abnormal_time
+            ,acc.client_id
+            ,kp.staff_info_id
+            ,kp.store_id
+            ,acc.store_id duty_store_id
+            ,acc.channel_type
+            ,acc.complaints_type
+            ,acc.complaints_sub_type
+            ,acc.state
+            ,am.isdel
+            ,CASE
+                  WHEN kp.id ='AA0622' THEN 'PMD-shein'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+                  when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+                  WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+                  WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+                  WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+                  WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+                  when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+                  else 'Other'
+              end as '归属部门'
+        from bi_pro.abnormal_customer_complaint acc
+        left join bi_pro.abnormal_message am on am.id = acc.abnormal_message_id
+        left join fle_staging.parcel_info pi2 on acc.pno = pi2.pno
+        left join fle_staging.ka_profile  AS kp on kp.id = pi2.client_id
+        left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+        left join fle_staging.sys_store  as ss on ss.id = pi2.ticket_pickup_store_id
+        left join fle_staging.ka_profile kp3 on pi2.`agent_id`  =kp3.`id`
+        left join dwm.tmp_ex_big_clients_id_detail  bc on bc.client_id = pi2.client_id
+        left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+        where
+            acc.ticket_type = 2 -- 派件
+            and
+                (
+                    if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) in (4,34,40,13)
+                    or (kp.id is null and ss.category in (1,10,13,4,5,7))
+                ) -- retail
+            and acc.abnormal_time >= '2023-06-04'
+            and acc.abnormal_time <= '2023-06-05'
+            and bc.client_id is null
+
+        union all
+
+        select
+            acc.pno
+            ,acc.ticket_type
+            ,acc.abnormal_time
+            ,acc.client_id
+            ,kp.staff_info_id
+            ,kp.store_id
+            ,acc.store_id duty_store_id
+            ,acc.channel_type
+            ,acc.complaints_type
+            ,acc.complaints_sub_type
+            ,acc.state
+            ,am.isdel
+            ,CASE
+                  WHEN kp.id ='AA0622' THEN 'PMD-shein'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+                  when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+                  WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+                  WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+                  WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+                  WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+                  when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+                  else 'Other'
+            end as '归属部门'
+        from bi_pro.abnormal_customer_complaint acc
+        left join bi_pro.abnormal_message am on am.id = acc.abnormal_message_id
+        left join fle_staging.ticket_pickup  pi2 on acc.pno = pi2.id
+        left join fle_staging.ka_profile  AS kp on kp.id = pi2.client_id
+        left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+        left join fle_staging.sys_store  as ss on ss.id = pi2.store_id
+        left join fle_staging.ka_profile kp3 on pi2.`agent_id`  =kp3.`id`
+        left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi2.client_id
+        left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+        where
+            acc.ticket_type = 1 -- 派件
+            and
+                (
+                    if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) in (4,34,40,13)
+                    or (kp.id is null and ss.category in (1,10,13,4,5,7))
+                ) -- retail
+            and acc.abnormal_time >= '2023-06-04'
+            and acc.abnormal_time <= '2023-06-05'
+            and bc.client_id is null
+    ) a
+left join fle_staging.sys_store ss on ss.id = a.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_store ss2 on ss2.id = a.duty_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.pno '运单号/任务号'
+    ,case a.ticket_type
+        when 1 then '揽件'
+        when 2 then '派件'
+    end 揽派件类型
+    ,a.abnormal_time 投诉日期
+    ,a.client_id 客户ID
+    ,if(a.归属部门 = 'retail-Sales', a.staff_info_id, ss.name) '客户所属网点-工号'
+    ,a.归属部门
+    ,smr.name 客户所属大区
+    ,ss2.name 被投诉网点
+    ,case
+        when a.`channel_type` =1 then 'APP揽件任务'
+        when a.`channel_type` =2 then 'APP派件任务'
+        when a.`channel_type` =3 then 'APP投诉'
+        when a.`channel_type` =4 then '短信揽件投诉'
+        when a.`channel_type` =5 then '短信派件投诉'
+        when a.`channel_type` =6 then '短信妥投投诉'
+        when a.`channel_type` =7 then 'MS问题记录本'
+        when a.`channel_type` =8 then '新增处罚记录'
+        when a.`channel_type` =9 then 'KA投诉'
+        when a.`channel_type` =10 then '官网投诉'
+        when a.`channel_type` =12 then 'BS问题记录本'
+    end as '投诉渠道'
+    ,case a.`complaints_type`
+        when 6 then '服务态度类投诉 1级'
+        when 2 then '虚假揽件改约时间/取消揽件任务 2级'
+        when 1 then '虚假妥投 3级'
+        when 3 then '派件虚假留仓件/问题件 4级'
+        when 7 then '操作规范类投诉 5级'
+        when 5 then '其他 6级'
+        when 4 then '普通客诉 已弃用，仅供展示历史'
+    end as 投诉大类
+    ,case a.complaints_sub_type
+        when 1 then '业务不熟练'
+        when 2 then '虚假签收'
+        when 3 then '以不礼貌的态度对待客户'
+        when 4   then '揽/派件动作慢'
+        when 5 then '未经客户同意投递他处'
+        when 6   then '未经客户同意改约时间'
+        when 7 then '不接客户电话'
+        when 8   then '包裹丢失 没有数据'
+        when 9 then '改约的时间和客户沟通的时间不一致'
+        when 10   then '未提前电话联系客户'
+        when 11   then '包裹破损 没有数据'
+        when 12   then '未按照改约时间派件'
+        when 13    then '未按订单带包装'
+        when 14   then '不找零钱'
+        when 15    then '客户通话记录内未看到员工电话'
+        when 16    then '未经客户允许取消揽件任务'
+        when 17   then '未给客户回执'
+        when 18   then '拨打电话时间太短，客户来不及接电话'
+        when 19   then '未经客户允许退件'
+        when 20    then '没有上门'
+        when 21    then '其他'
+        when 22   then '未经客户同意改约揽件时间'
+        when 23    then '改约的揽件时间和客户要求的时间不一致'
+        when 24    then '没有按照改约时间揽件'
+        when 25    then '揽件前未提前联系客户'
+        when 26    then '答应客户揽件，但最终没有揽'
+        when 27    then '很晚才打电话联系客户'
+        when 28    then '货物多/体积大，因骑摩托而拒绝上门揽收'
+        when 29    then '因为超过当日截单时间，要求客户取消'
+        when 30    then '声称不是自己负责的区域，要求客户取消'
+        when 31    then '拨打电话时间太短，客户来不及接电话'
+        when 32    then '不接听客户回复的电话'
+        when 33    then '答应客户今天上门，但最终没有揽收'
+        when 34    then '没有上门揽件，也没有打电话联系客户'
+        when 35    then '货物不属于超大件/违禁品'
+        when 36    then '没有收到包裹，且快递员没有联系客户'
+        when 37    then '快递员拒绝上门派送'
+        when 38    then '快递员擅自将包裹放在门口或他处'
+        when 39    then '快递员没有按约定的时间派送'
+        when 40    then '代替客户签收包裹'
+        when   41   then '快说话不礼貌/没有礼貌/不愿意服务'
+        when 42    then '说话不礼貌/没有礼貌/不愿意服务'
+        when   43    then '快递员抛包裹'
+        when   44    then '报复/骚扰客户'
+        when 45   then '快递员收错COD金额'
+        when   46   then '虚假妥投'
+        when   47    then '派件虚假留仓件/问题件'
+        when 48   then '虚假揽件改约时间/取消揽件任务'
+        when   49   then '抛客户包裹'
+        when 50    then '录入客户信息不正确'
+        when 51    then '送货前未电话联系'
+        when 52    then '未在约定时间上门'
+        when   53    then '上门前不电话联系'
+        when   54    then '以不礼貌的态度对待客户'
+        when   55    then '录入客户信息不正确'
+        when   56    then '与客户发生肢体接触'
+        when   57    then '辱骂客户'
+        when   58    then '威胁客户'
+        when   59    then '上门揽件慢'
+        when   60    then '快递员拒绝上门揽件'
+        when 61    then '未经客户同意标记收件人拒收'
+        when 62    then '未按照系统地址送货导致收件人拒收'
+        when 63 then '情况不属实，快递员虚假标记'
+        when 64 then '情况不属实，快递员诱导客户改约时间'
+        when 65 then '包裹长时间未派送'
+        when 66 then '未经同意拒收包裹'
+        when 67 then '已交费仍索要COD'
+        when 68 then '投递时要求开箱'
+        when 69 then '不当场扫描揽收'
+        when 70 then '揽派件速度慢'
+    end as 投诉原因
+    ,case
+        when a.isdel = 1 then '已删除'
+        when a.state = 1 then '责任已认定'
+        when a.state = 2 then '未处理'
+        when a.state = 3 then '无需追责'
+        when a.state = 5 then '重复投诉'
+    end 状态
+
+from
+    (
+        select
+            acc.pno
+            ,acc.ticket_type
+            ,acc.abnormal_time
+            ,acc.client_id
+            ,kp.staff_info_id
+            ,kp.store_id
+            ,acc.store_id duty_store_id
+            ,acc.channel_type
+            ,acc.complaints_type
+            ,acc.complaints_sub_type
+            ,acc.state
+            ,am.isdel
+            ,CASE
+                  WHEN kp.id ='AA0622' THEN 'PMD-shein'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+                  when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+                  WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+                  WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+                  WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+                  WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+                  when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+                  else 'Other'
+              end as '归属部门'
+        from bi_pro.abnormal_customer_complaint acc
+        left join bi_pro.abnormal_message am on am.id = acc.abnormal_message_id
+        left join fle_staging.parcel_info pi2 on acc.pno = pi2.pno
+        left join fle_staging.ka_profile  AS kp on kp.id = pi2.client_id
+        left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+        left join fle_staging.sys_store  as ss on ss.id = pi2.ticket_pickup_store_id
+        left join fle_staging.ka_profile kp3 on pi2.`agent_id`  =kp3.`id`
+        left join dwm.tmp_ex_big_clients_id_detail  bc on bc.client_id = pi2.client_id
+        left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+        where
+            acc.ticket_type = 2 -- 派件
+            and
+                (
+                    if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) in (4,34,40,13)
+                    or (kp.id is null and ss.category in (1,10,13,4,5,7))
+                ) -- retail
+            and acc.abnormal_time >= '2023-06-04'
+            and acc.abnormal_time <= '2023-06-05'
+            and bc.client_id is null
+
+        union all
+
+        select
+            acc.pno
+            ,acc.ticket_type
+            ,acc.abnormal_time
+            ,acc.client_id
+            ,kp.staff_info_id
+            ,kp.store_id
+            ,acc.store_id duty_store_id
+            ,acc.channel_type
+            ,acc.complaints_type
+            ,acc.complaints_sub_type
+            ,acc.state
+            ,am.isdel
+            ,CASE
+                  WHEN kp.id ='AA0622' THEN 'PMD-shein'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+                  WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+                  when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+                  WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+                  WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+                  WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+                  WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+                  when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+                  else 'Other'
+            end as '归属部门'
+        from bi_pro.abnormal_customer_complaint acc
+        left join bi_pro.abnormal_message am on am.id = acc.abnormal_message_id
+        left join fle_staging.ticket_pickup  pi2 on acc.pno = pi2.id
+        left join fle_staging.ka_profile  AS kp on kp.id = pi2.client_id
+        left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+        left join fle_staging.sys_store  as ss on ss.id = pi2.store_id
+        left join fle_staging.ka_profile kp3 on pi2.`agent_id`  =kp3.`id`
+        left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi2.client_id
+        left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+        where
+            acc.ticket_type = 1 -- 派件
+            and
+                (
+                    if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) in (4,34,40,13)
+                    or (kp.id is null and ss.category in (1,10,13,4,5,7))
+                ) -- retail
+            and acc.abnormal_time >= '2023-06-04'
+            and acc.abnormal_time <= '2023-06-05'
+            and bc.client_id is null
+    ) a
+left join fle_staging.sys_store ss on ss.id = a.store_id
+left join fle_staging.sys_manage_region smr on smr.id = ss.manage_region
+left join fle_staging.sys_store ss2 on ss2.id = a.duty_store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a1.pno
+    ,a1.staff_info_id 员工
+    ,a1.pr_date 日期
+    ,a1.ka_type 客户类型
+    ,case a1.forceTakePhotoCategory
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+from
+    (
+        select
+            a.pno
+            ,a.forceTakePhotoCategory
+            ,a.ka_type
+            ,a.pr_date
+            ,a.store_id
+            ,a.staff_info_id
+            ,a.routeExtraId
+        from
+            (
+                select
+                    pr.pno
+                    ,pr.store_id
+                    ,case
+                        when bc.`client_id` is not null then bc.client_name
+                        when kp.id is not null and bc.id is null then '普通ka'
+                        when kp.`id` is null then '小c'
+                    end as  ka_type
+                    ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) pr_date
+                    ,json_extract(pr.extra_value, '$.routeExtraId') routeExtraId
+                    ,pr.staff_info_id
+                    ,json_extract(pr.extra_value, '$.forceTakePhotoCategory') forceTakePhotoCategory
+                    ,row_number() over (partition by pr.pno, date(convert_tz(pr.routed_at, '+00:00', '+07:00')) order by pr.routed_at ) rk
+                from rot_pro.parcel_route pr
+                left join fle_staging.parcel_info pi on pi.pno = pr.pno
+                left join fle_staging.ka_profile kp on pi.client_id = kp.id
+                left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+                # left join dwm.drds_parcel_route_extra dpr on dpr.id = json_extract(pr.extra_value, '$.routeExtraId')
+                where
+                    pr.route_action in ('TAKE_PHOTO')
+                    and pr.routed_at > '2023-04-30 17:00:00'
+                    and pr.routed_at < '2023-05-07 17:00:00'
+            ) a
+        where
+            a.rk = 1
+    ) a1
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.网点ID = a1.store_id and dt.统计日期 = a1.pr_date;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        plt.pno
+        ,plt.updated_at
+        ,plt.state
+        ,plt.created_at
+        ,plt.penalties
+        ,case
+            when bc.`client_id` is not null then bc.client_name
+            when kp.id is not null and bc.id is null then '普通ka'
+            when kp.`id` is null then '小c'
+        end as  ka_type
+#         ,plt.id
+    from bi_pro.parcel_lose_task plt
+    left join fle_staging.ka_profile kp on pi.client_id = kp.id
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+    # left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+    where
+        plt.created_at >= '2023-05-01'
+        and plt.created_at < '2023-05-08'
+        and plt.source = 12
+)
+select
+    t1.pno
+    ,t1.state
+    ,case
+        when t1.state = 6 and t1.penalties > 0 then 'L来源判责丢失'
+        when t1.state = 6 and plt2.id is not null  then '其他来源判责丢失'
+        when t1.state = 5 then '无须追责'
+        else null
+    end 分类
+    ,t1.created_at 任务生成时间
+    ,t1.ka_type 客户类型
+    ,t1.updated_at 处理时间
+from t t1
+left join bi_pro.parcel_lose_task plt2 on plt2.pno = t1.pno and plt2.source not in (12) and plt2.state = 6 and plt2.penalties > 0;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        plt.pno
+        ,plt.updated_at
+        ,plt.state
+        ,plt.created_at
+        ,plt.penalties
+        ,case
+            when bc.`client_id` is not null then bc.client_name
+            when kp.id is not null and bc.id is null then '普通ka'
+            when kp.`id` is null then '小c'
+        end as  ka_type
+#         ,plt.id
+    from bi_pro.parcel_lose_task plt
+    left join fle_staging.ka_profile kp on plt.client_id = kp.id
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+    # left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+    where
+        plt.created_at >= '2023-05-01'
+        and plt.created_at < '2023-05-08'
+        and plt.source = 12
+)
+select
+    t1.pno
+    ,t1.state
+    ,case
+        when t1.state = 6 and t1.penalties > 0 then 'L来源判责丢失'
+        when t1.state = 6 and plt2.id is not null  then '其他来源判责丢失'
+        when t1.state = 5 then '无须追责'
+        else null
+    end 分类
+    ,t1.created_at 任务生成时间
+    ,t1.ka_type 客户类型
+    ,t1.updated_at 处理时间
+from t t1
+left join bi_pro.parcel_lose_task plt2 on plt2.pno = t1.pno and plt2.source not in (12) and plt2.state = 6 and plt2.penalties > 0;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno
+from
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a1
+left join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno
+where
+    a2.created_at > a1.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno
+from
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+left join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno
+from
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+left join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno
+where
+    a2.created_at > a1.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno
+    ,a1.id
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+left join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno
+    ,a1.id
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno 包裹
+    ,a1.id 闪速任务ID
+    ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno
+where
+    a2.created_at < a1.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno 包裹
+    ,a1.id 闪速任务ID
+    ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno
+where
+    a2.created_at > a1.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-06-01'
+    and plt.created_at < '2023-07-08'
+    and plt.source = 12
+)
+select
+    a1.pno 包裹
+    ,a1.id 闪速任务ID
+    ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno
+where
+    a2.created_at > a1.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno 包裹
+    ,a1.id 闪速任务ID
+    ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+#     a1.pno 包裹
+#     ,a1.id 闪速任务ID
+#     ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+    a1.*
+    ,a2.*
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.pno = a1.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,plt.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+#     a1.pno 包裹
+#     ,a1.id 闪速任务ID
+#     ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+    a1.*
+    ,a2.*
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.id = a1.id;
+;-- -. . -..- - / . -. - .-. -.--
+with  t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.updated_at
+    ,plt.state
+    ,pcol.created_at
+    ,plt.penalties
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  ka_type
+    ,pcol.action
+#         ,plt.id
+from bi_pro.parcel_lose_task plt
+left join fle_staging.ka_profile kp on plt.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-08'
+    and plt.source = 12
+)
+select
+    a1.pno 包裹
+    ,a1.id 闪速任务ID
+    ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+from
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 4
+    ) a1
+join
+    (
+        select
+            t1.pno
+            ,t1.id
+            ,t1.created_at
+            ,t1.action
+        from t t1
+        where
+            t1.action = 3
+    ) a2 on a2.id = a1.id
+where
+    a2.created_at > a1.created_at;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        plt.pno
+        ,plt.updated_at
+        ,plt.state
+        ,plt.created_at
+        ,plt.penalties
+        ,case
+            when bc.`client_id` is not null then bc.client_name
+            when kp.id is not null and bc.id is null then '普通ka'
+            when kp.`id` is null then '小c'
+        end as  ka_type
+#         ,plt.id
+    from bi_pro.parcel_lose_task plt
+    left join fle_staging.ka_profile kp on plt.client_id = kp.id
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+    # left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+    where
+        plt.created_at >= '2023-05-01'
+        and plt.created_at < '2023-05-08'
+        and plt.source = 12
+)
+select
+    t1.pno
+    ,t1.state
+    ,case
+        when t1.state = 6 and t1.penalties > 0 then 'L来源判责丢失'
+        when t1.state = 6 and plt2.id is not null  then '其他来源判责丢失'
+        when plt2.id is null and t1.state = 5 then 'L来源被判无须追责'
+        when t1.state = 5 then '无须追责'
+        else null
+    end 分类
+    ,t1.created_at 任务生成时间
+    ,t1.ka_type 客户类型
+    ,t1.updated_at 处理时间
+from t t1
+left join bi_pro.parcel_lose_task plt2 on plt2.pno = t1.pno and plt2.source not in (12) and plt2.state = 6 and plt2.penalties > 0;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        plt.pno
+        ,plt.updated_at
+        ,plt.state
+        ,plt.created_at
+        ,plt.penalties
+        ,case
+            when bc.`client_id` is not null then bc.client_name
+            when kp.id is not null and bc.id is null then '普通ka'
+            when kp.`id` is null then '小c'
+        end as  ka_type
+#         ,plt.id
+    from bi_pro.parcel_lose_task plt
+    left join fle_staging.ka_profile kp on plt.client_id = kp.id
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
+    # left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
+    where
+        plt.created_at >= '2023-05-01'
+        and plt.created_at < '2023-05-08'
+        and plt.source = 12
+)
+select
+    t1.pno
+    ,t1.state
+    ,case
+        when t1.state = 6 and t1.penalties > 0 then 'L来源判责丢失'
+        when t1.state = 6 and plt2.id is not null  then '其他来源判责丢失'
+        when plt3.id is null and t1.state = 5 then 'L来源被判无须追责'
+        when t1.state = 5 then '无须追责'
+        else null
+    end 分类
+    ,t1.created_at 任务生成时间
+    ,t1.ka_type 客户类型
+    ,t1.updated_at 处理时间
+from t t1
+left join bi_pro.parcel_lose_task plt2 on plt2.pno = t1.pno and plt2.source not in (12) and plt2.state = 6 and plt2.penalties > 0
+left join bi_pro.parcel_lose_task plt3 on plt3.pno = t1.pno and plt3.source not in (12) and plt3.state = 5 and plt3.updated_at = t1.updated_at;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pi.state
+        ,pi.ticket_pickup_store_id
+        ,pi.returned
+        ,pi.dst_store_id
+        ,pi.client_id
+        ,pi.cod_enabled
+    from fle_staging.parcel_info pi
+    where
+        pi.created_at < '2023-05-31 16:00:00'
+        and pi.state not in (5,7,8,9)
+#         and pi.pno = 'P35231NPHV3BE'
+)
+select
+    t1.pno
+    ,if(t1.returned = 1, '退件', '正向件')  方向
+    ,t1.client_id 客户ID
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as 客户类型
+    ,case t1.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 48 then '转交FH包裹留仓'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难原因
+    ,case
+        when t1.state = 6 and di.pno is not null then di.sh_do
+        when t1.state = 6 and plt.pno is not null then plt.should_do
+        when t1.state != 6 and plt.pno is not null then plt.should_do
+        when t1.state != 6 and plt.pno is null and pct.pno is not null then 'qaqc-TeamB'
+        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then pr.store_name
+        else de.last_store_name
+    end 待处理节点
+    ,case
+        when t1.state = 6 and di.pno is not null then 'KAM/揽件网点未协商'
+        when t1.state = 6 and di.pno is null  then '闪速系统沟通处理中'
+        when t1.state != 6 and plt.pno is not null and plt2.pno is not null then '闪速系统沟通处理中'
+        when plt.pno is null and pct.pno is not null then '闪速超时效理赔未完成'
+        when de.last_store_id = t1.ticket_pickup_store_id and plt2.pno is null then '揽件未发出'
+        when t1.dst_store_id = 'PH19040F05' and plt2.pno is null then '弃件未到拍卖仓'
+        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then 'QAQC无须追责后长期无有效路由'
+        else null
+    end 卡点原因
+    ,de.last_store_name 当前节点
+    ,datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) 最后有效路由距今天数
+#     ,de.last_cn_route_action 最新一条有效路由
+    ,case pr.route_action # 路由动作
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end as 最后一条路由
+    ,convert_tz(pr.routed_at ,'+00:00', '+08:00') 最新一条有效路由时间
+    ,datediff(now(), de.dst_routed_at) 目的地网点停留时间
+    ,de.dst_store 目的地网点
+    ,de.src_store 揽收网点
+    ,de.pickup_time 揽收时间
+    ,de.pick_date 揽收日期
+    ,if(hold.pno is not null, 'yes', 'no' ) 是否有holding标记
+from t t1
+left join fle_staging.ka_profile kp on t1.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t1.client_id
+left join dwm.dwd_ex_th_parcel_details de on de.pno = t1.pno
+left join
+    (
+        select
+            plt.pno
+            ,group_concat(ss.name ) should_do
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        left join bi_pro.work_order wo on wo.loseparcel_task_id = plt.id
+        left join fle_staging.sys_store ss on ss.id = wo.store_id
+        where
+            plt.state in (3)
+            and wo.status in (1,2)
+        group by 1
+
+        union  all
+
+        select
+            plt.pno
+            ,'QAQC' should_do
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        where
+            plt.state in (1,2,4)
+    ) plt on plt.pno = t1.pno
+left join
+    (
+        select
+            t2.pno
+            ,cdt.negotiation_result_category
+            ,di.diff_marker_category
+            ,case
+                when di.diff_marker_category in (20,21)  and cdt.vip_enable = 1 then 'KAM'
+                when di.diff_marker_category not in (20,21) and cdt.vip_enable = 1 then 'KAM'
+                when di.diff_marker_category not in (20,21) and cdt.vip_enable = 0 then ss2.name
+                WHEN di.diff_marker_category in (20,21) and cdt.vip_enable = 0 then ss2.name
+            end sh_do
+        from fle_staging.diff_info di
+        join t t2 on t2.pno = di.pno
+        join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        left join bi_pro.parcel_lose_task plt on plt.source_id = cdt.id
+        left join fle_staging.sys_store ss2 on ss2.id = t2.ticket_pickup_store_id
+        where
+            cdt.negotiation_result_category is null
+    ) di on di.pno = t1.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.store_name
+            ,pr.routed_at
+            ,pr.route_action
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+        from  rot_pro.parcel_route pr
+        join t t3 on t3.pno = pr.pno
+        where
+            pr.route_action in ('INVENTORY','RECEIVED' ,'RECEIVE_WAREHOUSE_SCAN', 'SORTING_SCAN', 'DELIVERY_TICKET_CREATION_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SHIPMENT_WAREHOUSE_SCAN', 'DETAIN_WAREHOUSE', 'DELIVERY_CONFIRM', 'DIFFICULTY_HANDOVER', 'DELIVERY_MARKER', 'REPLACE_PNO','SEAL', 'UNSEAL', 'STAFF_INFO_UPDATE_WEIGHT', 'STORE_KEEPER_UPDATE_WEIGHT', 'STORE_SORTER_UPDATE_WEIGHT', 'DISCARD_RETURN_BKK', 'DELIVERY_TRANSFER', 'PICKUP_RETURN_RECEIPT', 'FLASH_HOME_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SORTING_SCAN ', 'DELIVERY_PICKUP_STORE_SCAN', 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE', 'REFUND_CONFIRM', 'ACCEPT_PARCEL')
+    ) pr on pr.pno = t1.pno and pr.rk = 1
+left join
+    (
+        select
+            plt.pno
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        where
+            plt.state = 5
+            and plt.operator_id not in (10000,10001,10002)
+        group by 1
+    ) plt2 on plt2.pno = t1.pno
+left join
+    (
+        select
+            plt.pno
+        from bi_pro.parcel_claim_task plt
+        join t t4  on t4.pno = plt.pno
+        where
+            plt.state not in (6,7,8)
+            and plt.source = 11
+        group by 1
+    ) pct on pct.pno = t1.pno
+left join
+    (
+        select
+            pr2.pno
+        from rot_pro.parcel_route pr2
+        join t t1 on t1.pno = pr2.pno
+        where
+            pr2.route_action = 'REFUND_CONFIRM'
+        group by 1
+    ) hold on hold.pno = t1.pno
+group by t1.pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(plt.id)
+from bi_pro.parcel_lose_task plt
+where
+    plt.created_at >= '2023-05-01'
+    and plt.created_at < '2023-05-14'
+    and plt.source = 2;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(pi.pno)
+from fle_staging.parcel_info pi
+where
+    pi.created_at < '2023-01-01'
+    and pi.state not in (5,7,8,9);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(pi.pno)
+from fle_staging.parcel_info pi
+where
+    pi.created_at < '2023-01-01'
+    and pi.state not in (5,7,8,9)
+    and pi.created_at > '2022-01-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(pi.pno)
+    ,min(pi.created_at)
+from fle_staging.parcel_info pi
+where
+     pi.state not in (5,7,8,9)
+    and pi.created_at >= '2022-01-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(pi.pno)
+    ,min(pi.created_at)
+from fle_staging.parcel_info pi
+where
+     pi.state not in (5,7,8,9)
+    and pi.created_at >= '2023-01-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(pi.pno)
+from fle_staging.parcel_info pi
+where
+    pi.created_at > '2023-02-28 17:00:00'
+    and pi.created_at < '2023-06-04 17:00:00'
+    and pi.state not in (5,7,8,9);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pi.returned
+        ,pi.client_id
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_date
+        ,pi.state
+        ,pi.agent_id
+        ,pi.ticket_pickup_store_id
+        ,pi.dst_store_id
+    from fle_staging.parcel_info pi
+#     left join dwm.dwd_ex_th_parcel_details detpd
+    where
+        pi.created_at > '2023-02-28 17:00:00'
+        and pi.created_at < '2023-06-04 17:00:00'
+        and pi.state not in (5,7,8,9)
+)
+select
+    t1.pno
+    ,t1.pick_date 揽收日期
+    ,if(t1.returned = 1, '退件', '正向') 包裹类型
+    ,t1.client_id 客户ID
+    ,datediff(curdate(), t1.pick_date) 揽收至今滞留天数
+    ,case t1.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,pr.store_name 当前滞留网点
+    ,case pr.store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `当前网点类型`
+    ,pr.CN_element 最新有效路由
+    ,convert_tz(pr.routed_at, '+00:00', '+07:00')  最后有效路由时间
+    ,datediff(curdate(),convert_tz(pr.routed_at, '+00:00', '+07:00')) 最后有效路由至今日期
+    ,di.CN_element 问题件类型
+    ,convert_tz(di.created_at, '+00:00', '+07:00') 最后一条问题件创建时间
+    ,datediff(now(),convert_tz(di.created_at, '+00:00', '+07:00')) 问题件处理天数
+    ,ppd.CN_element 最后一个留仓原因
+    ,ss.name 揽收网点
+    ,ss2.name 目的地网点
+    ,CASE
+          WHEN kp.id ='AA0622' THEN 'PMD-shein'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+          when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+          WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+          WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+          WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+          WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+          else 'Other'
+      end as '归属部门'
+from t t1
+left join
+     (
+         select
+             pr.pno
+            ,pr.store_id
+            ,pr.store_name
+            ,pr.store_category
+            ,ddd.CN_element
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+         from rot_pro.parcel_route pr
+         join t t1 on t1.pno = pr.pno
+         join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
+     ) pr on pr.pno = t1.pno and pr.rk = 1
+left join
+     (
+         select
+             di.pno
+            ,di.diff_marker_category
+            ,ddd.CN_element
+            ,di.created_at
+            ,row_number() over (partition by di.pno order by di.created_at desc ) rk
+         from fle_staging.diff_info di
+         join t t1 on t1.pno = di.pno
+         left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             di.state = 0
+     ) di on di.pno = t1.pno and di.rk = 1
+left join
+     (
+         select
+             ppd.pno
+            ,ppd.diff_marker_category
+            ,ddd.CN_element
+            ,row_number() over (partition by ppd.pno order by ppd.created_at desc ) rk
+         from fle_staging.parcel_problem_detail ppd
+         join t t1 on t1.pno = ppd.pno
+         left join dwm.dwd_dim_dict ddd on ppd.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             ppd.parcel_problem_type_category = 2
+     ) ppd on ppd.pno = t1.pno and ppd.rk = 1
+left join fle_staging.sys_store ss on ss.id = t1.ticket_pickup_store_id
+left join fle_staging.sys_store ss2 on ss2.id = t1.dst_store_id
+left join fle_staging.ka_profile  AS kp on kp.id = t1.client_id
+left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+left join fle_staging.sys_store  as ss on ss.id = t1.ticket_pickup_store_id
+left join fle_staging.ka_profile kp3 on t1.`agent_id`  = kp3.`id`;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pi.returned
+        ,pi.client_id
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_date
+        ,pi.state
+        ,pi.agent_id
+        ,pi.ticket_pickup_store_id
+        ,pi.dst_store_id
+    from fle_staging.parcel_info pi
+#     left join dwm.dwd_ex_th_parcel_details detpd
+    where
+        pi.created_at > '2023-02-28 17:00:00'
+        and pi.created_at < '2023-06-04 17:00:00'
+        and pi.state not in (5,7,8,9)
+)
+select
+    t1.pno
+    ,t1.pick_date 揽收日期
+    ,if(t1.returned = 1, '退件', '正向') 包裹类型
+    ,t1.client_id 客户ID
+    ,datediff(curdate(), t1.pick_date) 揽收至今滞留天数
+    ,case t1.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,pr.store_name 当前滞留网点
+    ,case pr.store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `当前网点类型`
+    ,pr.CN_element 最新有效路由
+    ,convert_tz(pr.routed_at, '+00:00', '+07:00')  最后有效路由时间
+    ,datediff(curdate(),convert_tz(pr.routed_at, '+00:00', '+07:00')) 最后有效路由至今日期
+    ,di.CN_element 问题件类型
+    ,convert_tz(di.created_at, '+00:00', '+07:00') 最后一条问题件创建时间
+    ,datediff(now(),convert_tz(di.created_at, '+00:00', '+07:00')) 问题件处理天数
+    ,ppd.CN_element 最后一个留仓原因
+    ,ss.name 揽收网点
+    ,ss2.name 目的地网点
+    ,CASE
+          WHEN kp.id ='AA0622' THEN 'PMD-shein'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+          when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+          WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+          WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+          WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+          WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+          else 'Other'
+      end as '归属部门'
+from t t1
+left join
+     (
+         select
+             pr.pno
+            ,pr.store_id
+            ,pr.store_name
+            ,pr.store_category
+            ,ddd.CN_element
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+         from rot_pro.parcel_route pr
+         join t t1 on t1.pno = pr.pno
+         join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
+     ) pr on pr.pno = t1.pno and pr.rk = 1
+left join
+     (
+         select
+             di.pno
+            ,di.diff_marker_category
+            ,ddd.CN_element
+            ,di.created_at
+            ,row_number() over (partition by di.pno order by di.created_at desc ) rk
+         from fle_staging.diff_info di
+         join t t1 on t1.pno = di.pno
+         left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             di.state = 0
+     ) di on di.pno = t1.pno and di.rk = 1
+left join
+     (
+         select
+             ppd.pno
+            ,ppd.diff_marker_category
+            ,ddd.CN_element
+            ,row_number() over (partition by ppd.pno order by ppd.created_at desc ) rk
+         from fle_staging.parcel_problem_detail ppd
+         join t t1 on t1.pno = ppd.pno
+         left join dwm.dwd_dim_dict ddd on ppd.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             ppd.parcel_problem_type_category = 2
+     ) ppd on ppd.pno = t1.pno and ppd.rk = 1
+left join fle_staging.sys_store ss on ss.id = t1.ticket_pickup_store_id
+left join fle_staging.sys_store ss2 on ss2.id = t1.dst_store_id
+left join fle_staging.ka_profile  AS kp on kp.id = t1.client_id
+left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+left join fle_staging.sys_store  as ss on ss.id = t1.ticket_pickup_store_id
+left join fle_staging.ka_profile kp3 on t1.`agent_id`  = kp3.`id`
+left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101');
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pi.returned
+        ,pi.client_id
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_date
+        ,pi.state
+        ,pi.agent_id
+        ,pi.ticket_pickup_store_id
+        ,pi.dst_store_id
+    from fle_staging.parcel_info pi
+#     left join dwm.dwd_ex_th_parcel_details detpd
+    where
+        pi.created_at > '2023-02-28 17:00:00'
+        and pi.created_at < '2023-06-04 17:00:00'
+        and pi.state not in (5,7,8,9)
+)
+select
+    t1.pno
+    ,t1.pick_date 揽收日期
+    ,if(t1.returned = 1, '退件', '正向') 包裹类型
+    ,t1.client_id 客户ID
+    ,datediff(curdate(), t1.pick_date) 揽收至今滞留天数
+    ,case t1.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,pr.store_name 当前滞留网点
+    ,case pr.store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `当前网点类型`
+    ,pr.CN_element 最新有效路由
+    ,convert_tz(pr.routed_at, '+00:00', '+07:00')  最后有效路由时间
+    ,datediff(curdate(),convert_tz(pr.routed_at, '+00:00', '+07:00')) 最后有效路由至今日期
+    ,di.CN_element 问题件类型
+    ,convert_tz(di.created_at, '+00:00', '+07:00') 最后一条问题件创建时间
+    ,datediff(now(),convert_tz(di.created_at, '+00:00', '+07:00')) 问题件处理天数
+    ,ppd.CN_element 最后一个留仓原因
+    ,ss.name 揽收网点
+    ,ss2.name 目的地网点
+    ,CASE
+          WHEN kp.id ='AA0622' THEN 'PMD-shein'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+          when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+          WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+          WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+          WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+          WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+          else 'Other'
+      end as '归属部门'
+from t t1
+left join
+     (
+         select
+             pr.pno
+            ,pr.store_id
+            ,pr.store_name
+            ,pr.store_category
+            ,ddd.CN_element
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+         from rot_pro.parcel_route pr
+         join t t1 on t1.pno = pr.pno
+         join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
+     ) pr on pr.pno = t1.pno and pr.rk = 1
+left join
+     (
+         select
+             di.pno
+            ,di.diff_marker_category
+            ,ddd.CN_element
+            ,di.created_at
+            ,row_number() over (partition by di.pno order by di.created_at desc ) rk
+         from fle_staging.diff_info di
+         join t t1 on t1.pno = di.pno
+         left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             di.state = 0
+     ) di on di.pno = t1.pno and di.rk = 1
+left join
+     (
+         select
+             ppd.pno
+            ,ppd.diff_marker_category
+            ,ddd.CN_element
+            ,row_number() over (partition by ppd.pno order by ppd.created_at desc ) rk
+         from fle_staging.parcel_problem_detail ppd
+         join t t1 on t1.pno = ppd.pno
+         left join dwm.dwd_dim_dict ddd on ppd.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             ppd.parcel_problem_type_category = 2
+     ) ppd on ppd.pno = t1.pno and ppd.rk = 1
+left join fle_staging.sys_store ss on ss.id = t1.ticket_pickup_store_id
+left join fle_staging.sys_store ss2 on ss2.id = t1.dst_store_id
+left join fle_staging.ka_profile  AS kp on kp.id = t1.client_id
+left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+left join fle_staging.ka_profile kp3 on t1.`agent_id`  = kp3.`id`
+left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101');
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pi.state
+        ,pi.ticket_pickup_store_id
+        ,pi.returned
+        ,pi.dst_store_id
+        ,pi.client_id
+        ,pi.cod_enabled
+    from fle_staging.parcel_info pi
+    where
+        pi.created_at < '2023-05-31 17:00:00'
+        and pi.state not in (5,7,8,9)
+#         and pi.pno = 'P35231NPHV3BE'
+)
+select
+    t1.pno
+    ,if(t1.returned = 1, '退件', '正向件')  方向
+    ,t1.client_id 客户ID
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as 客户类型
+    ,case t1.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 48 then '转交FH包裹留仓'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难原因
+    ,case
+        when t1.state = 6 and di.pno is not null then di.sh_do
+        when t1.state = 6 and plt.pno is not null then plt.should_do
+        when t1.state != 6 and plt.pno is not null then plt.should_do
+        when t1.state != 6 and plt.pno is null and pct.pno is not null then 'qaqc-TeamB'
+        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then pr.store_name
+        else de.last_store_name
+    end 待处理节点
+    ,case
+        when t1.state = 6 and di.pno is not null then 'KAM/揽件网点未协商'
+        when t1.state = 6 and di.pno is null  then '闪速系统沟通处理中'
+        when t1.state != 6 and plt.pno is not null and plt2.pno is not null then '闪速系统沟通处理中'
+        when plt.pno is null and pct.pno is not null then '闪速超时效理赔未完成'
+        when de.last_store_id = t1.ticket_pickup_store_id and plt2.pno is null then '揽件未发出'
+        when t1.dst_store_id = 'PH19040F05' and plt2.pno is null then '弃件未到拍卖仓'
+        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then 'QAQC无须追责后长期无有效路由'
+        else null
+    end 卡点原因
+    ,de.last_store_name 当前节点
+    ,datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) 最后有效路由距今天数
+#     ,de.last_cn_route_action 最新一条有效路由
+    ,case pr.route_action # 路由动作
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end as 最后一条路由
+    ,convert_tz(pr.routed_at ,'+00:00', '+08:00') 最新一条有效路由时间
+    ,datediff(now(), de.dst_routed_at) 目的地网点停留时间
+    ,de.dst_store 目的地网点
+    ,de.src_store 揽收网点
+    ,de.pickup_time 揽收时间
+    ,de.pick_date 揽收日期
+    ,if(hold.pno is not null, 'yes', 'no' ) 是否有holding标记
+    ,if(plt2.pno is not null, 'yes', 'no') 是否人工无须追责过
+    ,if(pr3.pno is not null, 'yes', 'no') 是否有待退件标记
+from t t1
+left join fle_staging.ka_profile kp on t1.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t1.client_id
+left join dwm.dwd_ex_th_parcel_details de on de.pno = t1.pno
+left join
+    (
+        select
+            plt.pno
+            ,group_concat(ss.name ) should_do
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        left join bi_pro.work_order wo on wo.loseparcel_task_id = plt.id
+        left join fle_staging.sys_store ss on ss.id = wo.store_id
+        where
+            plt.state in (3)
+            and wo.status in (1,2)
+        group by 1
+
+        union  all
+
+        select
+            plt.pno
+            ,'QAQC' should_do
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        where
+            plt.state in (1,2,4)
+    ) plt on plt.pno = t1.pno
+left join
+    (
+        select
+            t2.pno
+            ,cdt.negotiation_result_category
+            ,di.diff_marker_category
+            ,case
+                when di.diff_marker_category in (20,21)  and cdt.vip_enable = 1 then 'KAM'
+                when di.diff_marker_category not in (20,21) and cdt.vip_enable = 1 then 'KAM'
+                when di.diff_marker_category not in (20,21) and cdt.vip_enable = 0 then ss2.name
+                WHEN di.diff_marker_category in (20,21) and cdt.vip_enable = 0 then ss2.name
+            end sh_do
+        from fle_staging.diff_info di
+        join t t2 on t2.pno = di.pno
+        join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        left join bi_pro.parcel_lose_task plt on plt.source_id = cdt.id
+        left join fle_staging.sys_store ss2 on ss2.id = t2.ticket_pickup_store_id
+        where
+            cdt.negotiation_result_category is null
+    ) di on di.pno = t1.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.store_name
+            ,pr.routed_at
+            ,pr.route_action
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+        from  rot_pro.parcel_route pr
+        join t t3 on t3.pno = pr.pno
+        where
+            pr.route_action in ('INVENTORY','RECEIVED' ,'RECEIVE_WAREHOUSE_SCAN', 'SORTING_SCAN', 'DELIVERY_TICKET_CREATION_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SHIPMENT_WAREHOUSE_SCAN', 'DETAIN_WAREHOUSE', 'DELIVERY_CONFIRM', 'DIFFICULTY_HANDOVER', 'DELIVERY_MARKER', 'REPLACE_PNO','SEAL', 'UNSEAL', 'STAFF_INFO_UPDATE_WEIGHT', 'STORE_KEEPER_UPDATE_WEIGHT', 'STORE_SORTER_UPDATE_WEIGHT', 'DISCARD_RETURN_BKK', 'DELIVERY_TRANSFER', 'PICKUP_RETURN_RECEIPT', 'FLASH_HOME_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SORTING_SCAN ', 'DELIVERY_PICKUP_STORE_SCAN', 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE', 'REFUND_CONFIRM', 'ACCEPT_PARCEL')
+    ) pr on pr.pno = t1.pno and pr.rk = 1
+left join
+    (
+        select
+            plt.pno
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        where
+            plt.state = 5
+            and plt.operator_id not in (10000,10001,10002)
+        group by 1
+    ) plt2 on plt2.pno = t1.pno
+left join
+    (
+        select
+            plt.pno
+        from bi_pro.parcel_claim_task plt
+        join t t4  on t4.pno = plt.pno
+        where
+            plt.state not in (6,7,8)
+            and plt.source = 11
+        group by 1
+    ) pct on pct.pno = t1.pno
+left join
+    (
+        select
+            pr2.pno
+        from rot_pro.parcel_route pr2
+        join t t1 on t1.pno = pr2.pno
+        where
+            pr2.route_action = 'REFUND_CONFIRM'
+        group by 1
+    ) hold on hold.pno = t1.pno
+left join
+    (
+        select
+            pr2.pno
+        from  rot_pro.parcel_route pr2
+        join t t1 on t1.pno = pr2.pno
+        where
+            pr2.route_action = 'PENDING_RETURN'
+        group by 1
+    ) pr3 on pr3.pno = t1.pno
+group by t1.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with  a as
+(
+    select
+        di.pno
+        ,di.id
+        ,ddd.CN_element
+        ,convert_tz(di.created_at, '+00:00', '+07:00') di_time
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_time
+        ,pi.client_id
+    from fle_staging.diff_info di
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    where
+        di.state = 0
+        and pi.created_at < '2023-06-04 17:00:00'
+        and pi.state = 6
+)
+select
+    t.pno
+    ,t.pick_time 揽收时间
+    ,datediff(now(), t.pick_time) 揽收至今天数
+    ,pr.store_name 当前滞留网点
+    ,case pr.store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `当前网点类型`
+    ,t.CN_element 疑难原因
+    ,datediff(now(), t.di_time) 问题件处理天数
+    ,case sdt.pending_handle_category
+        when 1 then '待揽收网点协商'
+        when 2 then '待KAM问题件处理'
+        when 3 then '待QAQC判责'
+        when 4 then '待客户决定'
+    end 待处理人
+    ,if(cdt.service_type = 2 and cdt.state in (0,2,3,4), ss.name, null  ) 待处理网点
+    ,t.client_id
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,cg.name 客服组
+    ,case sdt.state
+        when 0 then '处理中'
+        when 1 then '未处理'
+        when 2 then '已处理'
+    end 处理状态
+    ,datediff(now(), convert_tz(sdt.updated_at, '+00:00', '+07:00')) 当前状态至今天数
+from a t
+left join
+     (
+         select
+             pr.pno
+            ,pr.store_id
+            ,pr.store_name
+            ,pr.store_category
+            ,ddd.CN_element
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+         from rot_pro.parcel_route pr
+         join a t1 on t1.pno = pr.pno
+         join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
+     ) pr on pr.pno = t.pno and pr.rk = 1
+left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = t.id
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = t.id
+left join fle_staging.ka_profile kp on t.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t.client_id
+left join fle_staging.sys_store ss on ss.id = cdt.organization_id
+left join fle_staging.customer_group cg on cg.id = cdt.group_id;
+;-- -. . -..- - / . -. - .-. -.--
+with  a as
+(
+    select
+        di.pno
+        ,di.id
+        ,ddd.CN_element
+        ,convert_tz(di.created_at, '+00:00', '+07:00') di_time
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_time
+        ,pi.client_id
+    from fle_staging.diff_info di
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    where
+        di.state = 0
+        and pi.created_at < '2023-06-04 17:00:00'
+        and pi.state = 6
+)
+select
+    t.pno
+    ,t.pick_time 揽收时间
+    ,t.di_time 疑难件提交时间
+    ,datediff(now(), t.pick_time) 揽收至今天数
+    ,pr.store_name 当前滞留网点
+    ,case pr.store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `当前网点类型`
+    ,t.CN_element 疑难原因
+    ,datediff(now(), t.di_time) 问题件处理天数
+    ,case sdt.pending_handle_category
+        when 1 then '待揽收网点协商'
+        when 2 then '待KAM问题件处理'
+        when 3 then '待QAQC判责'
+        when 4 then '待客户决定'
+    end 待处理人
+    ,if(cdt.service_type = 2 and cdt.state in (0,2,3,4), ss.name, null  ) 待处理网点
+    ,t.client_id
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,cg.name 客服组
+    ,case sdt.state
+        when 0 then '处理中'
+        when 1 then '未处理'
+        when 2 then '已处理'
+    end 处理状态
+    ,datediff(now(), convert_tz(sdt.updated_at, '+00:00', '+07:00')) 当前状态至今天数
+from a t
+left join
+     (
+         select
+             pr.pno
+            ,pr.store_id
+            ,pr.store_name
+            ,pr.store_category
+            ,ddd.CN_element
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+         from rot_pro.parcel_route pr
+         join a t1 on t1.pno = pr.pno
+         join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
+     ) pr on pr.pno = t.pno and pr.rk = 1
+left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = t.id
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = t.id
+left join fle_staging.ka_profile kp on t.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t.client_id
+left join fle_staging.sys_store ss on ss.id = cdt.organization_id
+left join fle_staging.customer_group cg on cg.id = cdt.group_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pi.returned
+        ,pi.client_id
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_date
+        ,pi.state
+        ,pi.agent_id
+        ,pi.ticket_pickup_store_id
+        ,pi.dst_store_id
+    from fle_staging.parcel_info pi
+#     left join dwm.dwd_ex_th_parcel_details detpd
+    where
+        pi.created_at > '2023-02-28 17:00:00'
+        and pi.created_at < '2023-06-04 17:00:00'
+        and pi.state not in (5,7,8,9)
+)
+select
+    t1.pno
+    ,t1.pick_date 揽收日期
+    ,if(t1.returned = 1, '退件', '正向') 包裹类型
+    ,t1.client_id 客户ID
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as 客户类型
+    ,datediff(curdate(), t1.pick_date) 揽收至今滞留天数
+    ,case t1.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,pr.store_name 当前滞留网点
+    ,case pr.store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `当前网点类型`
+    ,pr.CN_element 最新有效路由
+    ,convert_tz(pr.routed_at, '+00:00', '+07:00')  最后有效路由时间
+    ,datediff(curdate(),convert_tz(pr.routed_at, '+00:00', '+07:00')) 最后有效路由至今日期
+    ,di.CN_element 问题件类型
+    ,convert_tz(di.created_at, '+00:00', '+07:00') 最后一条问题件创建时间
+    ,datediff(now(),convert_tz(di.created_at, '+00:00', '+07:00')) 问题件处理天数
+    ,ppd.CN_element 最后一个留仓原因
+    ,ss.name 揽收网点
+    ,ss2.name 目的地网点
+    ,CASE
+          WHEN kp.id ='AA0622' THEN 'PMD-shein'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' AND if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' THEN 'KAM'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' THEN 'retail-Network'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' THEN 'retail-Bulky'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` IN ('1098','1099','1100','1101') THEN 'retail-Sales'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' THEN 'retail-shop'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' THEN 'Customer Service'
+          WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' THEN 'Bulky Business Development'
+          when kp3.`agent_category`= '3'  AND kp3.department_id= '388' and kp.id is null THEN 'KAM'
+          WHEN ss.`category` = '1' and kp.id is null THEN 'retail-Network-c'
+          WHEN ss.`category` in ('10','13') and kp.id is null THEN 'retail-Bulky-c'
+          WHEN ss.`category` = '6'  and kp.id is null THEN 'FH'
+          WHEN ss.`category` IN ('4','5','7') and kp.id is null THEN 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null THEN 'FFM'
+          else 'Other'
+      end as '归属部门'
+from t t1
+left join
+     (
+         select
+             pr.pno
+            ,pr.store_id
+            ,pr.store_name
+            ,pr.store_category
+            ,ddd.CN_element
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+         from rot_pro.parcel_route pr
+         join t t1 on t1.pno = pr.pno
+         join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
+     ) pr on pr.pno = t1.pno and pr.rk = 1
+left join
+     (
+         select
+             di.pno
+            ,di.diff_marker_category
+            ,ddd.CN_element
+            ,di.created_at
+            ,row_number() over (partition by di.pno order by di.created_at desc ) rk
+         from fle_staging.diff_info di
+         join t t1 on t1.pno = di.pno
+         left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             di.state = 0
+     ) di on di.pno = t1.pno and di.rk = 1
+left join
+     (
+         select
+             ppd.pno
+            ,ppd.diff_marker_category
+            ,ddd.CN_element
+            ,row_number() over (partition by ppd.pno order by ppd.created_at desc ) rk
+         from fle_staging.parcel_problem_detail ppd
+         join t t1 on t1.pno = ppd.pno
+         left join dwm.dwd_dim_dict ddd on ppd.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+         where
+             ppd.parcel_problem_type_category = 2
+     ) ppd on ppd.pno = t1.pno and ppd.rk = 1
+left join fle_staging.sys_store ss on ss.id = t1.ticket_pickup_store_id
+left join fle_staging.sys_store ss2 on ss2.id = t1.dst_store_id
+left join fle_staging.ka_profile  AS kp on kp.id = t1.client_id
+left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+left join fle_staging.ka_profile kp3 on t1.`agent_id`  = kp3.`id`
+left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t1.client_id;
+;-- -. . -..- - / . -. - .-. -.--
+with  a as
+(
+    select
+        di.pno
+        ,di.id
+        ,ddd.CN_element
+        ,convert_tz(di.created_at, '+00:00', '+07:00') di_time
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_time
+        ,pi.client_id
+    from fle_staging.diff_info di
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    where
+        di.state = 0
+        and pi.created_at < '2023-06-04 17:00:00'
+        and pi.state = 6
+)
+select
+    t.pno
+    ,t.pick_time 揽收时间
+    ,t.di_time 疑难件提交时间
+    ,datediff(now(), t.pick_time) 揽收至今天数
+    ,pr.store_name 当前滞留网点
+    ,case pr.store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `当前网点类型`
+    ,t.CN_element 疑难原因
+    ,datediff(now(), t.di_time) 问题件处理天数
+    ,case sdt.pending_handle_category
+        when 1 then '待揽收网点协商'
+        when 2 then '待KAM问题件处理'
+        when 3 then '待QAQC判责'
+        when 4 then '待客户决定'
+    end 待处理人
+    ,ss.name 待处理网点
+    ,t.client_id
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,cg.name 客服组
+    ,case sdt.state
+        when 0 then '处理中'
+        when 1 then '未处理'
+        when 2 then '已处理'
+    end 处理状态
+    ,datediff(now(), convert_tz(sdt.updated_at, '+00:00', '+07:00')) 当前状态至今天数
+from a t
+left join
+     (
+         select
+             pr.pno
+            ,pr.store_id
+            ,pr.store_name
+            ,pr.store_category
+            ,ddd.CN_element
+            ,pr.routed_at
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+         from rot_pro.parcel_route pr
+         join a t1 on t1.pno = pr.pno
+         join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
+     ) pr on pr.pno = t.pno and pr.rk = 1
+left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = t.id
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = t.id
+left join fle_staging.ka_profile kp on t.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t.client_id
+left join fle_staging.sys_store ss on ss.id = cdt.organization_id
+left join fle_staging.customer_group cg on cg.id = cdt.group_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pi.state
+        ,pi.ticket_pickup_store_id
+        ,pi.returned
+        ,pi.dst_store_id
+        ,pi.client_id
+        ,pi.cod_enabled
+    from fle_staging.parcel_info pi
+    where
+        pi.created_at < '2023-06-06 17:00:00'
+        and pi.state not in (5,7,8,9)
+#         and pi.pno = 'P35231NPHV3BE'
+)
+select
+    t1.pno
+    ,if(t1.returned = 1, '退件', '正向件')  方向
+    ,t1.client_id 客户ID
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as 客户类型
+    ,case t1.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case di.diff_marker_category # 疑难原因
+        when 1 then '客户不在家/电话无人接听'
+        when 2 then '收件人拒收'
+        when 3 then '快件分错网点'
+        when 4 then '外包装破损'
+        when 5 then '货物破损'
+        when 6 then '货物短少'
+        when 7 then '货物丢失'
+        when 8 then '电话联系不上'
+        when 9 then '客户改约时间'
+        when 10 then '客户不在'
+        when 11 then '客户取消任务'
+        when 12 then '无人签收'
+        when 13 then '客户周末或假期不收货'
+        when 14 then '客户改约时间'
+        when 15 then '当日运力不足，无法派送'
+        when 16 then '联系不上收件人'
+        when 17 then '收件人拒收'
+        when 18 then '快件分错网点'
+        when 19 then '外包装破损'
+        when 20 then '货物破损'
+        when 21 then '货物短少'
+        when 22 then '货物丢失'
+        when 23 then '收件人/地址不清晰或不正确'
+        when 24 then '收件地址已废弃或不存在'
+        when 25 then '收件人电话号码错误'
+        when 26 then 'cod金额不正确'
+        when 27 then '无实际包裹'
+        when 28 then '已妥投未交接'
+        when 29 then '收件人电话号码是空号'
+        when 30 then '快件分错网点-地址正确'
+        when 31 then '快件分错网点-地址错误'
+        when 32 then '禁运品'
+        when 33 then '严重破损（丢弃）'
+        when 34 then '退件两次尝试派送失败'
+        when 35 then '不能打开locker'
+        when 36 then 'locker不能使用'
+        when 37 then '该地址找不到lockerstation'
+        when 38 then '一票多件'
+        when 39 then '多次尝试派件失败'
+        when 40 then '客户不在家/电话无人接听'
+        when 41 then '错过班车时间'
+        when 42 then '目的地是偏远地区,留仓待次日派送'
+        when 43 then '目的地是岛屿,留仓待次日派送'
+        when 44 then '企业/机构当天已下班'
+        when 45 then '子母件包裹未全部到达网点'
+        when 46 then '不可抗力原因留仓(台风)'
+        when 47 then '虚假包裹'
+        when 48 then '转交FH包裹留仓'
+        when 50 then '客户取消寄件'
+        when 51 then '信息录入错误'
+        when 52 then '客户取消寄件'
+        when 53 then 'lazada仓库拒收'
+        when 69 then '禁运品'
+        when 70 then '客户改约时间'
+        when 71 then '当日运力不足，无法派送'
+        when 72 then '客户周末或假期不收货'
+        when 73 then '收件人/地址不清晰或不正确'
+        when 74 then '收件地址已废弃或不存在'
+        when 75 then '收件人电话号码错误'
+        when 76 then 'cod金额不正确'
+        when 77 then '企业/机构当天已下班'
+        when 78 then '收件人电话号码是空号'
+        when 79 then '快件分错网点-地址错误'
+        when 80 then '客户取消任务'
+        when 81 then '重复下单'
+        when 82 then '已完成揽件'
+        when 83 then '联系不上客户'
+        when 84 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 85 then '寄件人电话号码是空号'
+        when 86 then '包裹不符合揽收条件超大件'
+        when 87 then '包裹不符合揽收条件违禁品'
+        when 88 then '寄件人地址为岛屿'
+        when 89 then '运力短缺，跟客户协商推迟揽收'
+        when 90 then '包裹未准备好推迟揽收'
+        when 91 then '包裹包装不符合运输标准'
+        when 92 then '客户提供的清单里没有此包裹'
+        when 93 then '包裹不符合揽收条件（超大件、违禁物品）'
+        when 94 then '客户取消寄件/客户实际不想寄此包裹'
+        when 95 then '车辆/人力短缺推迟揽收'
+        when 96 then '遗漏揽收(已停用)'
+        when 97 then '子母件(一个单号多个包裹)'
+        when 98 then '地址错误addresserror'
+        when 99 then '包裹不符合揽收条件：超大件'
+        when 100 then '包裹不符合揽收条件：违禁品'
+        when 101 then '包裹包装不符合运输标准'
+        when 102 then '包裹未准备好'
+        when 103 then '运力短缺，跟客户协商推迟揽收'
+        when 104 then '子母件(一个单号多个包裹)'
+        when 105 then '破损包裹'
+        when 106 then '空包裹'
+        when 107 then '不能打开locker(密码错误)'
+        when 108 then 'locker不能使用'
+        when 109 then 'locker找不到'
+        when 110 then '运单号与实际包裹的单号不一致'
+        when 111 then 'box客户取消任务'
+        when 112 then '不能打开locker(密码错误)'
+        when 113 then 'locker不能使用'
+        when 114 then 'locker找不到'
+        when 115 then '实际重量尺寸大于客户下单的重量尺寸'
+        when 116 then '客户仓库关闭'
+        when 117 then '客户仓库关闭'
+        when 118 then 'SHOPEE订单系统自动关闭'
+        when 119 then '客户取消包裹'
+        when 121 then '地址错误'
+        when 122 then '当日运力不足，无法揽收'
+    end as 疑难原因
+    ,case
+        when t1.state = 6 and di.pno is not null then di.sh_do
+        when t1.state = 6 and plt.pno is not null then plt.should_do
+        when t1.state != 6 and plt.pno is not null then plt.should_do
+        when t1.state != 6 and plt.pno is null and pct.pno is not null then 'qaqc-TeamB'
+        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then pr.store_name
+        else de.last_store_name
+    end 待处理节点
+    ,case
+        when t1.state = 6 and di.pno is not null then 'KAM/揽件网点未协商'
+        when t1.state = 6 and di.pno is null  then '闪速系统沟通处理中'
+        when t1.state != 6 and plt.pno is not null and plt2.pno is not null then '闪速系统沟通处理中'
+        when plt.pno is null and pct.pno is not null then '闪速超时效理赔未完成'
+        when de.last_store_id = t1.ticket_pickup_store_id and plt2.pno is null then '揽件未发出'
+        when t1.dst_store_id = 'PH19040F05' and plt2.pno is null then '弃件未到拍卖仓'
+        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then 'QAQC无须追责后长期无有效路由'
+        else null
+    end 卡点原因
+    ,de.last_store_name 当前节点
+    ,datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) 最后有效路由距今天数
+#     ,de.last_cn_route_action 最新一条有效路由
+    ,case pr.route_action # 路由动作
+         when 'ACCEPT_PARCEL' then '接件扫描'
+         when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
+         when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
+         when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
+         when 'CANCEL_PARCEL' then '撤销包裹'
+         when 'CANCEL_SHIPMENT_WAREHOUSE' then '取消发件出仓'
+         when 'CHANGE_PARCEL_CANCEL' then '修改包裹为撤销'
+         when 'CHANGE_PARCEL_CLOSE' then '修改包裹为异常关闭'
+         when 'CHANGE_PARCEL_IN_TRANSIT' then '修改包裹为运输中'
+         when 'CHANGE_PARCEL_INFO' then '修改包裹信息'
+         when 'CHANGE_PARCEL_SIGNED' then '修改包裹为签收'
+         when 'CLAIMS_CLOSE' then '理赔关闭'
+         when 'CLAIMS_COMPLETE' then '理赔完成'
+         when 'CLAIMS_CONTACT' then '已联系客户'
+         when 'CLAIMS_TRANSFER_CS' then '转交总部cs处理'
+         when 'CLOSE_ORDER' then '关闭订单'
+         when 'CONTINUE_TRANSPORT' then '疑难件继续配送'
+         when 'CREATE_WORK_ORDER' then '创建工单'
+         when 'CUSTOMER_CHANGE_PARCEL_INFO' then '客户修改包裹信息'
+         when 'CUSTOMER_OPERATING_RETURN' then '客户操作退回寄件人'
+         when 'DELIVERY_CONFIRM' then '确认妥投'
+         when 'DELIVERY_MARKER' then '派件标记'
+         when 'DELIVERY_PICKUP_STORE_SCAN' then '自提取件扫描'
+         when 'DELIVERY_TICKET_CREATION_SCAN' then '交接扫描'
+         when 'DELIVERY_TRANSFER' then '派件转单'
+         when 'DEPARTURE_GOODS_VAN_CK_SCAN' then '车货关联出港'
+         when 'DETAIN_WAREHOUSE' then '货件留仓'
+         when 'DIFFICULTY_FINISH_INDEMNITY' then '疑难件支付赔偿'
+         when 'DIFFICULTY_HANDOVER' then '疑难件交接'
+         when 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE' then '疑难件交接货件留仓'
+         when 'DIFFICULTY_RE_TRANSIT' then '疑难件退回区域总部/重启运送'
+         when 'DIFFICULTY_RETURN' then '疑难件退回寄件人'
+         when 'DIFFICULTY_SEAL' then '集包异常'
+         when 'DISCARD_RETURN_BKK' then '丢弃包裹的，换单后寄回BKK'
+         when 'DISTRIBUTION_INVENTORY' then '分拨盘库'
+         when 'DWS_WEIGHT_IMAGE' then 'DWS复秤照片'
+         when 'EXCHANGE_PARCEL' then '换货'
+         when 'FAKE_CANCEL_HANDLE' then '虚假撤销判责'
+         when 'FLASH_HOME_SCAN' then 'FH交接扫描'
+         when 'FORCE_TAKE_PHOTO' then '强制拍照路由'
+         when 'HAVE_HAIR_SCAN_NO_TO' then '有发无到'
+         when 'HURRY_PARCEL' then '催单'
+         when 'INCOMING_CALL' then '来电接听'
+         when 'INTERRUPT_PARCEL_AND_RETURN' then '中断运输并退回'
+         when 'INVENTORY' then '盘库'
+         when 'LOSE_PARCEL_TEAM_OPERATION' then '丢失件团队处理'
+         when 'MANUAL_REMARK' then '添加备注'
+         when 'MISS_PICKUP_HANDLE' then '漏包裹揽收判责'
+         when 'MISSING_PARCEL_SCAN' then '丢失件包裹操作'
+         when 'NOTICE_LOST_PARTS_TEAM' then '已通知丢失件团队'
+         when 'PARCEL_HEADLESS_CLAIMED' then '无头件包裹已认领'
+         when 'PARCEL_HEADLESS_PRINTED' then '无头件包裹已打单'
+         when 'PENDING_RETURN' then '待退件'
+         when 'PHONE' then '电话联系'
+         when 'PICK_UP_STORE' then '待自提取件'
+         when 'PICKUP_RETURN_RECEIPT' then '签回单揽收'
+         when 'PRINTING' then '打印面单'
+         when 'QAQC_OPERATION' then 'QAQC判责'
+         when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
+         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'REFUND_CONFIRM' then '退件妥投'
+         when 'REPAIRED' then '上报问题修复路由'
+         when 'REPLACE_PNO' then '换单'
+         when 'REPLY_WORK_ORDER' then '回复工单'
+         when 'REVISION_TIME' then '改约时间'
+         when 'SEAL' then '集包'
+         when 'SEAL_NUMBER_CHANGE' then '集包件数变化'
+         when 'SHIPMENT_WAREHOUSE_SCAN' then '发件出仓扫描'
+         when 'SORTER_WEIGHT_IMAGE' then '分拣机复秤照片'
+         when 'SORTING_SCAN' then '分拣扫描'
+         when 'STAFF_INFO_UPDATE_WEIGHT' then '快递员修改重量'
+         when 'STORE_KEEPER_UPDATE_WEIGHT' then '仓管员复秤'
+         when 'STORE_SORTER_UPDATE_WEIGHT' then '分拣机复秤'
+         when 'SYSTEM_AUTO_RETURN' then '系统自动退件'
+         when 'TAKE_PHOTO' then '异常打单拍照'
+         when 'THIRD_EXPRESS_ROUTE' then '第三方公司路由'
+         when 'THIRD_PARTY_REASON_DETAIN' then '第三方原因滞留'
+         when 'TICKET_WEIGHT_IMAGE' then '揽收称重照片'
+         when 'TRANSFER_LOST_PARTS_TEAM' then '已转交丢失件团队'
+         when 'TRANSFER_QAQC' then '转交QAQC处理'
+         when 'UNSEAL' then '拆包'
+         when 'UNSEAL_NO_PARCEL' then '上报包裹不在集包里'
+         when 'UNSEAL_NOT_SCANNED' then '集包已拆包，本包裹未被扫描'
+         when 'VEHICLE_ACCIDENT_REG' then '车辆车祸登记'
+         when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
+         when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
+         when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
+        end as 最后一条路由
+    ,convert_tz(pr.routed_at ,'+00:00', '+08:00') 最新一条有效路由时间
+    ,datediff(now(), de.dst_routed_at) 目的地网点停留时间
+    ,de.dst_store 目的地网点
+    ,de.src_store 揽收网点
+    ,de.pickup_time 揽收时间
+    ,de.pick_date 揽收日期
+    ,if(hold.pno is not null, 'yes', 'no' ) 是否有holding标记
+    ,if(plt2.pno is not null, 'yes', 'no') 是否人工无须追责过
+    ,if(pr3.pno is not null, 'yes', 'no') 是否有待退件标记
+from t t1
+left join fle_staging.ka_profile kp on t1.client_id = kp.id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t1.client_id
+left join dwm.dwd_ex_th_parcel_details de on de.pno = t1.pno
+left join
+    (
+        select
+            plt.pno
+            ,group_concat(ss.name ) should_do
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        left join bi_pro.work_order wo on wo.loseparcel_task_id = plt.id
+        left join fle_staging.sys_store ss on ss.id = wo.store_id
+        where
+            plt.state in (3)
+            and wo.status in (1,2)
+        group by 1
+
+        union  all
+
+        select
+            plt.pno
+            ,'QAQC' should_do
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        where
+            plt.state in (1,2,4)
+    ) plt on plt.pno = t1.pno
+left join
+    (
+        select
+            t2.pno
+            ,cdt.negotiation_result_category
+            ,di.diff_marker_category
+            ,case
+                when di.diff_marker_category in (20,21)  and cdt.vip_enable = 1 then 'KAM'
+                when di.diff_marker_category not in (20,21) and cdt.vip_enable = 1 then 'KAM'
+                when di.diff_marker_category not in (20,21) and cdt.vip_enable = 0 then ss2.name
+                WHEN di.diff_marker_category in (20,21) and cdt.vip_enable = 0 then ss2.name
+            end sh_do
+        from fle_staging.diff_info di
+        join t t2 on t2.pno = di.pno
+        join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        left join bi_pro.parcel_lose_task plt on plt.source_id = cdt.id
+        left join fle_staging.sys_store ss2 on ss2.id = t2.ticket_pickup_store_id
+        where
+            cdt.negotiation_result_category is null
+    ) di on di.pno = t1.pno
+left join
+    (
+        select
+            pr.pno
+            ,pr.store_name
+            ,pr.routed_at
+            ,pr.route_action
+            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+        from  rot_pro.parcel_route pr
+        join t t3 on t3.pno = pr.pno
+        where
+            pr.route_action in ('INVENTORY','RECEIVED' ,'RECEIVE_WAREHOUSE_SCAN', 'SORTING_SCAN', 'DELIVERY_TICKET_CREATION_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SHIPMENT_WAREHOUSE_SCAN', 'DETAIN_WAREHOUSE', 'DELIVERY_CONFIRM', 'DIFFICULTY_HANDOVER', 'DELIVERY_MARKER', 'REPLACE_PNO','SEAL', 'UNSEAL', 'STAFF_INFO_UPDATE_WEIGHT', 'STORE_KEEPER_UPDATE_WEIGHT', 'STORE_SORTER_UPDATE_WEIGHT', 'DISCARD_RETURN_BKK', 'DELIVERY_TRANSFER', 'PICKUP_RETURN_RECEIPT', 'FLASH_HOME_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SORTING_SCAN ', 'DELIVERY_PICKUP_STORE_SCAN', 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE', 'REFUND_CONFIRM', 'ACCEPT_PARCEL')
+    ) pr on pr.pno = t1.pno and pr.rk = 1
+left join
+    (
+        select
+            plt.pno
+        from bi_pro.parcel_lose_task plt
+        join t t1 on t1.pno = plt.pno
+        where
+            plt.state = 5
+            and plt.operator_id not in (10000,10001,10002)
+        group by 1
+    ) plt2 on plt2.pno = t1.pno
+left join
+    (
+        select
+            plt.pno
+        from bi_pro.parcel_claim_task plt
+        join t t4  on t4.pno = plt.pno
+        where
+            plt.state not in (6,7,8)
+            and plt.source = 11
+        group by 1
+    ) pct on pct.pno = t1.pno
+left join
+    (
+        select
+            pr2.pno
+        from rot_pro.parcel_route pr2
+        join t t1 on t1.pno = pr2.pno
+        where
+            pr2.route_action = 'REFUND_CONFIRM'
+        group by 1
+    ) hold on hold.pno = t1.pno
+left join
+    (
+        select
+            pr2.pno
+        from  rot_pro.parcel_route pr2
+        join t t1 on t1.pno = pr2.pno
+        where
+            pr2.route_action = 'PENDING_RETURN'
+        group by 1
+    ) pr3 on pr3.pno = t1.pno
+group by t1.pno;

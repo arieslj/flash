@@ -105,8 +105,8 @@ from  backyard_pro.staff_mileage_record smr
 left join fle_staging.sys_store ss on ss.id = smr.store_id
 where
 #     smr.`created_at` >= convert_tz(CURRENT_DATE-interval 7 day,'+07:00','+00:00')
-    smr.created_at >= '2023-05-02 17:00:00'
-    and smr.created_at < '2023-05-12 17:00:00'
+    smr.created_at >= '2023-05-14 17:00:00'
+    and smr.created_at < '2023-05-21 17:00:00'
 
 ;
 
@@ -425,3 +425,132 @@ from
  -- and di.pno='P47211HMYR8AW'
         group by 1,2,3,4,5
 )t where t.拒收次数>=3
+;
+
+select
+    pi.pno
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_lj_0522 t on t.pno = pi.pno
+left join fle_staging.ka_profile kp on kp.id = pi.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+
+union
+
+select
+    pi.recent_pno
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_lj_0522 t on t.pno = pi.recent_pno
+left join fle_staging.ka_profile kp on kp.id = pi.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+
+
+;
+
+
+select
+    dt.store_name 网点名称
+    ,dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_type 网点类型
+    ,if(dd.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,count(distinct coalesce(am.average_merge_key, am.average_merge_key)) 生成处罚总量
+    ,count(distinct if(pssn.store_id in ('TH02030121', 'TH46010401', 'TH02030307') or pssn.store_category = 14, pssn.pno, null)) '揽件网点没有收件入仓但包裹发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pssn.store_id not in ('TH02030121', 'TH46010401', 'TH02030307') and  pssn.store_category != 14, pssn.pno, null)) '揽件网点没有收件入仓且未发往BAG89、BAG88、BAG99、PDC总量'
+    ,count(distinct if(pi.dst_store_id = pi.ticket_pickup_store_id, pi.pno, null)) 自揽自派总量
+    ,count(distinct if(am.isappeal in (2,3,4,5), coalesce(am.average_merge_key, am.average_merge_key), null)) 网点申诉总量
+    ,count(distinct if(am.state = 1 and am.isdel = 0, coalesce(am.average_merge_key, am.average_merge_key), null)) 实际处罚量
+from bi_pro.abnormal_message am
+left join fle_staging.parcel_info pi on pi.pno = am.merge_column
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = am.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_th_network_spill_detl_rd dd on dd.统计日期 = am.abnormal_time and dd.网点ID = am.store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = am.merge_column and pssn.valid_store_order = 2
+where
+    am.punish_category = 39 -- 不揽收包裹未入仓
+    and am.created_at >= '2023-04-19'
+    and am.created_at < '2023-05-20'
+group by 1,2,3,4,5
+;
+
+select
+    dt.store_name
+    ,am.merge_column
+from bi_pro.abnormal_message am
+left join fle_staging.parcel_info pi on pi.pno = am.merge_column
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = am.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_th_network_spill_detl_rd dd on dd.统计日期 = am.abnormal_time and dd.网点ID = am.store_id
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = am.merge_column and pssn.valid_store_order = 2
+where
+    am.punish_category = 39 -- 不揽收包裹未入仓
+    and am.created_at >= '2023-04-19'
+    and am.created_at < '2023-05-20'
+    and dt.store_name in ('2LPW_BDC-ลาดพร้าว', '2LLK_BDC-ลำลูกกา', 'TMI_SP-ท่าไม้')
+group by 1,2
+
+
+;
+
+
+select
+    fvp.relation_no
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,de.last_store_name 包裹当前网点
+    ,de.last_cn_route_action 最后一条有效路由
+    ,de.last_route_time 最后一条有效路由时间
+    ,de.last_cn_marker_category 最近一次派送失败原因
+    ,de.last_inventory_at 最后一次盘库时间
+    ,de.dst_routed_at 目的地网点第一次有效路由时间
+from fle_staging.fleet_van_proof_parcel_detail fvp
+left join dwm.dwd_ex_th_parcel_details de on de.pno = fvp.relation_no
+left join fle_staging.parcel_info pi on pi.recent_pno = fvp.recent_pno
+where
+    fvp.proof_id = 'BKKQWZF63'
+    and fvp.relation_category = 1
+
+
+
+;
+
+
+
+select
+    pi.pno 单号
+    ,pi.client_id 客户ID
+    ,ss.name 揽收网点
+    ,pi.exhibition_weight 揽收重量
+    ,concat_ws('*', pi.exhibition_length, pi.exhibition_width, pi.exhibition_height) 揽收尺寸
+from fle_staging.parcel_info pi
+join tmpale.tmp_th_pno_0529 t on t.pno = pi.pno
+left join fle_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id
+;
+
+
+select
+    sci.pno
+    ,sci.third_sorting_code
+    ,sci.sorting_code
+from dwm.drds_parcel_sorting_code_info sci
+where
+    sci.pno in ('TH01163Z321U1B1','THT01168SH8K0Z','THT01168JCBZ6Z','THT01168KH1V3Z','THT01168MMGQ0Z','THT01168G7AZ3Z','TH01163UDK146B0','TH01163YZSKJ3B0','TH01163YJXN05B0','TH011640X70B6B0','TH01163XX6QJ8B0','TH44113ZM9YY7H','TH011641T8K26B0','TH011641MCHR6B0','TH01163WCPTN9B0','THT011695SZF5Z','TH011641TC963B0','TH011641E6FW5B0','TH011641HUT08B0','TH011641ACGA7B0','TH01163ZACAE4B0','SSLT730008335006','THT01169ERA97Z','TH011641HQG02B0','TH011640XBF10B0','TH01163ZNAHK6B1','TH011641G4AF3B0','TH011640RTZ36B0','TH01163Z3X1C6B0','TH014440FU9Z3C','SSLT730007989946','THT01169BSST8Z','TH0116415HE72B0','TH011640XJYC5B0','THT011694NU44Z','TH01163Z4H946B0','TH011641F8X54B0','TH0116412DGJ4B0','THT011693H079Z','TH01163YU4SA2B0','TH0116410AEE2B0','THT0116944XR6Z','TH01163Z8AQ52B0','THT011693C138Z','TH01163U8AS92B1','TH01163V4P9B1B0','TH01163YPJJK1B0','TH01163YFXKU7B0','TH01163VVJEV9B0','TH01163VVG5Z8B0','TH01163W1Z2G0B0','TH01163XECHM9B0','TH01163XEMYM6B0','TH01163WJ3SE5B0','TH01163XPM448B0','TH01163X5R432B0','TH01163XKNPK6B0','TH01163WDM636B0','TH01163X1XU37B0','TH01163XKDJT1B0','TH01163YFNVM9B0','TH01163W1BWH9B0','TH01163TFSU52B0','TH01163YERXH0B0','TH01163ZYV9K2B0','TH01163Y4F6D1B0','TH01163X5CY06B0','TH01163V870R5B1','TH01163ZRNS77B0','TH011640SD2J2B0','TH01163ZSJ6A5B0','TH01163YGPGH9B0','TH01163XMGGD6B0','TH01163XHH8Z6B0','TH01163YK6DV0B0','TH011641A59K8B0','THT011692RHV2Z','TH011640MB5K0B0','TH011641FFXZ5B0','TH01163ZNYRR4B0','TH011641696Q8B0','TH01163YXHA96B0','TH011640ZUWK0B0','TH0116417Y4G6B0','TH011641UVPQ4B0','THT01168M6S30Z','TH01163ZU2009B0','TH0116412NCN2B0','THT011691FUY7Z','TH011640CS7T9B0','TH01163ZRX9P7B0','TH011640HNKB3B0','TH01163Z4Q9Y3B0','TH01163Y03VW4B0','TH011640B07U7B0','TH01163YY4Q26B0','TH011640XBR69B0','TH0116426S4S4B0','TH011640PXDH6B0','TH01163YJTZY2B0','TH011640TVZU2B0','TH011640JYYM4B0','THT011694KBF8Z','TH011640J6KM1B0','TH01163YK04S2B0','TH01163YAFFN1B0','TH011640VJTR6B0','TH01163ZREAK9B0','TH0116401T7A7B0','TH0116428EE16B0','THT01169CVMQ8Z','TH01163YGKDK4B0','TH01163VFVQC4B0','THT01169E7G27Z','THT01169JPCJ9Z','TH01164228NA7B0','TH01163ZVW7D0B0','THT01169AM808Z','TH011642TXUS2B0','THT011696VJM3Z','TH01163Z4EWR5B0','THT01169CH5H2Z','THT01169C2H82Z','TH01163ZFHPA6B0','TH011642M3HJ2B0','TH011642HSP27B0','TH011642HS7P5B0','TH01164269QN5B0','TH01163ZMSW42B0','TH014441F6TH6C','TH011642280Y2B0','TH01163ZZ4FK1B0','TH0116426Z1Z7B0','TH011641NAMW9B0','TH0116421XA09B0','TH01164292EJ0B0','TH0202427TB98A','TH011641SHSE2B0','TH01164293RY1B0','TH01163ZSXPT0B0','TH011641X3CF9B0','TH011641KFEP2B0','TH01163VT71R2B0','TH011642EYYR7B0','TH011641FTUK0B0','TH011641HRX92B0','TH01163Z49Q99B0','TH01163NA6864B0','THT011699E4P5Z','TH011641SQ2M6B0','TH0116415KV91B0','TH011641B7R16B0','TH0116419B5M5B0','TH011641R6NX2B0','TH01163ZGR9T1B0','TH01164213YJ4B0','THT01169617J0Z','TH0116411SNE2B0','TH011640WJQH1B0','TH011641B33Y0B0','TH011641RZ6D0B0','TH0116414MCT8B0','THT01169Y1HE6Z','TH011643NH6Z6B0','TH011640YSG47B1','TH0116436Q271B0','TH01163VUKT30B0','TH011642744Q5B0','THT01169KYFT3Z','TH0116425G4D4B0','TH0116439WQW7B0','TH011643B5SU1B0','TH011643D1WK0B0','TH011642XXJ00B0','TH011643C43V7B0','TH011642U32U0B0','TH011642SXT32B0','TH0116414Z417B0','TH01163Y3ERR3B0','TH01163Y6TZ62B0','TH01163WXE178B0','TH0116416GCT9B0','THT01169M06D7Z','TH011643BPY21B0','TH0116437G3M5B1','TH011642XZ343B0','TH01164093PE1B0','TH0116410VAA8A1','THT01169WR6B1Z','TH011642KNMY2B0','TH01164269567A0','TH01163ZADFQ4B0','TH011642ZTKJ4B0','THT01169JAPN9Z','TH01163Z2GD33B0','TH011642NVB14B0','TH011642VQFB9B0','TH020342BRYB6B0','TH011641Y33E8B0')
+;
+
+

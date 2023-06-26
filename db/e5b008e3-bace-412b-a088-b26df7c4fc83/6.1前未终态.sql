@@ -8,9 +8,9 @@ with t as
         ,pi.dst_store_id
         ,pi.client_id
         ,pi.cod_enabled
-    from fle_staging.parcel_info pi
+    from ph_staging.parcel_info pi
     where
-        pi.created_at < '2023-06-06 17:00:00'
+        pi.created_at < '2023-06-07 16:00:00'
         and pi.state not in (5,7,8,9)
 #         and pi.pno = 'P35231NPHV3BE'
 )
@@ -258,21 +258,20 @@ select
     ,de.pickup_time 揽收时间
     ,de.pick_date 揽收日期
     ,if(hold.pno is not null, 'yes', 'no' ) 是否有holding标记
-    ,if(plt2.pno is not null, 'yes', 'no') 是否人工无须追责过
     ,if(pr3.pno is not null, 'yes', 'no') 是否有待退件标记
 from t t1
-left join fle_staging.ka_profile kp on t1.client_id = kp.id
-left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t1.client_id
-left join dwm.dwd_ex_th_parcel_details de on de.pno = t1.pno
+left join ph_staging.ka_profile kp on t1.client_id = kp.id
+left join dwm.dwd_dim_bigClient bc on bc.client_id = t1.client_id
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = t1.pno
 left join
     (
         select
             plt.pno
             ,group_concat(ss.name ) should_do
-        from bi_pro.parcel_lose_task plt
+        from ph_bi.parcel_lose_task plt
         join t t1 on t1.pno = plt.pno
-        left join bi_pro.work_order wo on wo.loseparcel_task_id = plt.id
-        left join fle_staging.sys_store ss on ss.id = wo.store_id
+        left join ph_bi.work_order wo on wo.loseparcel_task_id = plt.id
+        left join ph_staging.sys_store ss on ss.id = wo.store_id
         where
             plt.state in (3)
             and wo.status in (1,2)
@@ -283,7 +282,7 @@ left join
         select
             plt.pno
             ,'QAQC' should_do
-        from bi_pro.parcel_lose_task plt
+        from ph_bi.parcel_lose_task plt
         join t t1 on t1.pno = plt.pno
         where
             plt.state in (1,2,4)
@@ -300,15 +299,15 @@ left join
                 when di.diff_marker_category not in (20,21) and cdt.vip_enable = 0 then ss2.name
                 WHEN di.diff_marker_category in (20,21) and cdt.vip_enable = 0 then ss2.name
             end sh_do
-        from fle_staging.diff_info di
+        from ph_staging.diff_info di
         join t t2 on t2.pno = di.pno
-        join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
-        left join bi_pro.parcel_lose_task plt on plt.source_id = cdt.id
-        left join fle_staging.sys_store ss2 on ss2.id = t2.ticket_pickup_store_id
+        join ph_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+        left join ph_bi.parcel_lose_task plt on plt.source_id = cdt.id
+        left join ph_staging.sys_store ss2 on ss2.id = t2.ticket_pickup_store_id
         where
             cdt.negotiation_result_category is null
     ) di on di.pno = t1.pno
-left join
+left join  
     (
         select
             pr.pno
@@ -316,7 +315,7 @@ left join
             ,pr.routed_at
             ,pr.route_action
             ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
-        from  rot_pro.parcel_route pr
+        from  ph_staging.parcel_route pr
         join t t3 on t3.pno = pr.pno
         where
             pr.route_action in ('INVENTORY','RECEIVED' ,'RECEIVE_WAREHOUSE_SCAN', 'SORTING_SCAN', 'DELIVERY_TICKET_CREATION_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SHIPMENT_WAREHOUSE_SCAN', 'DETAIN_WAREHOUSE', 'DELIVERY_CONFIRM', 'DIFFICULTY_HANDOVER', 'DELIVERY_MARKER', 'REPLACE_PNO','SEAL', 'UNSEAL', 'STAFF_INFO_UPDATE_WEIGHT', 'STORE_KEEPER_UPDATE_WEIGHT', 'STORE_SORTER_UPDATE_WEIGHT', 'DISCARD_RETURN_BKK', 'DELIVERY_TRANSFER', 'PICKUP_RETURN_RECEIPT', 'FLASH_HOME_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SORTING_SCAN ', 'DELIVERY_PICKUP_STORE_SCAN', 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE', 'REFUND_CONFIRM', 'ACCEPT_PARCEL')
@@ -325,7 +324,7 @@ left join
     (
         select
             plt.pno
-        from bi_pro.parcel_lose_task plt
+        from ph_bi.parcel_lose_task plt
         join t t1 on t1.pno = plt.pno
         where
             plt.state = 5
@@ -336,7 +335,7 @@ left join
     (
         select
             plt.pno
-        from bi_pro.parcel_claim_task plt
+        from ph_bi.parcel_claim_task plt
         join t t4  on t4.pno = plt.pno
         where
             plt.state not in (6,7,8)
@@ -347,7 +346,7 @@ left join
     (
         select
             pr2.pno
-        from rot_pro.parcel_route pr2
+        from ph_staging.parcel_route pr2
         join t t1 on t1.pno = pr2.pno
         where
             pr2.route_action = 'REFUND_CONFIRM'
@@ -357,7 +356,7 @@ left join
     (
         select
             pr2.pno
-        from  rot_pro.parcel_route pr2
+        from  ph_staging.parcel_route pr2
         join t t1 on t1.pno = pr2.pno
         where
             pr2.route_action = 'PENDING_RETURN'

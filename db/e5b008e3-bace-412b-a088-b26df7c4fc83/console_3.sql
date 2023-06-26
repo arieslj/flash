@@ -910,92 +910,7 @@ where
     and pr.routed_at > date_sub(curdate(), interval 10 day)
 
 ;
-with a as
-(
-    select
-        a.pno
-        ,a.routed_at
-        ,a.store_id
-        ,a.store_name
-        ,a.staff_info_id
-        ,link_id
-    from
-        (
-            select
-                pr.pno
-                ,pr.routed_at
-                ,pr.store_id
-                ,pr.store_name
-                ,pr.staff_info_id
-                ,replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
-            from ph_staging.parcel_route pr
-            left join ph_drds.parcel_route_extra pre on pre.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
-            where
-                pr.route_action = 'TAKE_PHOTO'
-                and json_extract(pr.extra_value, '$.forceTakePhotoCategory') = 3
-                and pr.routed_at >= date_sub(date_sub(curdate() ,interval 1 day), interval 8 hour )
-                and pr.routed_at < date_sub(curdate(), interval 8 hour )
-        ) a
-    lateral view explode(split(a.valu, ',')) id as link_id
-)
-select
-    dp.region_name 大区
-    ,dp.piece_name 片区
-    ,dr.area_name 地区
-    ,de.pickup_time 揽收时间
-    ,convert_tz(coalesce(arr.unseal_time, arr.scan_time), '+00:00', '+08:00') 到达目的地网点时间  --
-    ,a.pno
-    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) '物品价值(cogs)'
-    ,oi.cod_amount/100 COD金额
-    ,datediff(date_sub(curdate(), interval 1 day), convert_tz(coalesce(arr.unseal_time, arr.scan_time), '+00:00', '+08:00')) 在仓天数
-    ,if(pri.pno is null, '否', '是') 是否打印面单
-    ,convert_tz(a.routed_at, '+00:00', '+08:00') 拍照路由时间
-    ,a.store_name 操作网点
-    ,a.staff_info_id 操作员工
-    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa.object_key) 图片地址
-from a
-left join ph_staging.sys_attachment sa on sa.id = a.link_id
-left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
-left join dwm.dwd_ex_ph_parcel_details de on de.pno = a.pno
-left join ph_staging.order_info oi on oi.pno = de.pno
-left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
-left join
-    ( -- 目的地网点拍照
-        select
-            pr.pno
-        from ph_staging.parcel_route pr
-        join
-            (
-                select
-                    a.pno
-                    ,a.store_id
-                from a
-                group by 1
-            ) a1 on a1.pno = pr.pno and a1.store_id = pr.store_id
-        where
-            pr.route_action = 'PRINTING'
-        group by 1
-    ) pri on pri.pno = a.pno
-left join dwm.dwd_ph_dict_lazada_period_rules dr on dr.province_code = dp.province_code
-left join
-    (
-        select
-            pr.pno
-            ,max(if(pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN', pr.routed_at, null)) scan_time
-            ,max(if(pr.route_action = 'UNSEAL', pr.routed_at, null)) unseal_time
-        from ph_staging.parcel_route pr
-        join
-            (
-                select
-                    a.pno
-                    ,a.store_id
-                from a
-                group by 1
-            ) a1 on a1.pno = pr.pno and a1.store_id = pr.store_id
-        where
-            pr.route_action in ('ARRIVAL_WAREHOUSE_SCAN','UNSEAL')
-        group by 1
-    ) arr on arr.pno = a.pno
+
 
 ;
 
@@ -1371,9 +1286,331 @@ left join
 
 
 
+select
+        fn.end_date as 理论妥投日期
+  ,count(distinct fn.pno) as 理论妥投包裹
+  ,count(distinct case when fn.latest_created_date<=fn.end_date then fn.pno else null end) as 时效内妥投包裹量
+  ,concat(round(count(distinct case when fn.latest_created_date<=fn.end_date then fn.pno else null end)/count(distinct fn.pno)*100,2),'%') as 绝对妥投率
+    from
+    (
+        select
+        ssd.pno
+        ,ssd.src_area_name
+        ,ssd.dst_area_name
+     ,ssd.end_date
+  ,date(convert_tz(cr.latest_created_at,'+00:00','+08:00')) as latest_created_date
+from  dwm.dwd_ex_ph_tiktok_sla_detail ssd
+left join
+(
+ select
+     cr.tracking_no
+     ,cr.pno
+     ,cr.action_code
+     ,cr.created_at as latest_created_at
+ from dwm.dwd_ph_tiktok_parcel_route_callback_record cr
+ where cr.action_code in ( 'signed_personally', 'signed_thirdparty', 'signed_cod', 'unreachable_returned','pkg_damaged','pkg_lost','pkg_scrap')
+) cr on ssd.pno=cr.pno
+where (cr.action_code is null or cr.action_code in ( 'signed_personally', 'signed_thirdparty', 'signed_cod', 'unreachable_returned'))
+and ssd.parcel_state<9
+    )fn
+where fn.end_date<current_date
+and fn.end_date>date_sub(current_date,interval 10 day)
+group by 1
+order by 1
+
+
+;
+select
+    km.应揽收日期
+ ,count(distinct km.运单号) as 应揽收订单量
+ ,count(distinct if(km.揽收订单日期<=km.应揽收日期,km.运单号,null)) as 时效内揽收订单量
+ /*,count(distinct if(km.揽收订单日期 is null,km.运单号,null)) as 截止目前历史未揽收订单量*/
+ ,concat(round(count(distinct if(km.揽收订单日期<=km.应揽收日期,km.运单号,null))/count(distinct km.运单号)*100,2),'%') as 绝对揽收率
+    from
+        (
+         select
+       oi.pno as 运单号
+       ,oi.src_name as seller名称
+       ,if(hour(convert_tz(oi.confirm_at, '+00:00', '+08:00'))>12,date_add(date(convert_tz(oi.confirm_at, '+00:00', '+08:00')), interval 1 day),  date(convert_tz(oi.confirm_at, '+00:00', '+08:00'))) as 应揽收日期
+       ,convert_tz(oi.created_at, '+00:00', '+08:00') as 创建订单时间
+       ,convert_tz(oi.confirm_at, '+00:00', '+08:00') as 订单确认时间
+       ,date(convert_tz(oi.confirm_at, '+00:00', '+08:00'))as 订单确认日期
+       ,convert_tz(pi.created_at, '+00:00', '+08:00') as 揽收订单时间
+       ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) as 揽收订单日期
+       ,case oi.state
+        when 0 then'已确认'
+     when 1 then'待揽件'
+     when 2 then'已揽收'
+     when 3 then'已取消(已终止)'
+     when 4 then'已删除(已作废)'
+     when 5 then'预下单'
+     when 6 then'被标记多次，限制揽收'
+        end as 订单状态
+    from  ph_staging.order_info oi
+   left join ph_staging.parcel_info pi on oi.pno=pi.pno
+   where oi.confirm_at>=date_sub(current_date,interval 41 day)
+     and oi.client_id in('AA0131')
+     and oi.state not in(3,4)
+   union
+   select
+       oi.pno as 运单号
+       ,oi.src_name as seller名称
+       ,date(convert_tz(oi.confirm_at, '+00:00', '+08:00'))as 应揽收日期
+       ,convert_tz(oi.created_at, '+00:00', '+08:00') as 创建订单时间
+       ,convert_tz(oi.confirm_at, '+00:00', '+08:00') as 订单确认时间
+       ,date(convert_tz(oi.confirm_at, '+00:00', '+08:00'))as 订单确认日期
+       ,convert_tz(pi.created_at, '+00:00', '+08:00') as 揽收订单时间
+       ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) as 揽收订单日期
+       ,case oi.state
+        when 0 then'已确认'
+     when 1 then'待揽件'
+     when 2 then'已揽收'
+     when 3 then'已取消(已终止)'
+     when 4 then'已删除(已作废)'
+     when 5 then'预下单'
+     when 6 then'被标记多次，限制揽收'
+        end as 订单状态
+    from  ph_staging.order_info oi
+   left join ph_staging.parcel_info pi on oi.pno=pi.pno
+   where oi.confirm_at>=date_sub(current_date,interval 10 day)
+     and oi.client_id in('AA0132')
+     and oi.state not in(3,4)
+        )km
+group by 1
+order by 1
+
+
+;
+select
+  r.pno
+ ,r.src_area_name
+ ,r.dst_area_name
+ ,r.finished_date
+ ,r.diff_time_hours
+ ,r.cn
+from
+    (
+       select
+      ssd.pno
+      ,ssd.src_area_name
+      ,ssd.dst_area_name
+   ,ssd.finished_date
+      ,ssd.pickup_time
+      ,ssd.finished_time
+            ,ssd.dst_hub_name
+   ,ssd.returned
+            ,ssd.src_store
+   ,round(timestampdiff(second,ssd.pickup_time,ssd.finished_time)/3600,2) as diff_time_hours
+            ,row_number() over(partition by ssd.src_area_name,ssd.dst_area_name,ssd.finished_date order by round(timestampdiff(second,ssd.pickup_time,ssd.finished_time)/3600,2)) as rn
+            ,count(1)over(partition by ssd.src_area_name,ssd.dst_area_name,ssd.finished_date) as cn
+            ,round(count(1)over(partition by ssd.src_area_name,ssd.dst_area_name,ssd.finished_date)*0.95,0) as cn_01
+      from dwm.dwd_ex_ph_tiktok_sla_detail ssd
+  where ssd.finished_date>='2023-05-10'
+    and ssd.finished_date<current_date
+    and ssd.parcel_state=5
+    and ssd.returned=0
+    )r
+where r.rn=r.cn_01
+order by r.src_area_name,r.dst_area_name,r.finished_date
+
+;
+select
+  r.pno
+ ,r.src_area_name
+ ,r.dst_area_name
+    ,r.dst_hub_name
+ ,r.finished_date
+ ,r.diff_time_hours
+ ,r.cn
+from
+    (
+       select
+      ssd.pno
+      ,ssd.src_area_name
+      ,ssd.dst_area_name
+   ,ssd.finished_date
+      ,ssd.pickup_time
+      ,ssd.finished_time
+            ,ssd.dst_hub_name
+   ,ssd.returned
+            ,ssd.src_store
+   ,round(timestampdiff(second,ssd.pickup_time,ssd.finished_time)/3600,2) as diff_time_hours
+            ,row_number() over(partition by ssd.dst_hub_name,ssd.finished_date order by round(timestampdiff(second,ssd.pickup_time,ssd.finished_time)/3600,2)) as rn
+            ,count(1)over(partition by ssd.dst_hub_name,ssd.finished_date) as cn
+            ,round(count(1)over(partition by ssd.dst_hub_name,ssd.finished_date)*0.95,0) as cn_01
+      from dwm.dwd_ex_ph_tiktok_sla_detail ssd
+  where ssd.finished_date>='2023-05-01'
+    and ssd.finished_date<current_date
+    and ssd.parcel_state=5
+    and ssd.returned=0
+    and((ssd.dst_area_name='LUZON 3'and ssd.src_area_name='MM')or (ssd.dst_area_name='VISAYAS 2'and ssd.src_area_name='MM'))
+    )r
+where r.rn=r.cn_01
+order by 2,3,4,5
+
+;
+
+select
+  r.pno
+ ,r.src_area_name
+ ,r.dst_area_name
+    ,r.dst_hub_name
+ ,r.finished_date
+ ,r.diff_time_hours
+ ,r.cn
+from
+    (
+       select
+      ssd.pno
+      ,ssd.src_area_name
+      ,ssd.dst_area_name
+   ,ssd.finished_date
+      ,ssd.pickup_time
+      ,ssd.finished_time
+            ,ssd.dst_hub_name
+   ,ssd.returned
+            ,ssd.src_store
+   ,round(timestampdiff(second,ssd.pickup_time,ssd.finished_time)/3600,2) as diff_time_hours
+            ,row_number() over(partition by ssd.dst_hub_name,ssd.finished_date order by round(timestampdiff(second,ssd.pickup_time,ssd.finished_time)/3600,2)) as rn
+            ,count(1)over(partition by ssd.dst_hub_name,ssd.finished_date) as cn
+            ,round(count(1)over(partition by ssd.dst_hub_name,ssd.finished_date)*0.95,0) as cn_01
+      from dwm.dwd_ex_ph_tiktok_sla_detail ssd
+  where ssd.finished_date>='2023-05-01'
+    and ssd.finished_date<current_date
+    and ssd.parcel_state=5
+    and ssd.returned=0
+    and(ssd.dst_area_name='VISAYAS 1'and ssd.src_area_name='MM')
+    )r
+where r.rn=r.cn_01
+order by 2,3,4,5
+
+
+;
+
+
+
+select
+    pi.pno
+    ,dp.store_name 妥投网点
+    ,dp.region_name 妥投网点大区
+    ,dp.piece_name 妥投网点片区
+    ,pi.ticket_delivery_staff_info_id 妥投员工ID
+from ph_staging.parcel_info pi
+join tmpale.tmp_ph_pno_lj_0522 t on t.pno = pi.pno
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = pi.ticket_delivery_store_id and dp.stat_date = date_sub(curdate(), interval 1 day )
 
 
 
 
+;
+
+
+with a as
+(
+    select
+        a.pno
+        ,a.routed_at
+        ,a.store_id
+        ,a.store_name
+        ,a.staff_info_id
+        ,link_id
+    from
+        (
+            select
+                pr.pno
+                ,pr.routed_at
+                ,pr.store_id
+                ,pr.store_name
+                ,pr.staff_info_id
+                ,replace(replace(replace(json_extract(pre.extra_value, '$.images'), '"', ''),'[', ''),']', '') valu
+            from ph_staging.parcel_route pr
+            left join ph_drds.parcel_route_extra pre on pre.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
+            where
+                pr.route_action = 'TAKE_PHOTO'
+                and json_extract(pr.extra_value, '$.forceTakePhotoCategory') = 3
+                and pr.routed_at >= date_sub(date_sub(curdate() ,interval 1 day), interval 8 hour )
+                and pr.routed_at < date_sub(curdate(), interval 8 hour )
+        ) a
+    lateral view explode(split(a.valu, ',')) id as link_id
+)
+select
+    dp.region_name 大区
+    ,dp.piece_name 片区
+    ,dr.area_name 地区
+    ,de.pickup_time 揽收时间
+    ,convert_tz(coalesce(arr.unseal_time, arr.scan_time), '+00:00', '+08:00') 到达目的地网点时间
+    ,a.pno
+    ,if(bc.client_name = 'lazada', oi.insure_declare_value/100, oi.cogs_amount/100) '物品价值(cogs)'
+    ,oi.cod_amount/100 COD金额
+    ,datediff(date_sub(curdate(), interval 1 day), convert_tz(coalesce(arr.unseal_time, arr.scan_time), '+00:00', '+08:00')) 在仓天数
+    ,if(pri.pno is null, '否', '是') 是否打印面单
+    ,convert_tz(a.routed_at, '+00:00', '+08:00') 拍照路由时间
+    ,a.store_name 操作网点
+    ,a.staff_info_id 操作员工
+    ,concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/',sa.object_key) 图片地址
+from a
+left join ph_staging.sys_attachment sa on sa.id = a.link_id
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dwd_ex_ph_parcel_details de on de.pno = a.pno
+left join ph_staging.order_info oi on oi.pno = de.pno
+left join dwm.dwd_dim_bigClient bc on bc.client_id = de.client_id
+left join
+    ( -- 目的地网点拍照
+        select
+            pr.pno
+        from ph_staging.parcel_route pr
+        join
+            (
+                select
+                    a.pno
+                    ,a.store_id
+                from a
+                group by 1
+            ) a1 on a1.pno = pr.pno and a1.store_id = pr.store_id
+        where
+            pr.route_action = 'PRINTING'
+        group by 1
+    ) pri on pri.pno = a.pno
+left join dwm.dwd_ph_dict_lazada_period_rules dr on dr.province_code = dp.province_code
+left join
+    (
+        select
+            pr.pno
+            ,max(if(pr.route_action = 'ARRIVAL_WAREHOUSE_SCAN', pr.routed_at, null)) scan_time
+            ,max(if(pr.route_action = 'UNSEAL', pr.routed_at, null)) unseal_time
+        from ph_staging.parcel_route pr
+        join
+            (
+                select
+                    a.pno
+                    ,a.store_id
+                from a
+                group by 1
+            ) a1 on a1.pno = pr.pno and a1.store_id = pr.store_id
+        where
+            pr.route_action in ('ARRIVAL_WAREHOUSE_SCAN','UNSEAL')
+        group by 1
+    ) arr on arr.pno = a.pno
+
+;
+select
+    pr.pno
+from ph_staging.parcel_route pr
+where
+    pr.route_action = 'UNSEAL'
+    and json_extract(pr.extra_value, '$.packPno') = 'P64091263'
+    and pr.routed_at > '2023-06-05'
+    and pr.routed_at < '20230-06-08'
+
+;
+
+select
+    pr.pno
+from ph_staging.parcel_route pr
+where
+    pr.route_action = 'SEAL'
+    and json_extract(pr.extra_value, '$.packPno') = 'P64091263'
+    and pr.routed_at > '2023-06-03'
+    and pr.routed_at < '20230-06-07';
 
 

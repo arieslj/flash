@@ -385,3 +385,23 @@ left join
 #     and dp.store_category not in (8,12)
 #     and pi.pno = 'P61022HXGYAD'
 group by 1
+
+
+;
+
+
+select
+    t.stat_date
+    ,t.delivery_par_cnt
+    ,count(t.staff_info_id)
+from
+    (
+        select
+            dp.staff_info_id
+            ,dp.stat_date
+            ,dp.delivery_par_cnt
+        from dwm.dwm_ph_staff_wide_s dp
+        where
+            dp.stat_date >= date_sub(curdate(), interval 7 day )
+    ) t
+group by 1,2
