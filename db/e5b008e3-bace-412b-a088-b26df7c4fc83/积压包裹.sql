@@ -304,11 +304,35 @@ with t as
 (
     select
         ssp.pno
+        ,ssp.stat_date
         ,ssp.inventory_class
+        ,ssp.resp_store_id
+        ,ssp.last_valid_action_route_at
+        ,ddd2.CN_element
     from ph_bi.should_stocktaking_parcel_info_recently ssp
+    left join dwm.dwd_dim_dict ddd2 on ddd2.element = ssp.last_valid_action and  ddd2.db = 'ph_staging' and ddd2.tablename = 'parcel_route'
     where
         ssp.stat_date = curdate()
         and ssp.hour = hour(now())
+        and hour(now()) <= 23
+
+    union all
+
+    select
+        ssp.pno
+        ,ssp.stat_date
+        ,ssp.inventory_class
+        ,ssp.resp_store_id
+        ,ssp.last_valid_action_route_at
+        ,ddd2.CN_element
+    from ph_bi.should_stocktaking_parcel_info_recently ssp
+    left join dwm.dwd_dim_dict ddd2 on ddd2.element = ssp.last_valid_action and  ddd2.db = 'ph_staging' and ddd2.tablename = 'parcel_route'
+    where
+        ssp.stat_date = date_sub(curdate(), interval 1 day)
+        and ssp.hour = 24
+        and hour(now()) = 0
+
+
 )
 select
     t1.pno
@@ -346,31 +370,19 @@ select
     ,dp2.piece_name 揽收片区
     ,dp2.region_name 揽收大区
     ,ss.name 目的地网点
-    ,pr.CN_element 最后一条有效路由
-    ,convert_tz(pr.routed_at, '+00:00', '+08:00') 最后一条有效路由时间
+    ,t1.CN_element 最后一条有效路由
+    ,t1.last_valid_action_route_at 最后一条有效路由时间
     ,if(pi.state = 1, datediff(now(), convert_tz(pi.created_at, '+00:00', '+08:00')), datediff(now(), de.dst_routed_at)) 在仓天数
     ,de.discard_enabled 是否为丢弃
     ,de.inventorys 盘库次数
     ,convert_tz(pr2.routed_at, '+00:00', '+08:00') 最后一次盘库时间
     ,date(convert_tz(pr2.routed_at, '+00:00', '+08:00')) 最后一次盘库日期
-    ,if(pr2.routed_at > date_add(curdate(), interval 8 hour), '是', '否') 是否有效盘库
-    ,if(pr2.routed_at > date_sub(curdate(), interval 8 hour), convert_tz(pr2.routed_at, '+00:00', '+08:00'), null) 今日最后一次盘库时间
+    ,if(pr2.routed_at > date_add(t1.stat_date, interval 8 hour), '是', '否') 是否有效盘库
+    ,if(pr2.routed_at > date_sub(t1.stat_date, interval 8 hour), convert_tz(pr2.routed_at, '+00:00', '+08:00'), null) 今日最后一次盘库时间
 from  t t1
 left join dwm.dwd_ex_ph_parcel_details de on de.pno = t1.pno
 left join ph_staging.parcel_info pi on pi.pno = t1.pno
-left join
-    (
-        select
-            pr.pno
-            ,pr.routed_at
-            ,pr.store_id
-            ,ddd.CN_element
-            ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
-        from ph_staging.parcel_route pr
-        join t t2 on t2.pno = pr.pno
-        join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'ph_staging' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
-    ) pr on pr.pno = t1.pno and pr.rk = 1
-left join dwm.dim_ph_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dim_ph_sys_store_rd dp on dp.store_id = t1.resp_store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
 left join ph_staging.order_info oi on if(pi.returned = 1, pi.customary_pno, pi.pno) = oi.pno
 left join dwm.dim_ph_sys_store_rd dp2 on dp2.store_id = pi.ticket_pickup_store_id and dp2.stat_date = date_sub(curdate(), interval 1 day)
 left join ph_staging.sys_store ss on ss.id = pi.dst_store_id

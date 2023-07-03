@@ -154,49 +154,127 @@ select
     ,plt.id
     ,plt.updated_at
     ,plt.state
-    ,pcol.created_at
     ,plt.penalties
     ,case
         when bc.`client_id` is not null then bc.client_name
         when kp.id is not null and bc.id is null then '普通ka'
         when kp.`id` is null then '小c'
     end as  ka_type
-    ,pcol.action
-#         ,plt.id
 from bi_pro.parcel_lose_task plt
 left join fle_staging.ka_profile kp on plt.client_id = kp.id
 left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
-left join bi_pro.parcel_cs_operation_log pcol on pcol.task_id = plt.id and pcol.type = 1
 where
-    plt.created_at >= '2023-05-01'
-    and plt.created_at < '2023-05-08'
-    and plt.source = 12
+    plt.updated_at >= '2023-05-01'
+    and plt.updated_at < '2023-06-01'
+    and plt.duty_result = 1
+    and plt.state = 6
+#     and plt.source = 12
 )
 select
-    a1.pno 包裹
-    ,a1.id 闪速任务ID
-    ,timestampdiff(second, a1.created_at, a2.created_at)/3600 认定后无需追责时间_H
+    b.ka_type 客户分类
+    ,count(b.id) 5月判责丢失量
+    ,count(if(b.24hour = 'y', b.id, null)) 丢失后24H内找回量
+    ,count(if(b.24hour = 'n', b.id, null)) 判责丢失后24H后找回量
+from
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_at, pr.min_prat)/3600 <= 24 then 'y'
+                when timestampdiff(second, t2.updated_at, pr.min_prat)/3600 > 24 then 'n'
+                else null
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_at, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b
+group by 1
+
+
+
+;
+
+
+
+with t as
+(
+    select
+        pr.pno
+        ,pr.routed_at
+        ,pr.id
+        ,case json_extract(pr.extra_value, '$.forceTakePhotoCategory')
+            when 1 then '打印面单'
+            when 2 then '收件人拒收'
+            when 3 then '滞留包裹强制拍照'
+        end photo_type
+    from rot_pro.parcel_route pr
+    where
+        pr.route_action = 'TAKE_PHOTO'
+        and pr.routed_at > '2023-06-14 17:00:00'
+        and pr.routed_at < '2023-06-30 17:00:00'
+)
+select
+    ddd.CN_element
+    ,a.photo_type
+    ,count(a.id) action_count
 from
     (
         select
             t1.pno
             ,t1.id
-            ,t1.created_at
-            ,t1.action
-        from t t1
+            ,t1.photo_type
+            ,pr2.remark
+            ,row_number() over (partition by pr2.pno order by pr2.routed_at desc) rk
+        from rot_pro.parcel_route pr2
+        join t t1 on pr2.pno = t1.pno
         where
-            t1.action = 4
-    ) a1
-join
-    (
-        select
-            t1.pno
-            ,t1.id
-            ,t1.created_at
-            ,t1.action
-        from t t1
-        where
-            t1.action = 3
-    ) a2 on a2.id = a1.id
+            pr2.routed_at < t1.routed_at
+            and pr2.route_action = 'FORCE_TAKE_PHOTO'
+            and pr2.routed_at > '2023-06-14 17:00:00'
+            and pr2.routed_at < '2023-06-30 17:00:00'
+#             and pr2.route_action = 'ARRIVAL_WAREHOUSE_SCAN'
+    ) a
+left join dwm.dwd_dim_dict ddd on ddd.element = a.remark and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
 where
-    a2.created_at > a1.created_at
+    a.rk = 1
+#     and ddd.CN_element = '到件入仓扫描'
+group by 1,2
+
+
+;
+with t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.state
+    ,plt.client_id
+    ,group_concat(plr.staff_id) staff
+from bi_pro.parcel_lose_task plt
+left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+group by 1
+)
+select
+    t1.*
+    ,sfp.force_take_photos_type
+    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+from fle_staging.stranded_force_photo_ai_record sfp
+join t t1 on t1.pno = sfp.pno
+where
+    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)

@@ -405,3 +405,14 @@ from
             dp.stat_date >= date_sub(curdate(), interval 7 day )
     ) t
 group by 1,2
+
+;
+
+select
+    ssp.hour
+from ph_bi.should_stocktaking_parcel_info_recently ssp
+where
+    ssp.stat_date = date_sub(curdate(), interval  1 day)
+group by 1
+;
+select hour('2023-06-28 00:29:29')

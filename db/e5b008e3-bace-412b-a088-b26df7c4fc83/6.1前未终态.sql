@@ -10,7 +10,7 @@ with t as
         ,pi.cod_enabled
     from ph_staging.parcel_info pi
     where
-        pi.created_at < '2023-06-07 16:00:00'
+        pi.created_at < '2023-06-14 16:00:00'
         and pi.state not in (5,7,8,9)
 #         and pi.pno = 'P35231NPHV3BE'
 )
@@ -149,17 +149,17 @@ select
         when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then pr.store_name
         else de.last_store_name
     end 待处理节点
-    ,case
-        when t1.state = 6 and di.pno is not null then 'KAM/揽件网点未协商'
-        when t1.state = 6 and di.pno is null  then '闪速系统沟通处理中'
-        when t1.state != 6 and plt.pno is not null and plt2.pno is not null then '闪速系统沟通处理中'
-        when plt.pno is null and pct.pno is not null then '闪速超时效理赔未完成'
-        when de.last_store_id = t1.ticket_pickup_store_id and plt2.pno is null then '揽件未发出'
-        when t1.dst_store_id = 'PH19040F05' and plt2.pno is null then '弃件未到拍卖仓'
-        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then 'QAQC无须追责后长期无有效路由'
-        else null
-    end 卡点原因
-    ,de.last_store_name 当前节点
+#     ,case
+#         when t1.state = 6 and di.pno is not null then 'KAM/揽件网点未协商'
+#         when t1.state = 6 and di.pno is null  then '闪速系统沟通处理中'
+#         when t1.state != 6 and plt.pno is not null and plt2.pno is not null then '闪速系统沟通处理中'
+#         when plt.pno is null and pct.pno is not null then '闪速超时效理赔未完成'
+#         when de.last_store_id = t1.ticket_pickup_store_id and plt2.pno is null then '揽件未发出'
+#         when t1.dst_store_id = 'PH19040F05' and plt2.pno is null then '弃件未到拍卖仓'
+#         when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then 'QAQC无须追责后长期无有效路由'
+#         else null
+#     end 卡点原因
+#     ,de.last_store_name 当前节点
     ,datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) 最后有效路由距今天数
 #     ,de.last_cn_route_action 最新一条有效路由
     ,case pr.route_action # 路由动作
@@ -259,6 +259,7 @@ select
     ,de.pick_date 揽收日期
     ,if(hold.pno is not null, 'yes', 'no' ) 是否有holding标记
     ,if(pr3.pno is not null, 'yes', 'no') 是否有待退件标记
+    ,td.try_num 尝试派送次数
 from t t1
 left join ph_staging.ka_profile kp on t1.client_id = kp.id
 left join dwm.dwd_dim_bigClient bc on bc.client_id = t1.client_id
@@ -362,6 +363,16 @@ left join
             pr2.route_action = 'PENDING_RETURN'
         group by 1
     ) pr3 on pr3.pno = t1.pno
+left join
+    (
+        select
+            td.pno
+            ,count(distinct date(convert_tz(tdm.created_at, '+00:00', '+08:00'))) try_num
+        from ph_staging.ticket_delivery td
+        join t t1 on t1.pno = td.pno
+        left join ph_staging.ticket_delivery_marker tdm on tdm.delivery_id = td.id
+        group by 1
+    ) td on td.pno = t1.pno
 group by t1.pno
 
     ;
@@ -373,23 +384,23 @@ group by t1.pno
 # where
 #     di.pno = 'P2206126FUVAL'
 ;
-
-select
-    t.*
-    ,pi.src_phone
-    ,pi.src_name
-    ,pi.dst_phone
-    ,pi.dst_name
-    ,fp.id
-    ,fp.name
-from ph_staging.parcel_info pi
-join tmpale.tmp_ph_pno_0621 t on t.pno = pi.pno
-left join ph_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id
-left join ph_staging.franchisee_profile fp on fp.id = ss.franchisee_id
-
-
-;
-select
-    pcd.field_name
-from ph_staging.parcel_change_detail pcd
-group by 1
+#
+# select
+#     t.*
+#     ,pi.src_phone
+#     ,pi.src_name
+#     ,pi.dst_phone
+#     ,pi.dst_name
+#     ,fp.id
+#     ,fp.name
+# from ph_staging.parcel_info pi
+# join tmpale.tmp_ph_pno_0621 t on t.pno = pi.pno
+# left join ph_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id
+# left join ph_staging.franchisee_profile fp on fp.id = ss.franchisee_id
+#
+#
+# ;
+# select
+#     pcd.field_name
+# from ph_staging.parcel_change_detail pcd
+# group by 1

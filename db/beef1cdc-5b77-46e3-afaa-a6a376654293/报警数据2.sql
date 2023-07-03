@@ -1,6 +1,7 @@
     select
         t.pno
         ,t.name
+        ,t.cod
         ,a1.created_at
         ,a1.finished_at
         ,a1.client_id
@@ -42,7 +43,7 @@
             when '9' then '已撤销 ยกเลิกแล้ว'
         end `包裹状态`
         ,group_concat(concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',a2.object_key)) `签名`
-    from test.tmp_th_m_pno_0615 t
+    from test.tmp_th_m_pno_0703 t
     left join
         (
             select
@@ -74,7 +75,7 @@
                         pi.p_date >= '2023-02-01'
                         and pi.p_date < '2023-03-01'
                 ) pi
-            join test.tmp_th_m_pno_0615 t on pi.pno = t.pno
+            join test.tmp_th_m_pno_0703 t on pi.pno = t.pno
         ) a1 on a1.pno = t.pno
     left join
         (
@@ -89,11 +90,11 @@
                         ,sa.object_key
                     from fle_dwd.dwd_fle_sys_attachment_di sa
                     where
-                        sa.p_date >= '2023-02-10'
-                        and sa.p_date < '2023-03-01'
+                        sa.p_date >= '2023-02-01'
+                        and sa.p_date < '2023-04-01'
                         and sa.oss_bucket_type = 'DELIVERY_CONFIRM'
                 ) sa
-            join test.tmp_th_m_pno_0615 t on sa.oss_bucket_key = t.pno
+            join test.tmp_th_m_pno_0703 t on sa.oss_bucket_key = t.pno
         ) a2 on a2.oss_bucket_key = a1.pno
     left join
         (
@@ -111,4 +112,6 @@
             where
                 ss.p_date = date_sub(`current_date`(), 1)
         ) s2 on s2.id = a1.ticket_delivery_store_id
-    group by t.pno
+    group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
+    ;
+select * from test.tmp_th_m_pno_0628

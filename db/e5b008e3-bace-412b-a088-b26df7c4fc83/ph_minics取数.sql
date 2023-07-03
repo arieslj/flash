@@ -115,11 +115,18 @@ from
             di.diff_marker_category
             ,if(ss.category = 6, 'FH', '网点') 类型
             ,if(hour(convert_tz(di.created_at, '+00:00', '+08:00')) >= 10 and hour(convert_tz(di.created_at, '+00:00', '+08:00')) < 16, '10-16', '16点-次日10点') 疑难件创建时间段
+#             ,case
+#                 when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 1 then '1小时内'
+#                 when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 >= 1 and timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 2 then '1-2小时'
+#                 when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 > 2 and timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 24 then '2小时-1天'
+#                 when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 > 24 and timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 72 then '1-3天'
+#                 else  '3天以上'
+#             end 处理时间
             ,case
-                when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 1 then '1小时内'
-                when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 >= 1 and timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 2 then '1-2小时'
-                when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 > 2 and timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 24 then '2小时-1天'
-                when timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 > 24 and timestampdiff(second, di.created_at, cdt.first_operated_at)/3600 < 72 then '1-3天'
+                when cdt.negotiation_result_category is not null  and  timestampdiff(second, di.created_at, cdt.updated_at)/3600 < 1 then '1小时内'
+                when cdt.negotiation_result_category is not null  and  timestampdiff(second, di.created_at, cdt.updated_at)/3600 >= 1 and timestampdiff(second, di.created_at, cdt.updated_at)/3600 < 2 then '1-2小时'
+                when cdt.negotiation_result_category is not null  and  timestampdiff(second, di.created_at, cdt.updated_at)/3600 >= 2 and timestampdiff(second, di.created_at, cdt.updated_at)/3600 < 24 then '2小时-1天'
+                when cdt.negotiation_result_category is not null  and  timestampdiff(second, di.created_at, cdt.updated_at)/3600 >= 24 and timestampdiff(second, di.created_at, cdt.updated_at)/3600 < 72 then '1-3天'
                 else  '3天以上'
             end 处理时间
             ,count(di.id) 单量

@@ -70,7 +70,7 @@ select
     end as 包裹状态
     ,pi.dst_phone 收件人电话
     ,pi.dst_home_phone 收件人家庭电话
-from tmpale.tmp_ph_pno_0626 t
+from tmpale.tmp_ph_pno_0627 t
 left join ph_staging.parcel_info pi on pi.pno = t.pno
 where
     pi.state not in (5,7,8,9)

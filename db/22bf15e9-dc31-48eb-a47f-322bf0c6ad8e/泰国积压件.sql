@@ -1,4 +1,4 @@
--- 3月后揽收
+-- 3月后揽收非问题件
 
 with t as
 (
@@ -16,7 +16,7 @@ with t as
     where
         pi.created_at > '2023-02-28 17:00:00'
         and pi.created_at < '2023-06-04 17:00:00'
-        and pi.state not in (5,7,8,9)
+        and pi.state not in (5,6,7,8,9)
 )
 select
     t1.pno
@@ -65,6 +65,13 @@ select
     ,ppd.CN_element 最后一个留仓原因
     ,ss.name 揽收网点
     ,ss2.name 目的地网点
+    ,cg.name 'KAM-VIP客服组'
+    ,case
+        when pr.store_category in (8,12) then 'HUB'
+        when pr.store_category in (4,5,7) then 'SHOP'
+        when pr.store_category in (1,10,14) then 'NW'
+        when pr.store_category in (6) then 'FH'
+    end 待处理部门
     ,CASE
           WHEN kp.id ='AA0622' THEN 'PMD-shein'
           WHEN if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' THEN 'FFM'
@@ -96,6 +103,7 @@ left join
             ,ddd.CN_element
             ,pr.routed_at
             ,row_number() over (partition by pr.pno order by pr.routed_at desc ) rk
+
          from rot_pro.parcel_route pr
          join t t1 on t1.pno = pr.pno
          join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.remark = 'valid'
@@ -134,7 +142,8 @@ left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`a
 left join fle_staging.ka_profile kp3 on t1.`agent_id`  = kp3.`id`
 left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
 left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = t1.client_id
-
+left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = t1.client_id
+left join fle_staging.customer_group cg on cg.id = cgkr.customer_group_id
 ;
 
 
@@ -149,9 +158,11 @@ with  a as
         ,convert_tz(di.created_at, '+00:00', '+07:00') di_time
         ,convert_tz(pi.created_at, '+00:00', '+07:00') pick_time
         ,pi.client_id
+        ,ss2.name pick_store
     from fle_staging.diff_info di
     left join fle_staging.parcel_info pi on pi.pno = di.pno
     left join dwm.dwd_dim_dict ddd on di.diff_marker_category = ddd.element and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
     where
         di.state = 0
         and pi.created_at < '2023-06-04 17:00:00'
@@ -186,7 +197,31 @@ select
         when 3 then '待QAQC判责'
         when 4 then '待客户决定'
     end 待处理人
+    ,case
+        when sdt.pending_handle_category =  1 and ss.category = 6 then 'FH'
+        when sdt.pending_handle_category =  1 and ss.category in (8,12) then 'HUB'
+        when sdt.pending_handle_category =  1 and ss.category in (7,5,4) then 'SHOP'
+        when sdt.pending_handle_category =  1 and ss.category in (1,10,14) then 'NW'
+        when sdt.pending_handle_category =  2 then cg.name
+        when sdt.pending_handle_category =  3 then 'QAQC'
+        when sdt.pending_handle_category =  4 then 'Retail'
+    end 待处理部门
     ,ss.name 待处理网点
+    ,case ss.category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end `待处理网点类型`
     ,t.client_id
     ,case
         when bc.`client_id` is not null then bc.client_name
