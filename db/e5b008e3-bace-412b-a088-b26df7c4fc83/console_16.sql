@@ -159,6 +159,7 @@ from
             ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
             ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98, 'B', null ) b_check
             ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 and count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) < 0.1, 'E', null ) e_check
         from t t1
         left join
             (
@@ -191,29 +192,23 @@ with t as
         ,ds.pno
         ,ds.stat_date
     from ph_bi.dc_should_delivery_today ds
-
-    union all
-
-    select
-         ds.store_id
-        ,ds.pno
-        ,ds.stat_date
-    from ph_bi.dc_should_delivery_2023_06 ds
+    where
+     ds.stat_date = curdate()
 )
 select
-    a.stat_date
-    ,a.store_id
-    ,dp.store_name
-    ,dp.region_name
-    ,dp.piece_name
+    now() 统计日期
+    ,a.store_id 网点ID
+    ,dp.store_name 网点名称
+    ,dp.region_name 大区
+    ,dp.piece_name 片区
     ,a.应交接
     ,a.已交接
     ,a.交接率
-    ,a.A_rate
-    ,a.B_rate
-    ,a.C_rate
-    ,a.D_rate
-    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), if(a.a_check is null  and a.d_check is null and a.b_check is null, 'C', '')) 交接评级
+    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null, 'C', '')) 交接评级
+    ,a.A_rate 'A（<0930 ）'
+    ,a.B_rate 'B（0930<=X<1200）'
+    ,a.C_rate 'C（1200<=X<1600 ）'
+    ,a.D_rate 'D（>=1600）'
 from
     (
         select
@@ -227,9 +222,11 @@ from
             ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) B_rate
             ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) C_rate
             ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) D_rate
+
             ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
-            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98, 'B', null ) b_check
+            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
             ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 and count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) < 0.1, 'E', null ) e_check
         from t t1
         left join
             (
@@ -243,9 +240,12 @@ from
                 join t t1 on t1.pno = pr.pno
                 where
                     pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
-                    and pr.routed_at >= date_sub(t1.stat_date, interval 8 hour)
-                    and pr.routed_at < date_add(t1.stat_date, interval 16 hour )
-            ) sc on sc.store_id = t1.store_id and sc.pno = t1.pno and sc.rk = 1
+#                     and pr.routed_at >= date_sub(t1.stat_date, interval 8 hour)
+#                     and pr.routed_at < date_add(t1.stat_date, interval 16 hour )
+                    and pr.routed_at >= date_sub(curdate(), interval 8 hour )
+            ) sc on sc.pno = t1.pno and sc.rk = 1
         group by 1,2
     ) a
 left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    dp.store_category = 1

@@ -21,7 +21,7 @@ with t as
           when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' then 'bulky business development'
           when kp3.`agent_category`= '3'  and kp3.department_id= '388' and kp.id is null then 'kam'
           when ss.`category` = '1' and kp.id is null then 'retail-network-c'
-          when ss.`category` in ('10','13') and kp.id is null then 'retail-bulky-c'
+          when ss.`category` in ('10','13') and kp.id is null then 'retail-bul  ky-c'
           when ss.`category` = '6'  and kp.id is null then 'fh'
           when ss.`category` in ('4','5','7') and kp.id is null then 'retail-shop-c'
           when ss.`category` in ('11') and kp.id is null then 'ffm'
@@ -51,14 +51,13 @@ with t as
             when 6 then '转交QAQC'
         end 处理状态
         ,ddd3.CN_element 协商结果
-        ,if(sdt.state in (0,1),
-        case sdt.pending_handle_category
+        ,case sdt.pending_handle_category
             when 1 then '待揽收网点协商'
             when 2 then '待KAM问题件处理'
             when 3 then '待QAQC判责'
             when 4 then '待客户决定'
-        end, null) 待处理人
-        ,sd.name
+        end 待处理人
+        ,if(cdt.organization_type = 1, ss3.name, sd.name) '处理问题件网点/部门'
         ,case fdt.state
             when 0 then '未支付'
             when 1 then '已支付'
@@ -90,10 +89,11 @@ with t as
     left join fle_staging.customer_group cg on cg.id = cgkr.customer_group_id
     left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
     left join fle_staging.sys_department sd on sd.id = cdt.organization_id
+    left join fle_staging.sys_store ss3 on ss3.id = cdt.organization_id
     where
         cdt.created_at >= '2023-04-30 17:00:00'
         and cdt.created_at < '2023-06-26 17:00:00'
-#         and cdt.state in (0,2,3,4)
+        and di.diff_marker_category not in (2,17)
 )
 select
     t1.*
@@ -120,7 +120,18 @@ left join
             and am.state = 1
         group by 1
     ) am on am.pno = t1.运单号
+# where
+#     am.pno = 'TH10033V0N1E3Q'
 
 ;
 
-select date_add('2023-03-02' ,interval 31 day)
+
+
+# select
+#     count(cdt.id)
+# from fle_staging.customer_diff_ticket cdt
+# left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+# where
+#         cdt.created_at >= '2023-04-30 17:00:00'
+#         and cdt.created_at < '2023-06-26 17:00:00'
+#         and di.diff_marker_category not in (2,17)

@@ -54,3 +54,4 @@ left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
 left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
 where
     cdt.created_at >= date_sub(date_sub(curdate(), interval 31 day ), interval 8 hour)
+    and t.projectteam not in ('LZD', 'SPX', 'TikTok')

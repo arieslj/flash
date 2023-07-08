@@ -141,14 +141,6 @@ select
         when 121 then '地址错误'
         when 122 then '当日运力不足，无法揽收'
     end as 疑难原因
-    ,case
-        when t1.state = 6 and di.pno is not null then di.sh_do
-        when t1.state = 6 and plt.pno is not null then plt.should_do
-        when t1.state != 6 and plt.pno is not null then plt.should_do
-        when t1.state != 6 and plt.pno is null and pct.pno is not null then 'qaqc-TeamB'
-        when t1.state != 6 and datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) > 7 and plt2.pno is not null then pr.store_name
-        else de.last_store_name
-    end 待处理节点
 #     ,case
 #         when t1.state = 6 and di.pno is not null then 'KAM/揽件网点未协商'
 #         when t1.state = 6 and di.pno is null  then '闪速系统沟通处理中'
@@ -251,6 +243,7 @@ select
          when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
          when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
         end as 最后一条路由
+    ,pr.store_name 最后有效路由动作网点
     ,convert_tz(pr.routed_at ,'+00:00', '+08:00') 最新一条有效路由时间
     ,datediff(now(), de.dst_routed_at) 目的地网点停留时间
     ,de.dst_store 目的地网点
@@ -320,7 +313,8 @@ left join
         join t t3 on t3.pno = pr.pno
         where
             pr.route_action in ('INVENTORY','RECEIVED' ,'RECEIVE_WAREHOUSE_SCAN', 'SORTING_SCAN', 'DELIVERY_TICKET_CREATION_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SHIPMENT_WAREHOUSE_SCAN', 'DETAIN_WAREHOUSE', 'DELIVERY_CONFIRM', 'DIFFICULTY_HANDOVER', 'DELIVERY_MARKER', 'REPLACE_PNO','SEAL', 'UNSEAL', 'STAFF_INFO_UPDATE_WEIGHT', 'STORE_KEEPER_UPDATE_WEIGHT', 'STORE_SORTER_UPDATE_WEIGHT', 'DISCARD_RETURN_BKK', 'DELIVERY_TRANSFER', 'PICKUP_RETURN_RECEIPT', 'FLASH_HOME_SCAN', 'ARRIVAL_WAREHOUSE_SCAN', 'SORTING_SCAN ', 'DELIVERY_PICKUP_STORE_SCAN', 'DIFFICULTY_HANDOVER_DETAIN_WAREHOUSE', 'REFUND_CONFIRM', 'ACCEPT_PARCEL')
-    ) pr on pr.pno = t1.pno and pr.rk = 1
+            and pr.organization_type = 1
+        ) pr on pr.pno = t1.pno and pr.rk = 1
 left join
     (
         select

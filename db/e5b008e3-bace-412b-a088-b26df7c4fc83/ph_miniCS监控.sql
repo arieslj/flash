@@ -270,6 +270,7 @@ select
     ,ddd.CN_element 疑难件原因
     ,ss.name miniCS处理网点
     ,ss2.name 揽收网点
+    ,ss3.name 上报网点
     ,case pi.state
         when 1 then '已揽收'
         when 2 then '运输中'
@@ -298,11 +299,12 @@ left join ph_staging.sys_store ss on ss.id = cdt.organization_id
 left join dwm.dwd_dim_bigClient bc on bc.client_id = cdt.client_id
 left join ph_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
 left join ph_staging.ka_profile kp on kp.id = cdt.client_id
+left join ph_staging.sys_store ss3 on ss3.id = di.store_id
 where
     cdt.organization_type = 1 -- FH&miniCS
     and bc.client_id is  null
-    and ss.category in (14) --
-        and di.diff_marker_category not in (38,39,2,17,32,69,7,22)
+    and ss.category = 14
+    and di.diff_marker_category not in (38,39,2,17,32,69,7,22)
     and date(date_add(cdt.created_at, interval 12 hour)) >= '${begin_date}'
     and date(date_add(cdt.created_at, interval 12 hour)) <= '${end_date}'
 
@@ -314,6 +316,7 @@ select
     ,ddd.CN_element 疑难件原因
     ,ss.name miniCS处理网点
     ,ss2.name 揽收网点
+    ,ss3.name 上报网点
     ,case pi.state
         when 1 then '已揽收'
         when 2 then '运输中'
@@ -342,6 +345,7 @@ left join ph_staging.sys_store ss on ss.id = cdt.organization_id
 left join dwm.dwd_dim_bigClient bc on bc.client_id = cdt.client_id
 left join ph_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
 left join ph_staging.ka_profile kp on kp.id = cdt.client_id
+left join ph_staging.sys_store ss3 on ss3.id = di.store_id
 where
     cdt.organization_type = 1 -- FH&miniCS
     and bc.client_id is  null

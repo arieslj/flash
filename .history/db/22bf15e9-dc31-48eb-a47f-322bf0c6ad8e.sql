@@ -30602,6 +30602,289 @@ group by 1,2;
 ;-- -. . -..- - / . -. - .-. -.--
 with t as
 (
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.state
+    ,plt.client_id
+    ,plt.last_valid_store_id
+    ,if(plt.state = 6 and plt.duty_result = 1, plt.updated_at, null) updated_time
+    ,group_concat(plr.staff_id) staff
+from bi_pro.parcel_lose_task plt
+left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+group by 1
+)
+select
+    a.pno
+    ,case a.force_take_photos_type
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,case a.state
+        when 1 then '丢失件待处理'
+        when 2 then '疑似丢失件待处理'
+        when 3 then '待工单回复'
+        when 4 then '已工单回复'
+        when 5 then '包裹未丢失'
+        when 6 then '丢失件处理完成'
+    end 判责结果
+    ,a.staff 责任人
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,b.24hour 判责丢失24小时判断
+    ,pi.cod_amount/100 cod金额
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,plt3.pl_source 进L来源同时是否有替他来源任务
+    ,timestampdiff(hour, a.created_at, a.updated_time) 进入L来源时间到已处理时间段_hour
+from
+    (
+        select
+            sf.*
+        from
+            (
+                select
+                    t1.*
+                    ,sfp.force_take_photos_type
+                    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+                from fle_staging.stranded_force_photo_ai_record sfp
+                join t t1 on t1.pno = sfp.pno
+                where
+                    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+                    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)
+            ) sf
+        where
+            sf.rk = 1
+    ) a
+left join fle_staging.ka_profile kp on kp.id = a.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = a.client_id
+left join fle_staging.parcel_info pi on pi.pno = a.pno
+left join
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 <= 24 then '1'
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 > 24 then '2'
+                else 0
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_time, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b on b.pno = a.pno
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.统计日期 = date(a.created_at) and dt.网点ID = a.last_valid_store_id
+left join
+    (
+        select
+            t1.pno
+            ,group_concat(pl.plt_source) pl_source
+        from
+            (
+                select
+                    plt3.pno
+                    ,plt3.source
+                    ,case plt3.source
+                        WHEN 1 THEN 'A'
+                        WHEN 2 THEN 'B'
+                        WHEN 3 THEN 'C'
+                        WHEN 4 THEN 'D'
+                        WHEN 5 THEN 'E'
+                        WHEN 6 THEN 'F'
+                        WHEN 7 THEN 'G'
+                        WHEN 8 THEN 'H'
+                        WHEN 9 THEN 'I'
+                        WHEN 10 THEN 'J'
+                        when 11 then 'K'
+                        when 12 then 'L'
+                    end plt_source
+                    ,plt3.created_at created_time
+                    ,if(plt3.state in (5,6), plt3.updated_at, now()) updated_time
+                from bi_pro.parcel_lose_task plt3
+                where
+                    plt3.created_at >= '2023-06-14 17:00:00'
+                    and plt3.created_at < '2023-06-30 17:00:00'
+                    and plt3.source != 12 -- 非L来源
+            ) pl
+        join t t1 on t1.pno = pl.pno
+        where
+            pl.updated_time > t1.created_at
+            and pl.created_time < t1.updated_time
+        group by 1
+    ) plt3 on plt3.pno = a.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.state
+    ,plt.client_id
+    ,plt.last_valid_store_id
+    ,if(plt.state = 6 and plt.duty_result = 1, plt.updated_at, null) updated_time
+    ,group_concat(plr.staff_id) staff
+from bi_pro.parcel_lose_task plt
+left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+group by 1
+)
+select
+    a.pno
+    ,case a.force_take_photos_type
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,case a.state
+        when 1 then '丢失件待处理'
+        when 2 then '疑似丢失件待处理'
+        when 3 then '待工单回复'
+        when 4 then '已工单回复'
+        when 5 then '包裹未丢失'
+        when 6 then '丢失件处理完成'
+    end 判责结果
+    ,a.staff 责任人
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,b.24hour 判责丢失24小时判断
+    ,pi.cod_amount/100 cod金额
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,plt3.pl_source 进L来源同时是否有替他来源任务
+    ,timestampdiff(hour, a.created_at, a.updated_time) 进入L来源时间到已处理时间段_hour
+from
+    (
+        select
+            sf.*
+        from
+            (
+                select
+                    t1.*
+                    ,sfp.force_take_photos_type
+                    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+                from fle_staging.stranded_force_photo_ai_record sfp
+                join t t1 on t1.pno = sfp.pno
+                where
+                    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+                    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)
+                    and sfp.force_take_photos_type is not null
+            ) sf
+        where
+            sf.rk = 1
+    ) a
+left join fle_staging.ka_profile kp on kp.id = a.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = a.client_id
+left join fle_staging.parcel_info pi on pi.pno = a.pno
+left join
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 <= 24 then '1'
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 > 24 then '2'
+                else 0
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_time, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b on b.pno = a.pno
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.统计日期 = date(a.created_at) and dt.网点ID = a.last_valid_store_id
+left join
+    (
+        select
+            t1.pno
+            ,group_concat(pl.plt_source) pl_source
+        from
+            (
+                select
+                    plt3.pno
+                    ,plt3.source
+                    ,case plt3.source
+                        WHEN 1 THEN 'A'
+                        WHEN 2 THEN 'B'
+                        WHEN 3 THEN 'C'
+                        WHEN 4 THEN 'D'
+                        WHEN 5 THEN 'E'
+                        WHEN 6 THEN 'F'
+                        WHEN 7 THEN 'G'
+                        WHEN 8 THEN 'H'
+                        WHEN 9 THEN 'I'
+                        WHEN 10 THEN 'J'
+                        when 11 then 'K'
+                        when 12 then 'L'
+                    end plt_source
+                    ,plt3.created_at created_time
+                    ,if(plt3.state in (5,6), plt3.updated_at, now()) updated_time
+                from bi_pro.parcel_lose_task plt3
+                where
+                    plt3.created_at >= '2023-06-14 17:00:00'
+                    and plt3.created_at < '2023-06-30 17:00:00'
+                    and plt3.source != 12 -- 非L来源
+            ) pl
+        join t t1 on t1.pno = pl.pno
+        where
+            pl.updated_time > t1.created_at
+            and pl.created_time < t1.updated_time
+        group by 1
+    ) plt3 on plt3.pno = a.pno;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
     select
         pr.pno
         ,pr.routed_at
@@ -30643,3 +30926,2997 @@ where
     a.rk = 1
 #     and ddd.CN_element = '到件入仓扫描'
 group by 1,2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-04'
+        and ds.stat_date <= '2023-07-04'
+)
+
+select
+    a.stat_date 日期
+    ,a.store_id 网点ID
+    ,dp.store_name 网点名称
+    ,dp.region_name 大区
+    ,dp.piece_name 片区
+    ,a.应交接
+    ,a.已交接
+    ,concat(round(a.交接率*100,2),'%') as 交接率
+    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+    ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+    ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+    ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+    ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+from
+    (
+        select
+            t1.store_id
+            ,t1.stat_date
+            ,count(t1.pno) 应交接
+            ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+            ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+            ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+            ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+            ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+            ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+            ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+            ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+        from t t1
+        left join
+            (
+                select
+                    sc.*
+                from
+                    (
+                        select
+                            pr.pno
+                            ,pr.store_id
+                            ,pr.store_name
+                            ,t1.stat_date
+                            ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                            ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                            ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                        from rot_pro.parcel_route pr
+                        join t t1 on t1.pno = pr.pno
+                        where
+                            pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                           and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                          and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                    ) sc
+                where
+                    sc.rk = 1
+            ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+        group by 1,2
+    ) a
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    dp.store_category = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-04'
+        and ds.stat_date <= '2023-07-04'
+)
+
+select
+    a.stat_date 日期
+    ,a.store_id 网点ID
+    ,dp.store_name 网点名称
+    ,dp.region_name 大区
+    ,dp.piece_name 片区
+    ,a.应交接
+    ,a.已交接
+    ,concat(round(a.交接率*100,2),'%') as 交接率
+    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+    ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+    ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+    ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+    ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+from
+    (
+        select
+            t1.store_id
+            ,t1.stat_date
+            ,count(t1.pno) 应交接
+            ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+            ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+            ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+            ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+            ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+            ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+            ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+            ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+        from t t1
+        left join
+            (
+                select
+                    sc.*
+                from
+                    (
+                        select
+                            pr.pno
+                            ,pr.store_id
+                            ,pr.store_name
+                            ,t1.stat_date
+                            ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                            ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                            ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                        from rot_pro.parcel_route pr
+                        join t t1 on t1.pno = pr.pno
+                        where
+                            pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                           and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                          and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                    ) sc
+                where
+                    sc.rk = 1
+            ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+        group by 1,2
+    ) a
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    dp.store_category in (1,10,13,14);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    distinct pls.pno '运单号เลขพัสดุ'
+    ,c.created_at '首次预警时间'
+    ,ds.store_name '网点名称'
+    ,pls.created_at '任务生成时间เวลาที่จัดการสำเร็จ'
+    ,if(
+        TIMESTAMPDIFF(hour,pls.created_at,now())<48,
+    concat(cast(TIMESTAMPDIFF(minute,now(),date_add(pls.created_at,interval 2 day))/60 as int),'h ',cast(round(TIMESTAMPDIFF(minute,now(),date_add(pls.created_at,interval 2 day))%60,0)as int),'min'),
+    concat('已超时',concat(cast(TIMESTAMPDIFF(minute,date_add(pls.created_at,interval 2 day),now())/60 as int),'h ',cast(round(TIMESTAMPDIFF(minute,date_add(pls.created_at,interval 2 day),now())%60,0)as int),'min'))) '任务处理倒计时เวลาที่สะสม'
+    ,pls.pack_no '集包号เลขแบ็กกิ้ง'
+    ,pls.arrival_time '入仓时间เวลาที่เข้าคลัง'
+    ,pls.parcel_created_at '揽件时间เวลาที่รับ'
+    ,pls.proof_id '出车凭证ใบรับรองปล่อยรถ'
+    ,case pls.state
+    when 1 then '待处理'
+    when 2 then '网点处理'
+    when 3 then '超时自动处理'
+    when 4 then 'QAQC处理'
+    when 5 then '已更新路由(无需处理)'
+    end  '状态สถานะ'
+    ,case pls.speed
+    when 1 then '是'
+    when 2 then '否'
+    end  'SPEED件มีพัสดุSpeed'
+    ,pls.last_valid_action '最后有效路由สถานะสุดท้าย'
+    ,pls.last_valid_staff_id '最后一步有效路由操作员工ID ไอดีพนักงานที่สแกนล่าสุด'
+    ,pls.last_valid_at '最后操作时间เวลาสุดท้ายที่ดำเนินการ'
+    ,ds2.store_name '最后有效路由所在网点สาขาสุดท้ายที่ดำเนินการ'
+    ,ds.piece_name '片区District'
+    ,ds.region_name '大区Area'
+    ,bc.client_name '客户名称'
+    ,if(pi.cod_enabled = 1, 'yes', 'no') '是否是cod เป็นพัสดุcodหรือไม่'
+    ,pi.cod_amount/100 COD金额
+    ,pls.arrival_time '到达网点时间 เวลาที่ถึงสาขา'
+    ,datediff(curdate(), pls.arrival_time) '到达网点时长/day มาถึงสาขาแล้วกี่วัน'
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as '包裹状态 สถานะพัสดุ'
+from bi_center.parcel_lose_task_sub_c pls
+left join fle_staging.parcel_info pi on pi.pno = pls.pno
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+left join dwm.dim_th_sys_store_rd ds on pls.store_id = ds.store_id and ds.stat_date = date_sub(curdate(), interval 1 day )
+left join dwm.dim_th_sys_store_rd ds2 on pls.last_valid_store_id = ds2.store_id and ds2.stat_date = date_sub(curdate(), interval 1 day )
+left join
+    (
+        select
+            pls.pno
+            ,plt.created_at
+            ,row_number() over (partition by pls.pno order by plt.created_at) rn
+        from bi_center.parcel_lose_task_sub_c pls
+        left join bi_pro.parcel_lose_task plt on pls.pno = plt.pno and plt.source = 3
+        where
+             pls.created_at > '2023-01-09 00:00:00'
+            and pls.state= 1
+    ) c on c.pno = pls.pno and c.rn = 1
+where
+    pls.created_at > '2023-01-09 00:00:00'
+    and pls.state = 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    distinct pls.pno '运单号เลขพัสดุ'
+    ,c.created_at '首次预警时间'
+    ,ds.store_name '网点名称'
+    ,pls.created_at '任务生成时间เวลาที่จัดการสำเร็จ'
+    ,if(
+        TIMESTAMPDIFF(hour,pls.created_at,now())<48,
+    concat(cast(TIMESTAMPDIFF(minute,now(),date_add(pls.created_at,interval 2 day))/60 as int),'h ',cast(round(TIMESTAMPDIFF(minute,now(),date_add(pls.created_at,interval 2 day))%60,0)as int),'min'),
+    concat('已超时',concat(cast(TIMESTAMPDIFF(minute,date_add(pls.created_at,interval 2 day),now())/60 as int),'h ',cast(round(TIMESTAMPDIFF(minute,date_add(pls.created_at,interval 2 day),now())%60,0)as int),'min'))) '任务处理倒计时เวลาที่สะสม'
+    ,pls.pack_no '集包号เลขแบ็กกิ้ง'
+#     ,pls.arrival_time '入仓时间เวลาที่เข้าคลัง'
+    ,pls.parcel_created_at '揽件时间เวลาที่รับ'
+    ,pls.proof_id '出车凭证ใบรับรองปล่อยรถ'
+    ,case pls.state
+    when 1 then '待处理'
+    when 2 then '网点处理'
+    when 3 then '超时自动处理'
+    when 4 then 'QAQC处理'
+    when 5 then '已更新路由(无需处理)'
+    end  '状态สถานะ'
+    ,case pls.speed
+    when 1 then '是'
+    when 2 then '否'
+    end  'SPEED件มีพัสดุSpeed'
+    ,ddd.CN_element '最后有效路由สถานะสุดท้าย'
+    ,pls.last_valid_staff_id '最后一步有效路由操作员工ID ไอดีพนักงานที่สแกนล่าสุด'
+    ,pls.last_valid_at '最后操作时间เวลาสุดท้ายที่ดำเนินการ'
+    ,ds2.store_name '最后有效路由所在网点สาขาสุดท้ายที่ดำเนินการ'
+    ,ds.piece_name '片区District'
+    ,ds.region_name '大区Area'
+    ,bc.client_name '客户名称'
+    ,if(pi.cod_enabled = 1, 'yes', 'no') '是否是cod เป็นพัสดุcodหรือไม่'
+    ,pi.cod_amount/100 COD金额
+    ,pls.arrival_time '到达网点时间 เวลาที่ถึงสาขา'
+    ,datediff(curdate(), pls.arrival_time) '到达网点时长/day มาถึงสาขาแล้วกี่วัน'
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as '包裹状态 สถานะพัสดุ'
+from bi_center.parcel_lose_task_sub_c pls
+left join dwm.dwd_dim_dict ddd on ddd.element = pls.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join fle_staging.parcel_info pi on pi.pno = pls.pno
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+left join dwm.dim_th_sys_store_rd ds on pls.store_id = ds.store_id and ds.stat_date = date_sub(curdate(), interval 1 day )
+left join dwm.dim_th_sys_store_rd ds2 on pls.last_valid_store_id = ds2.store_id and ds2.stat_date = date_sub(curdate(), interval 1 day )
+left join
+    (
+        select
+            pls.pno
+            ,plt.created_at
+            ,row_number() over (partition by pls.pno order by plt.created_at) rn
+        from bi_center.parcel_lose_task_sub_c pls
+        left join bi_pro.parcel_lose_task plt on pls.pno = plt.pno and plt.source = 3
+        where
+             pls.created_at > '2023-01-09 00:00:00'
+            and pls.state= 1
+    ) c on c.pno = pls.pno and c.rn = 1
+where
+    pls.created_at > '2023-01-09 00:00:00'
+    and pls.state = 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+        ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+        ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+        ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+        ,cdt.client_id 客户ID
+        ,case
+          when kp.id ='AA0622' then 'pmd-shein'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' then 'ffm'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' and if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' then 'retail-network'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' then 'retail-bulky'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` in ('1098','1099','1100','1101') then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' then 'retail-shop'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' then 'customer service'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' then 'bulky business development'
+          when kp3.`agent_category`= '3'  and kp3.department_id= '388' and kp.id is null then 'kam'
+          when ss.`category` = '1' and kp.id is null then 'retail-network-c'
+          when ss.`category` in ('10','13') and kp.id is null then 'retail-bulky-c'
+          when ss.`category` = '6'  and kp.id is null then 'fh'
+          when ss.`category` in ('4','5','7') and kp.id is null then 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null then 'ffm'
+          else ss2.name
+        end as '归属部门'
+        ,di.order_info_id  订单号
+        ,oi.remark 订单备注
+        ,di.pno 运单号
+        ,ddd.CN_element 疑难原因
+        ,ddd2.CN_element 二级类型
+        ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+        ,case pi.insured
+            when 1 then '保价'
+            when 0 then '不保价'
+        end 保价情况
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+        ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+        ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+        ,case cdt.state
+            when 0 then '未处理'
+            when 1 then '已处理'
+            when 2 then '沟通中'
+            when 3 then '支付驳回'
+            when 4 then '客户未处理'
+            when 5 then '转交闪速系统'
+            when 6 then '转交QAQC'
+        end 处理状态
+        ,ddd3.CN_element 协商结果
+        ,if(sdt.state in (0,1),
+        case sdt.pending_handle_category
+            when 1 then '待揽收网点协商'
+            when 2 then '待KAM问题件处理'
+            when 3 then '待QAQC判责'
+            when 4 then '待客户决定'
+        end, null) 待处理人
+        ,if(cdt.organization_type = 1, ss3.name, sd.name) '处理问题件网点/部门'
+        ,case fdt.state
+            when 0 then '未支付'
+            when 1 then '已支付'
+            when 2 then '驳回'
+            when 3 then '取消'
+            when 4 then '支付中'
+            when 5 then '无需支付'
+        end 财务支付状态
+        ,cdt.remark 备注
+    from fle_staging.customer_diff_ticket cdt
+    left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = cdt.diff_info_id
+    join fle_staging.diff_info di on di.id = cdt.diff_info_id
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+    left join fle_staging.order_info oi on oi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd2.db = 'fle_staging' and ddd2.tablename = 'diff_info' and ddd2.fieldname = 'rejection_category'
+    left join dwm.dwd_dim_dict ddd3 on ddd3.element = cdt.negotiation_result_category and ddd3.db = 'fle_staging' and ddd3.tablename = 'customer_diff_ticket' and ddd3.fieldname = 'negotiation_result_category'
+    left join fle_staging.sys_store ss on ss.id = di.store_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+    left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+    left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+    left join fle_staging.ka_profile  AS kp on kp.id = pi.client_id
+    left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+    left join fle_staging.ka_profile kp3 on pi.`agent_id`  = kp3.`id`
+    left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+    left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = pi.client_id
+    left join fle_staging.customer_group cg on cg.id = cgkr.customer_group_id
+    left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+    left join fle_staging.sys_department sd on sd.id = cdt.organization_id
+    left join fle_staging.sys_store ss3 on ss3.id = cdt.organization_id
+    where
+        cdt.created_at >= '2023-04-30 17:00:00'
+        and cdt.created_at < '2023-06-26 17:00:00'
+#         and cdt.state in (0,2,3,4)
+)
+select
+    t1.*
+    ,am.punish_num 罚款次数
+    ,am.punish_money_total 罚款总金额
+from t t1
+left join
+    (
+        select
+            am.pno
+            ,sum(am.punish_money) punish_money_total
+            ,count(distinct if(am.abnormal_object = 0, am.id, am.average_merge_key)) punish_num
+        from bi_pro.abnormal_message am
+        join
+            (
+                select
+                    t1.运单号 pno
+                from t t1
+                group by 1
+            ) t1 on am.merge_column = t1.pno
+        where
+            am.punish_category = 4
+            and am.isdel = 0
+            and am.state = 1
+        group by 1
+    ) am on am.pno = t1.运单号;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+        ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+        ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+        ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+        ,cdt.client_id 客户ID
+        ,case
+          when kp.id ='AA0622' then 'pmd-shein'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' then 'ffm'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' and if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' then 'retail-network'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' then 'retail-bulky'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` in ('1098','1099','1100','1101') then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' then 'retail-shop'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' then 'customer service'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' then 'bulky business development'
+          when kp3.`agent_category`= '3'  and kp3.department_id= '388' and kp.id is null then 'kam'
+          when ss.`category` = '1' and kp.id is null then 'retail-network-c'
+          when ss.`category` in ('10','13') and kp.id is null then 'retail-bulky-c'
+          when ss.`category` = '6'  and kp.id is null then 'fh'
+          when ss.`category` in ('4','5','7') and kp.id is null then 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null then 'ffm'
+          else ss2.name
+        end as '归属部门'
+        ,di.order_info_id  订单号
+        ,oi.remark 订单备注
+        ,di.pno 运单号
+        ,ddd.CN_element 疑难原因
+        ,ddd2.CN_element 二级类型
+        ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+        ,case pi.insured
+            when 1 then '保价'
+            when 0 then '不保价'
+        end 保价情况
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+        ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+        ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+        ,case cdt.state
+            when 0 then '未处理'
+            when 1 then '已处理'
+            when 2 then '沟通中'
+            when 3 then '支付驳回'
+            when 4 then '客户未处理'
+            when 5 then '转交闪速系统'
+            when 6 then '转交QAQC'
+        end 处理状态
+        ,ddd3.CN_element 协商结果
+        ,case sdt.pending_handle_category
+            when 1 then '待揽收网点协商'
+            when 2 then '待KAM问题件处理'
+            when 3 then '待QAQC判责'
+            when 4 then '待客户决定'
+        end 待处理人
+        ,if(cdt.organization_type = 1, ss3.name, sd.name) '处理问题件网点/部门'
+        ,case fdt.state
+            when 0 then '未支付'
+            when 1 then '已支付'
+            when 2 then '驳回'
+            when 3 then '取消'
+            when 4 then '支付中'
+            when 5 then '无需支付'
+        end 财务支付状态
+        ,cdt.remark 备注
+    from fle_staging.customer_diff_ticket cdt
+    left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = cdt.diff_info_id
+    join fle_staging.diff_info di on di.id = cdt.diff_info_id
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+    left join fle_staging.order_info oi on oi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd2.db = 'fle_staging' and ddd2.tablename = 'diff_info' and ddd2.fieldname = 'rejection_category'
+    left join dwm.dwd_dim_dict ddd3 on ddd3.element = cdt.negotiation_result_category and ddd3.db = 'fle_staging' and ddd3.tablename = 'customer_diff_ticket' and ddd3.fieldname = 'negotiation_result_category'
+    left join fle_staging.sys_store ss on ss.id = di.store_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+    left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+    left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+    left join fle_staging.ka_profile  AS kp on kp.id = pi.client_id
+    left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+    left join fle_staging.ka_profile kp3 on pi.`agent_id`  = kp3.`id`
+    left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+    left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = pi.client_id
+    left join fle_staging.customer_group cg on cg.id = cgkr.customer_group_id
+    left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+    left join fle_staging.sys_department sd on sd.id = cdt.organization_id
+    left join fle_staging.sys_store ss3 on ss3.id = cdt.organization_id
+    where
+        cdt.created_at >= '2023-04-30 17:00:00'
+        and cdt.created_at < '2023-06-26 17:00:00'
+#         and cdt.state in (0,2,3,4)
+)
+select
+    t1.*
+    ,am.punish_num 罚款次数
+    ,am.punish_money_total 罚款总金额
+from t t1
+left join
+    (
+        select
+            am.pno
+            ,sum(am.punish_money) punish_money_total
+            ,count(distinct if(am.abnormal_object = 0, am.id, am.average_merge_key)) punish_num
+        from bi_pro.abnormal_message am
+        join
+            (
+                select
+                    t1.运单号 pno
+                from t t1
+                group by 1
+            ) t1 on am.merge_column = t1.pno
+        where
+            am.punish_category = 4
+            and am.isdel = 0
+            and am.state = 1
+        group by 1
+    ) am on am.pno = t1.运单号;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+        ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+        ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+        ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+        ,cdt.client_id 客户ID
+        ,case
+          when kp.id ='AA0622' then 'pmd-shein'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' then 'ffm'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' and if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' then 'retail-network'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' then 'retail-bulky'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` in ('1098','1099','1100','1101') then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' then 'retail-shop'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' then 'customer service'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' then 'bulky business development'
+          when kp3.`agent_category`= '3'  and kp3.department_id= '388' and kp.id is null then 'kam'
+          when ss.`category` = '1' and kp.id is null then 'retail-network-c'
+          when ss.`category` in ('10','13') and kp.id is null then 'retail-bulky-c'
+          when ss.`category` = '6'  and kp.id is null then 'fh'
+          when ss.`category` in ('4','5','7') and kp.id is null then 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null then 'ffm'
+          else ss2.name
+        end as '归属部门'
+        ,di.order_info_id  订单号
+        ,oi.remark 订单备注
+        ,di.pno 运单号
+        ,ddd.CN_element 疑难原因
+        ,ddd2.CN_element 二级类型
+        ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+        ,case pi.insured
+            when 1 then '保价'
+            when 0 then '不保价'
+        end 保价情况
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+        ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+        ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+        ,case cdt.state
+            when 0 then '未处理'
+            when 1 then '已处理'
+            when 2 then '沟通中'
+            when 3 then '支付驳回'
+            when 4 then '客户未处理'
+            when 5 then '转交闪速系统'
+            when 6 then '转交QAQC'
+        end 处理状态
+        ,ddd3.CN_element 协商结果
+        ,case sdt.pending_handle_category
+            when 1 then '待揽收网点协商'
+            when 2 then '待KAM问题件处理'
+            when 3 then '待QAQC判责'
+            when 4 then '待客户决定'
+        end 待处理人
+        ,if(cdt.organization_type = 1, ss3.name, sd.name) '处理问题件网点/部门'
+        ,case fdt.state
+            when 0 then '未支付'
+            when 1 then '已支付'
+            when 2 then '驳回'
+            when 3 then '取消'
+            when 4 then '支付中'
+            when 5 then '无需支付'
+        end 财务支付状态
+        ,cdt.remark 备注
+    from fle_staging.customer_diff_ticket cdt
+    left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = cdt.diff_info_id
+    join fle_staging.diff_info di on di.id = cdt.diff_info_id
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+    left join fle_staging.order_info oi on oi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd2.db = 'fle_staging' and ddd2.tablename = 'diff_info' and ddd2.fieldname = 'rejection_category'
+    left join dwm.dwd_dim_dict ddd3 on ddd3.element = cdt.negotiation_result_category and ddd3.db = 'fle_staging' and ddd3.tablename = 'customer_diff_ticket' and ddd3.fieldname = 'negotiation_result_category'
+    left join fle_staging.sys_store ss on ss.id = di.store_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+    left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+    left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+    left join fle_staging.ka_profile  AS kp on kp.id = pi.client_id
+    left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+    left join fle_staging.ka_profile kp3 on pi.`agent_id`  = kp3.`id`
+    left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+    left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = pi.client_id
+    left join fle_staging.customer_group cg on cg.id = cgkr.customer_group_id
+    left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+    left join fle_staging.sys_department sd on sd.id = cdt.organization_id
+    left join fle_staging.sys_store ss3 on ss3.id = cdt.organization_id
+    where
+        cdt.created_at >= '2023-04-30 17:00:00'
+        and cdt.created_at < '2023-06-26 17:00:00'
+        and di.diff_marker_category not in (2,17)
+)
+select
+    t1.*
+    ,am.punish_num 罚款次数
+    ,am.punish_money_total 罚款总金额
+from t t1
+left join
+    (
+        select
+            am.pno
+            ,sum(am.punish_money) punish_money_total
+            ,count(distinct if(am.abnormal_object = 0, am.id, am.average_merge_key)) punish_num
+        from bi_pro.abnormal_message am
+        join
+            (
+                select
+                    t1.运单号 pno
+                from t t1
+                group by 1
+            ) t1 on am.merge_column = t1.pno
+        where
+            am.punish_category = 4
+            and am.isdel = 0
+            and am.state = 1
+        group by 1
+    ) am on am.pno = t1.运单号;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.parcel_created_at 包裹揽收时间
+    ,plt.created_at 任务生成时间
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速时的最后有效路由动作
+    ,ss.name 最后有效路由操作网点名称
+    ,case ss.category
+        when 1 then 'SP'
+        when 2 then 'DC'
+        when 4 then 'SHOP'
+        when 5 then 'SHOP'
+        when 6 then 'FH'
+        when 7 then 'SHOP'
+        when 8 then 'Hub'
+        when 9 then 'Onsite'
+        when 10 then 'BDC'
+        when 11 then 'fulfillment'
+        when 12 then 'B-HUB'
+        when 13 then 'CDC'
+        when 14 then 'PDC'
+    end 最后有效路由操作网点类型
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case plt.`link_type`
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 判责环节
+    ,plt2.ss2_name 责任网点
+    ,plt2.ratio  责任占比
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = plt.last_valid_action and ddd.db = 'rto_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join fle_staging.sys_store ss on ss.id = plt.last_valid_store_id
+left join
+    (
+        select
+            plr.lose_task_id
+            ,ss2.name ss2_name
+            ,sum(plr.duty_ratio)/100 ratio
+        from bi_pro.parcel_lose_task plt2
+        join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt2.id
+        left join fle_staging.sys_store ss2 on ss2.id = plr.store_id
+        where
+            plt2.created_at >= '2023-06-01'
+            and plt2.created_at < '2023-07-01'
+            and plt2.state = 6
+        group by 1,2
+    ) plt2 on plt2.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.created_at >= '2023-06-01'
+    and plt.created_at < '2023-07-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.parcel_created_at 包裹揽收时间
+    ,plt.created_at 任务生成时间
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速时的最后有效路由动作
+    ,ss.name 最后有效路由操作网点名称
+    ,case ss.category
+        when 1 then 'SP'
+        when 2 then 'DC'
+        when 4 then 'SHOP'
+        when 5 then 'SHOP'
+        when 6 then 'FH'
+        when 7 then 'SHOP'
+        when 8 then 'Hub'
+        when 9 then 'Onsite'
+        when 10 then 'BDC'
+        when 11 then 'fulfillment'
+        when 12 then 'B-HUB'
+        when 13 then 'CDC'
+        when 14 then 'PDC'
+    end 最后有效路由操作网点类型
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case plt.`link_type`
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 判责环节
+    ,plt2.ss2_name 责任网点
+    ,plt2.ratio  责任占比
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = plt.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join fle_staging.sys_store ss on ss.id = plt.last_valid_store_id
+left join
+    (
+        select
+            plr.lose_task_id
+            ,ss2.name ss2_name
+            ,sum(plr.duty_ratio)/100 ratio
+        from bi_pro.parcel_lose_task plt2
+        join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt2.id
+        left join fle_staging.sys_store ss2 on ss2.id = plr.store_id
+        where
+            plt2.created_at >= '2023-06-01'
+            and plt2.created_at < '2023-07-01'
+            and plt2.state = 6
+        group by 1,2
+    ) plt2 on plt2.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.created_at >= '2023-06-01'
+    and plt.created_at < '2023-07-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.parcel_created_at 包裹揽收时间
+    ,plt.created_at 任务生成时间
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速时的最后有效路由动作
+    ,ss.name 最后有效路由操作网点名称
+    ,case ss.category
+        when 1 then 'SP'
+        when 2 then 'DC'
+        when 4 then 'SHOP'
+        when 5 then 'SHOP'
+        when 6 then 'FH'
+        when 7 then 'SHOP'
+        when 8 then 'Hub'
+        when 9 then 'Onsite'
+        when 10 then 'BDC'
+        when 11 then 'fulfillment'
+        when 12 then 'B-HUB'
+        when 13 then 'CDC'
+        when 14 then 'PDC'
+    end 最后有效路由操作网点类型
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case plt.duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓7主3套餐(仓管70%主管30%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then  '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then  '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then  'LH全责（LH100%）'
+        when 7 then  '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 21 then  '仓7主3套餐(仓管70%主管30%)'
+    end 套餐
+    ,case plt.`link_type`
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 判责环节
+    ,plt2.ss2_name 责任网点
+    ,plt2.ratio  责任占比
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = plt.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join fle_staging.sys_store ss on ss.id = plt.last_valid_store_id
+left join
+    (
+        select
+            plr.lose_task_id
+            ,ss2.name ss2_name
+            ,sum(plr.duty_ratio)/100 ratio
+        from bi_pro.parcel_lose_task plt2
+        join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt2.id
+        left join fle_staging.sys_store ss2 on ss2.id = plr.store_id
+        where
+            plt2.created_at >= '2023-06-01'
+            and plt2.created_at < '2023-07-01'
+            and plt2.state = 6
+        group by 1,2
+    ) plt2 on plt2.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.created_at >= '2023-06-01'
+    and plt.created_at < '2023-07-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.parcel_created_at 包裹揽收时间
+    ,plt.created_at 任务生成时间
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速时的最后有效路由动作
+    ,ss.name 最后有效路由操作网点名称
+    ,case ss.category
+        when 1 then 'SP'
+        when 2 then 'DC'
+        when 4 then 'SHOP'
+        when 5 then 'SHOP'
+        when 6 then 'FH'
+        when 7 then 'SHOP'
+        when 8 then 'Hub'
+        when 9 then 'Onsite'
+        when 10 then 'BDC'
+        when 11 then 'fulfillment'
+        when 12 then 'B-HUB'
+        when 13 then 'CDC'
+        when 14 then 'PDC'
+    end 最后有效路由操作网点类型
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case plt.duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 套餐
+    ,case plt.`link_type`
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 判责环节
+    ,plt2.ss2_name 责任网点
+    ,plt2.ratio  责任占比
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = plt.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join fle_staging.sys_store ss on ss.id = plt.last_valid_store_id
+left join
+    (
+        select
+            plr.lose_task_id
+            ,ss2.name ss2_name
+            ,sum(plr.duty_ratio)/100 ratio
+        from bi_pro.parcel_lose_task plt2
+        join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt2.id
+        left join fle_staging.sys_store ss2 on ss2.id = plr.store_id
+        where
+            plt2.created_at >= '2023-06-01'
+            and plt2.created_at < '2023-07-01'
+            and plt2.state = 6
+        group by 1,2
+    ) plt2 on plt2.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.created_at >= '2023-06-01'
+    and plt.created_at < '2023-07-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.parcel_created_at 包裹揽收时间
+    ,plt.created_at 任务生成时间
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速时的最后有效路由动作
+    ,ss.name 最后有效路由操作网点名称
+    ,case ss.category
+        when 1 then 'SP'
+        when 2 then 'DC'
+        when 4 then 'SHOP'
+        when 5 then 'SHOP'
+        when 6 then 'FH'
+        when 7 then 'SHOP'
+        when 8 then 'Hub'
+        when 9 then 'Onsite'
+        when 10 then 'BDC'
+        when 11 then 'fulfillment'
+        when 12 then 'B-HUB'
+        when 13 then 'CDC'
+        when 14 then 'PDC'
+    end 最后有效路由操作网点类型
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,plt.duty_type
+    ,case plt.duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 套餐
+    ,case plt.`link_type`
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 判责环节
+    ,plt2.ss2_name 责任网点
+    ,plt2.ratio  责任占比
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = plt.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join fle_staging.sys_store ss on ss.id = plt.last_valid_store_id
+left join
+    (
+        select
+            plr.lose_task_id
+            ,ss2.name ss2_name
+            ,sum(plr.duty_ratio)/100 ratio
+        from bi_pro.parcel_lose_task plt2
+        join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt2.id
+        left join fle_staging.sys_store ss2 on ss2.id = plr.store_id
+        where
+            plt2.created_at >= '2023-06-01'
+            and plt2.created_at < '2023-07-01'
+            and plt2.state = 6
+        group by 1,2
+    ) plt2 on plt2.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.created_at >= '2023-06-01'
+    and plt.created_at < '2023-07-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(cdt.id)
+from fle_staging.customer_diff_ticket cdt
+left join fle_staging.diff_info di on di.id = cdt.diff_info_id
+where
+        cdt.created_at >= '2023-04-30 17:00:00'
+        and cdt.created_at < '2023-06-26 17:00:00'
+        and di.diff_marker_category not in (2,17);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+        ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+        ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+        ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+        ,cdt.client_id 客户ID
+        ,case
+          when kp.id ='AA0622' then 'pmd-shein'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' then 'ffm'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' and if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' then 'retail-network'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' then 'retail-bulky'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` in ('1098','1099','1100','1101') then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' then 'retail-shop'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' then 'customer service'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' then 'bulky business development'
+          when kp3.`agent_category`= '3'  and kp3.department_id= '388' and kp.id is null then 'kam'
+          when ss.`category` = '1' and kp.id is null then 'retail-network-c'
+          when ss.`category` in ('10','13') and kp.id is null then 'retail-bul  ky-c'
+          when ss.`category` = '6'  and kp.id is null then 'fh'
+          when ss.`category` in ('4','5','7') and kp.id is null then 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null then 'ffm'
+          else ss2.name
+        end as '归属部门'
+        ,di.order_info_id  订单号
+        ,oi.remark 订单备注
+        ,di.pno 运单号
+        ,ddd.CN_element 疑难原因
+        ,ddd2.CN_element 二级类型
+        ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+        ,case pi.insured
+            when 1 then '保价'
+            when 0 then '不保价'
+        end 保价情况
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+        ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+        ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+        ,case cdt.state
+            when 0 then '未处理'
+            when 1 then '已处理'
+            when 2 then '沟通中'
+            when 3 then '支付驳回'
+            when 4 then '客户未处理'
+            when 5 then '转交闪速系统'
+            when 6 then '转交QAQC'
+        end 处理状态
+        ,ddd3.CN_element 协商结果
+        ,case sdt.pending_handle_category
+            when 1 then '待揽收网点协商'
+            when 2 then '待KAM问题件处理'
+            when 3 then '待QAQC判责'
+            when 4 then '待客户决定'
+        end 待处理人
+        ,if(cdt.organization_type = 1, ss3.name, sd.name) '处理问题件网点/部门'
+        ,case fdt.state
+            when 0 then '未支付'
+            when 1 then '已支付'
+            when 2 then '驳回'
+            when 3 then '取消'
+            when 4 then '支付中'
+            when 5 then '无需支付'
+        end 财务支付状态
+        ,cdt.remark 备注
+    from fle_staging.customer_diff_ticket cdt
+    left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = cdt.diff_info_id
+    join fle_staging.diff_info di on di.id = cdt.diff_info_id
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+    left join fle_staging.order_info oi on oi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd2.db = 'fle_staging' and ddd2.tablename = 'diff_info' and ddd2.fieldname = 'rejection_category'
+    left join dwm.dwd_dim_dict ddd3 on ddd3.element = cdt.negotiation_result_category and ddd3.db = 'fle_staging' and ddd3.tablename = 'customer_diff_ticket' and ddd3.fieldname = 'negotiation_result_category'
+    left join fle_staging.sys_store ss on ss.id = di.store_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+    left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+    left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+    left join fle_staging.ka_profile  AS kp on kp.id = pi.client_id
+    left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+    left join fle_staging.ka_profile kp3 on pi.`agent_id`  = kp3.`id`
+    left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+    left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = pi.client_id
+    left join fle_staging.customer_group cg on cg.id = cgkr.customer_group_id
+    left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+    left join fle_staging.sys_department sd on sd.id = cdt.organization_id
+    left join fle_staging.sys_store ss3 on ss3.id = cdt.organization_id
+    where
+        cdt.created_at >= '2023-04-30 17:00:00'
+        and cdt.created_at < '2023-06-26 17:00:00'
+        and di.diff_marker_category not in (2,17)
+)
+select
+    t1.*
+    ,am.punish_num 罚款次数
+    ,am.punish_money_total 罚款总金额
+from t t1
+left join
+    (
+        select
+            am.pno
+            ,sum(am.punish_money) punish_money_total
+            ,count(distinct if(am.abnormal_object = 0, am.id, am.average_merge_key)) punish_num
+        from bi_pro.abnormal_message am
+        join
+            (
+                select
+                    t1.运单号 pno
+                from t t1
+                group by 1
+            ) t1 on am.merge_column = t1.pno
+        where
+            am.punish_category = 4
+            and am.isdel = 0
+            and am.state = 1
+        group by 1
+    ) am on am.pno = t1.运单号
+where
+    am.pno = 'TH10033V0N1E3Q';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+        ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+        ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+        ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+        ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+        ,cdt.client_id 客户ID
+        ,case
+          when kp.id ='AA0622' then 'pmd-shein'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '20001' then 'ffm'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' and if(kp.`account_type_category` = '3',kp.`agent_id`, kp.`id`) = 'BF5633' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '388' then 'kam'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '4' then 'retail-network'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '34' then 'retail-bulky'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '40' then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' and hs.`node_department_id` in ('1098','1099','1100','1101') then 'retail-sales'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '13' then 'retail-shop'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '3' then 'customer service'
+          when if(kp.`account_type_category` = '3',kp2.`department_id`, kp.`department_id`) = '545' then 'bulky business development'
+          when kp3.`agent_category`= '3'  and kp3.department_id= '388' and kp.id is null then 'kam'
+          when ss.`category` = '1' and kp.id is null then 'retail-network-c'
+          when ss.`category` in ('10','13') and kp.id is null then 'retail-bul  ky-c'
+          when ss.`category` = '6'  and kp.id is null then 'fh'
+          when ss.`category` in ('4','5','7') and kp.id is null then 'retail-shop-c'
+          when ss.`category` in ('11') and kp.id is null then 'ffm'
+          else ss2.name
+        end as '归属部门'
+        ,di.order_info_id  订单号
+        ,oi.remark 订单备注
+        ,di.pno 运单号
+        ,ddd.CN_element 疑难原因
+        ,ddd2.CN_element 二级类型
+        ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+        ,case pi.insured
+            when 1 then '保价'
+            when 0 then '不保价'
+        end 保价情况
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+        ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+        ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+        ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+        ,case cdt.state
+            when 0 then '未处理'
+            when 1 then '已处理'
+            when 2 then '沟通中'
+            when 3 then '支付驳回'
+            when 4 then '客户未处理'
+            when 5 then '转交闪速系统'
+            when 6 then '转交QAQC'
+        end 处理状态
+        ,ddd3.CN_element 协商结果
+        ,case sdt.pending_handle_category
+            when 1 then '待揽收网点协商'
+            when 2 then '待KAM问题件处理'
+            when 3 then '待QAQC判责'
+            when 4 then '待客户决定'
+        end 待处理人
+        ,if(cdt.organization_type = 1, ss3.name, sd.name) '处理问题件网点/部门'
+        ,case fdt.state
+            when 0 then '未支付'
+            when 1 then '已支付'
+            when 2 then '驳回'
+            when 3 then '取消'
+            when 4 then '支付中'
+            when 5 then '无需支付'
+        end 财务支付状态
+        ,cdt.remark 备注
+    from fle_staging.customer_diff_ticket cdt
+    left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = cdt.diff_info_id
+    join fle_staging.diff_info di on di.id = cdt.diff_info_id
+    left join fle_staging.parcel_info pi on pi.pno = di.pno
+    left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+    left join fle_staging.order_info oi on oi.pno = di.pno
+    left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+    left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd2.db = 'fle_staging' and ddd2.tablename = 'diff_info' and ddd2.fieldname = 'rejection_category'
+    left join dwm.dwd_dim_dict ddd3 on ddd3.element = cdt.negotiation_result_category and ddd3.db = 'fle_staging' and ddd3.tablename = 'customer_diff_ticket' and ddd3.fieldname = 'negotiation_result_category'
+    left join fle_staging.sys_store ss on ss.id = di.store_id
+    left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+    left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+    left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+    left join fle_staging.ka_profile  AS kp on kp.id = pi.client_id
+    left join fle_staging.ka_profile as kp2 on  kp.`agent_id` = kp2.`id` and (kp2.`agent_category` <>'3' or kp2.`agent_category` is null)
+    left join fle_staging.ka_profile kp3 on pi.`agent_id`  = kp3.`id`
+    left join bi_pro.hr_staff_info AS hs on kp.`staff_info_id` = hs.`staff_info_id` AND hs.`node_department_id` IN ('1098','1099','1100','1101')
+    left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+    left join fle_staging.customer_group_ka_relation cgkr on cgkr.ka_id = pi.client_id
+    left join fle_staging.customer_group cg on cg.id = cgkr.customer_group_id
+    left join fle_staging.sys_store ss2 on ss2.id = pi.ticket_pickup_store_id
+    left join fle_staging.sys_department sd on sd.id = cdt.organization_id
+    left join fle_staging.sys_store ss3 on ss3.id = cdt.organization_id
+    where
+        cdt.created_at >= '2023-04-30 17:00:00'
+        and cdt.created_at < '2023-06-26 17:00:00'
+        and di.diff_marker_category not in (2,17)
+)
+select
+    t1.*
+    ,am.punish_num 罚款次数
+    ,am.punish_money_total 罚款总金额
+from t t1
+left join
+    (
+        select
+            am.pno
+            ,sum(am.punish_money) punish_money_total
+            ,count(distinct if(am.abnormal_object = 0, am.id, am.average_merge_key)) punish_num
+        from bi_pro.abnormal_message am
+        join
+            (
+                select
+                    t1.运单号 pno
+                from t t1
+                group by 1
+            ) t1 on am.merge_column = t1.pno
+        where
+            am.punish_category = 4
+            and am.isdel = 0
+            and am.state = 1
+        group by 1
+    ) am on am.pno = t1.运单号;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-05'
+        and ds.stat_date <= '2023-07-05'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+
+select
+    a.stat_date 日期
+    ,a.store_id 网点ID
+    ,dp.store_name 网点名称
+    ,dp.region_name 大区
+    ,dp.piece_name 片区
+    ,a.应交接
+    ,a.已交接
+    ,concat(round(a.交接率*100,2),'%') as 交接率
+    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+    ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+    ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+    ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+    ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+from
+    (
+        select
+            t1.store_id
+            ,t1.stat_date
+            ,count(t1.pno) 应交接
+            ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+            ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+            ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+            ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+            ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+            ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+            ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+            ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+        from t t1
+        left join
+            (
+                select
+                    sc.*
+                from
+                    (
+                        select
+                            pr.pno
+                            ,pr.store_id
+                            ,pr.store_name
+                            ,t1.stat_date
+                            ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                            ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                            ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                        from rot_pro.parcel_route pr
+                        join t t1 on t1.pno = pr.pno
+                        where
+                            pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                           and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                          and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                    ) sc
+                where
+                    sc.rk = 1
+            ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+        group by 1,2
+    ) a
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    dp.store_category in (1,10,13,14);
+;-- -. . -..- - / . -. - .-. -.--
+select json_extract(dpr.extra_value, '$.images') from dwm.drds_parcel_route_extra dpr where  dpr.id = '1611593928971259904';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.updated_at
+    ,plt.state
+    ,plt.operator_id
+    ,plt.client_id
+    ,plt.last_valid_store_id
+    ,if(plt.state = 6 and plt.duty_result = 1, plt.updated_at, null) updated_time
+from bi_pro.parcel_lose_task plt
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+)
+select
+    a.pno
+    ,case a.force_take_photos_type
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,case
+        when  a.state = 1 then '丢失件待处理'
+        when  a.state = 2 then '疑似丢失件待处理'
+        when  a.state = 3 then '待工单回复'
+        when  a.state = 4 then '已工单回复'
+        when  a.state = 5 and a.operator_id in (10000,10001,10002) then '自动判责—包裹未丢失'
+        when  a.state = 5 and a.operator_id not in (10000,10001,10002) then '人工-包裹未丢失'
+        when  a.state = 6 then '丢失件处理完成'
+    end 判责结果
+    ,pr2.staff_info_id 拍照快递员
+    ,pr2.store_name 拍照网点
+    ,dt.piece_name 拍照网点片区
+    ,dt.region_name 拍照网点大区
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,b.24hour 判责丢失24小时判断
+    ,pi.cod_amount/100 cod金额
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,plt3.pl_source 进L来源同时是否有替他来源任务
+    ,if(a.state in (5,6) ,timestampdiff(hour, a.created_at, a.updated_at, null)) 进入L来源时间到已处理时间段_hour
+from
+    (
+        select
+            sf.*
+        from
+            (
+                select
+                    t1.*
+                    ,sfp.force_take_photos_type
+                    ,sfp.id record_id
+                    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+                from fle_staging.stranded_force_photo_ai_record sfp
+                join t t1 on t1.pno = sfp.pno
+                where
+                    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+                    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)
+                    and sfp.force_take_photos_type is not null
+            ) sf
+        where
+            sf.rk = 1
+    ) a
+left join fle_staging.ka_profile kp on kp.id = a.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = a.client_id
+left join fle_staging.parcel_info pi on pi.pno = a.pno
+left join
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 <= 24 then '1'
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 > 24 then '2'
+                else 0
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_time, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b on b.pno = a.pno
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.统计日期 = date(a.created_at) and dt.网点ID = a.last_valid_store_id
+left join
+    (
+        select
+            t1.pno
+            ,group_concat(pl.plt_source) pl_source
+        from
+            (
+                select
+                    plt3.pno
+                    ,plt3.source
+                    ,case plt3.source
+                        WHEN 1 THEN 'A'
+                        WHEN 2 THEN 'B'
+                        WHEN 3 THEN 'C'
+                        WHEN 4 THEN 'D'
+                        WHEN 5 THEN 'E'
+                        WHEN 6 THEN 'F'
+                        WHEN 7 THEN 'G'
+                        WHEN 8 THEN 'H'
+                        WHEN 9 THEN 'I'
+                        WHEN 10 THEN 'J'
+                        when 11 then 'K'
+                        when 12 then 'L'
+                    end plt_source
+                    ,plt3.created_at created_time
+                    ,if(plt3.state in (5,6), plt3.updated_at, now()) updated_time
+                from bi_pro.parcel_lose_task plt3
+                where
+                    plt3.created_at >= '2023-06-14 17:00:00'
+                    and plt3.created_at < '2023-06-30 17:00:00'
+                    and plt3.source != 12 -- 非L来源
+            ) pl
+        join t t1 on t1.pno = pl.pno
+        where
+            pl.updated_time > t1.created_at
+            and pl.created_time < t1.updated_time
+        group by 1
+    ) plt3 on plt3.pno = a.pno
+left join fle_staging.stranded_force_photo_info sfp on sfp.ai_record_id = a.record_id
+left join fle_staging.sys_attachment sa on sa.object_key = sfp.url
+left join dwm.drds_parcel_route_extra dpr on replace(replace(replace(json_extract(dpr.extra_value, '$.images'), '"', ''),'[', ''),']', '') = sa.id
+left join rot_pro.parcel_route pr2 on pr2.pno = dpr.pno and pr2.route_action = 'TAKE_PHOTO' and json_extract(pr2.extra_value, '$.routeExtraId') = dpr.route_extra_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = pr2.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.updated_at
+    ,plt.state
+    ,plt.operator_id
+    ,plt.client_id
+    ,plt.last_valid_store_id
+    ,if(plt.state = 6 and plt.duty_result = 1, plt.updated_at, null) updated_time
+from bi_pro.parcel_lose_task plt
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+)
+select
+    a.pno
+    ,case a.force_take_photos_type
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,case
+        when  a.state = 1 then '丢失件待处理'
+        when  a.state = 2 then '疑似丢失件待处理'
+        when  a.state = 3 then '待工单回复'
+        when  a.state = 4 then '已工单回复'
+        when  a.state = 5 and a.operator_id in (10000,10001,10002) then '自动判责—包裹未丢失'
+        when  a.state = 5 and a.operator_id not in (10000,10001,10002) then '人工-包裹未丢失'
+        when  a.state = 6 then '丢失件处理完成'
+    end 判责结果
+    ,pr2.staff_info_id 拍照快递员
+    ,pr2.store_name 拍照网点
+    ,dt.piece_name 拍照网点片区
+    ,dt.region_name 拍照网点大区
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,b.24hour 判责丢失24小时判断
+    ,pi.cod_amount/100 cod金额
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,plt3.pl_source 进L来源同时是否有替他来源任务
+    ,if(a.state in (5,6) ,timestampdiff(hour, a.created_at, a.updated_at), null) 进入L来源时间到已处理时间段_hour
+from
+    (
+        select
+            sf.*
+        from
+            (
+                select
+                    t1.*
+                    ,sfp.force_take_photos_type
+                    ,sfp.id record_id
+                    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+                from fle_staging.stranded_force_photo_ai_record sfp
+                join t t1 on t1.pno = sfp.pno
+                where
+                    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+                    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)
+                    and sfp.force_take_photos_type is not null
+            ) sf
+        where
+            sf.rk = 1
+    ) a
+left join fle_staging.ka_profile kp on kp.id = a.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = a.client_id
+left join fle_staging.parcel_info pi on pi.pno = a.pno
+left join
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 <= 24 then '1'
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 > 24 then '2'
+                else 0
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_time, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b on b.pno = a.pno
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.统计日期 = date(a.created_at) and dt.网点ID = a.last_valid_store_id
+left join
+    (
+        select
+            t1.pno
+            ,group_concat(pl.plt_source) pl_source
+        from
+            (
+                select
+                    plt3.pno
+                    ,plt3.source
+                    ,case plt3.source
+                        WHEN 1 THEN 'A'
+                        WHEN 2 THEN 'B'
+                        WHEN 3 THEN 'C'
+                        WHEN 4 THEN 'D'
+                        WHEN 5 THEN 'E'
+                        WHEN 6 THEN 'F'
+                        WHEN 7 THEN 'G'
+                        WHEN 8 THEN 'H'
+                        WHEN 9 THEN 'I'
+                        WHEN 10 THEN 'J'
+                        when 11 then 'K'
+                        when 12 then 'L'
+                    end plt_source
+                    ,plt3.created_at created_time
+                    ,if(plt3.state in (5,6), plt3.updated_at, now()) updated_time
+                from bi_pro.parcel_lose_task plt3
+                where
+                    plt3.created_at >= '2023-06-14 17:00:00'
+                    and plt3.created_at < '2023-06-30 17:00:00'
+                    and plt3.source != 12 -- 非L来源
+            ) pl
+        join t t1 on t1.pno = pl.pno
+        where
+            pl.updated_time > t1.created_at
+            and pl.created_time < t1.updated_time
+        group by 1
+    ) plt3 on plt3.pno = a.pno
+left join fle_staging.stranded_force_photo_info sfp on sfp.ai_record_id = a.record_id
+left join fle_staging.sys_attachment sa on sa.object_key = sfp.url
+left join dwm.drds_parcel_route_extra dpr on replace(replace(replace(json_extract(dpr.extra_value, '$.images'), '"', ''),'[', ''),']', '') = sa.id
+left join rot_pro.parcel_route pr2 on pr2.pno = dpr.pno and pr2.route_action = 'TAKE_PHOTO' and json_extract(pr2.extra_value, '$.routeExtraId') = dpr.route_extra_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = pr2.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.updated_at
+    ,plt.state
+    ,plt.operator_id
+    ,plt.client_id
+    ,plt.last_valid_store_id
+    ,if(plt.state = 6 and plt.duty_result = 1, plt.updated_at, null) updated_time
+from bi_pro.parcel_lose_task plt
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+)
+, po as
+(
+    select
+        pr.pno
+        ,dpr.route_extra_id
+        ,pr.store_id
+        ,pr.staff_info_id
+        ,replace(replace(replace(json_extract(dpr.extra_value, '$.images'), '"', ''),'[', ''),']', '') image
+    from rot_pro.parcel_route pr
+    left join dwm.drds_parcel_route_extra dpr on dpr.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
+    join
+        (
+            select
+                t1.pno
+            from t t1
+            group by 1
+        ) pl on pl.pno = pr.pno
+    where
+        pr.routed_at > '2023-06-01'
+        and pr.route_action = 'TAKE_PHOTO'
+)
+select
+    a.pno
+    ,case a.force_take_photos_type
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,case
+        when  a.state = 1 then '丢失件待处理'
+        when  a.state = 2 then '疑似丢失件待处理'
+        when  a.state = 3 then '待工单回复'
+        when  a.state = 4 then '已工单回复'
+        when  a.state = 5 and a.operator_id in (10000,10001,10002) then '自动判责—包裹未丢失'
+        when  a.state = 5 and a.operator_id not in (10000,10001,10002) then '人工-包裹未丢失'
+        when  a.state = 6 then '丢失件处理完成'
+    end 判责结果
+    ,po1.staff_info_id 拍照快递员
+    ,dt.store_name 拍照网点
+    ,dt.piece_name 拍照网点片区
+    ,dt.region_name 拍照网点大区
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,b.24hour 判责丢失24小时判断
+    ,pi.cod_amount/100 cod金额
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,plt3.pl_source 进L来源同时是否有替他来源任务
+    ,if(a.state in (5,6) ,timestampdiff(hour, a.created_at, a.updated_at), null) 进入L来源时间到已处理时间段_hour
+from
+    (
+        select
+            sf.*
+        from
+            (
+                select
+                    t1.*
+                    ,sfp.force_take_photos_type
+                    ,sfp.id record_id
+                    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+                from fle_staging.stranded_force_photo_ai_record sfp
+                join t t1 on t1.pno = sfp.pno
+                where
+                    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+                    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)
+                    and sfp.force_take_photos_type is not null
+            ) sf
+        where
+            sf.rk = 1
+    ) a
+left join fle_staging.ka_profile kp on kp.id = a.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = a.client_id
+left join fle_staging.parcel_info pi on pi.pno = a.pno
+left join
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 <= 24 then '1'
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 > 24 then '2'
+                else 0
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_time, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b on b.pno = a.pno
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.统计日期 = date(a.created_at) and dt.网点ID = a.last_valid_store_id
+left join
+    (
+        select
+            t1.pno
+            ,group_concat(pl.plt_source) pl_source
+        from
+            (
+                select
+                    plt3.pno
+                    ,plt3.source
+                    ,case plt3.source
+                        WHEN 1 THEN 'A'
+                        WHEN 2 THEN 'B'
+                        WHEN 3 THEN 'C'
+                        WHEN 4 THEN 'D'
+                        WHEN 5 THEN 'E'
+                        WHEN 6 THEN 'F'
+                        WHEN 7 THEN 'G'
+                        WHEN 8 THEN 'H'
+                        WHEN 9 THEN 'I'
+                        WHEN 10 THEN 'J'
+                        when 11 then 'K'
+                        when 12 then 'L'
+                    end plt_source
+                    ,plt3.created_at created_time
+                    ,if(plt3.state in (5,6), plt3.updated_at, now()) updated_time
+                from bi_pro.parcel_lose_task plt3
+                where
+                    plt3.created_at >= '2023-06-14 17:00:00'
+                    and plt3.created_at < '2023-06-30 17:00:00'
+                    and plt3.source != 12 -- 非L来源
+            ) pl
+        join t t1 on t1.pno = pl.pno
+        where
+            pl.updated_time > t1.created_at
+            and pl.created_time < t1.updated_time
+        group by 1
+    ) plt3 on plt3.pno = a.pno
+left join fle_staging.stranded_force_photo_info sfp on sfp.ai_record_id = a.record_id
+left join fle_staging.sys_attachment sa on sa.object_key = sfp.url
+left join po po1 on po1.image = sa.id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = po1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.updated_at
+    ,plt.state
+    ,plt.operator_id
+    ,plt.client_id
+    ,plt.last_valid_store_id
+    ,if(plt.state = 6 and plt.duty_result = 1, plt.updated_at, null) updated_time
+from bi_pro.parcel_lose_task plt
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+)
+, po as
+(
+    select
+        pr.pno
+        ,dpr.route_extra_id
+        ,pr.store_id
+        ,pr.staff_info_id
+        ,replace(replace(replace(json_extract(dpr.extra_value, '$.images'), '"', ''),'[', ''),']', '') image
+    from rot_pro.parcel_route pr
+    left join dwm.drds_parcel_route_extra dpr on dpr.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
+    join
+        (
+            select
+                t1.pno
+            from t t1
+            group by 1
+        ) pl on pl.pno = pr.pno
+    where
+        pr.routed_at > '2023-06-01'
+        and pr.route_action = 'TAKE_PHOTO'
+)
+select
+    a.pno
+    ,case a.force_take_photos_type
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,case
+        when  a.state = 1 then '丢失件待处理'
+        when  a.state = 2 then '疑似丢失件待处理'
+        when  a.state = 3 then '待工单回复'
+        when  a.state = 4 then '已工单回复'
+        when  a.state = 5 and a.operator_id in (10000,10001,10002) then '自动判责—包裹未丢失'
+        when  a.state = 5 and a.operator_id not in (10000,10001,10002) then '人工-包裹未丢失'
+        when  a.state = 6 then '丢失件处理完成'
+    end 判责结果
+    ,po1.staff_info_id 拍照快递员
+    ,dt.store_name 拍照网点
+    ,dt.piece_name 拍照网点片区
+    ,dt.region_name 拍照网点大区
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,b.24hour 判责丢失24小时判断
+    ,pi.cod_amount/100 cod金额
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,,case pi2.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 退件包裹包裹状态
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,plt3.pl_source 进L来源同时是否有替他来源任务
+    ,if(a.state in (5,6) ,timestampdiff(hour, a.created_at, a.updated_at), null) 进入L来源时间到已处理时间段_hour
+from
+    (
+        select
+            sf.*
+        from
+            (
+                select
+                    t1.*
+                    ,sfp.force_take_photos_type
+                    ,sfp.id record_id
+                    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+                from fle_staging.stranded_force_photo_ai_record sfp
+                join t t1 on t1.pno = sfp.pno
+                where
+                    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+                    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)
+                    and sfp.force_take_photos_type is not null
+            ) sf
+        where
+            sf.rk = 1
+    ) a
+left join fle_staging.ka_profile kp on kp.id = a.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = a.client_id
+left join fle_staging.parcel_info pi on pi.pno = a.pno
+left join
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 <= 24 then '1'
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 > 24 then '2'
+                else 0
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_time, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b on b.pno = a.pno
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.统计日期 = date(a.created_at) and dt.网点ID = a.last_valid_store_id
+left join
+    (
+        select
+            t1.pno
+            ,group_concat(pl.plt_source) pl_source
+        from
+            (
+                select
+                    plt3.pno
+                    ,plt3.source
+                    ,case plt3.source
+                        WHEN 1 THEN 'A'
+                        WHEN 2 THEN 'B'
+                        WHEN 3 THEN 'C'
+                        WHEN 4 THEN 'D'
+                        WHEN 5 THEN 'E'
+                        WHEN 6 THEN 'F'
+                        WHEN 7 THEN 'G'
+                        WHEN 8 THEN 'H'
+                        WHEN 9 THEN 'I'
+                        WHEN 10 THEN 'J'
+                        when 11 then 'K'
+                        when 12 then 'L'
+                    end plt_source
+                    ,plt3.created_at created_time
+                    ,if(plt3.state in (5,6), plt3.updated_at, now()) updated_time
+                from bi_pro.parcel_lose_task plt3
+                where
+                    plt3.created_at >= '2023-06-14 17:00:00'
+                    and plt3.created_at < '2023-06-30 17:00:00'
+                    and plt3.source != 12 -- 非L来源
+            ) pl
+        join t t1 on t1.pno = pl.pno
+        where
+            pl.updated_time > t1.created_at
+            and pl.created_time < t1.updated_time
+        group by 1
+    ) plt3 on plt3.pno = a.pno
+left join fle_staging.stranded_force_photo_info sfp on sfp.ai_record_id = a.record_id
+left join fle_staging.sys_attachment sa on sa.object_key = sfp.url
+left join po po1 on po1.image = sa.id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = po1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join fle_staging.parcel_info pi2 on pi2.pno = pi.returned_pno;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+select
+    plt.pno
+    ,plt.id
+    ,plt.created_at
+    ,plt.updated_at
+    ,plt.state
+    ,plt.operator_id
+    ,plt.client_id
+    ,plt.last_valid_store_id
+    ,if(plt.state = 6 and plt.duty_result = 1, plt.updated_at, null) updated_time
+from bi_pro.parcel_lose_task plt
+where
+    plt.created_at >= '2023-06-14 17:00:00'
+    and plt.created_at < '2023-06-30 17:00:00'
+    and plt.source = 12
+)
+, po as
+(
+    select
+        pr.pno
+        ,dpr.route_extra_id
+        ,pr.store_id
+        ,pr.staff_info_id
+        ,replace(replace(replace(json_extract(dpr.extra_value, '$.images'), '"', ''),'[', ''),']', '') image
+    from rot_pro.parcel_route pr
+    left join dwm.drds_parcel_route_extra dpr on dpr.route_extra_id = json_extract(pr.extra_value, '$.routeExtraId')
+    join
+        (
+            select
+                t1.pno
+            from t t1
+            group by 1
+        ) pl on pl.pno = pr.pno
+    where
+        pr.routed_at > '2023-06-01'
+        and pr.route_action = 'TAKE_PHOTO'
+)
+select
+    a.pno
+    ,case a.force_take_photos_type
+        when 1 then '打印面单'
+        when 2 then '收件人拒收'
+        when 3 then '滞留强制拍照'
+    end 拍照类型
+    ,case
+        when  a.state = 1 then '丢失件待处理'
+        when  a.state = 2 then '疑似丢失件待处理'
+        when  a.state = 3 then '待工单回复'
+        when  a.state = 4 then '已工单回复'
+        when  a.state = 5 and a.operator_id in (10000,10001,10002) then '自动判责—包裹未丢失'
+        when  a.state = 5 and a.operator_id not in (10000,10001,10002) then '人工-包裹未丢失'
+        when  a.state = 6 then '丢失件处理完成'
+    end 判责结果
+    ,po1.staff_info_id 拍照快递员
+    ,dt.store_name 拍照网点
+    ,dt.piece_name 拍照网点片区
+    ,dt.region_name 拍照网点大区
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end 客户类型
+    ,b.24hour 判责丢失24小时判断
+    ,pi.cod_amount/100 cod金额
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,case pi2.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 退件包裹包裹状态
+    ,if(dt.双重预警 = 'Alert', '是', '否') 当日是否爆仓
+    ,plt3.pl_source 进L来源同时是否有替他来源任务
+    ,if(a.state in (5,6) ,timestampdiff(hour, a.created_at, a.updated_at), null) 进入L来源时间到已处理时间段_hour
+from
+    (
+        select
+            sf.*
+        from
+            (
+                select
+                    t1.*
+                    ,sfp.force_take_photos_type
+                    ,sfp.id record_id
+                    ,row_number() over (partition by sfp.pno order by sfp.created_at desc) rk
+                from fle_staging.stranded_force_photo_ai_record sfp
+                join t t1 on t1.pno = sfp.pno
+                where
+                    sfp.created_at < date_sub(t1.created_at, interval 7 hour)
+                    and (sfp.parcel_enabled = 0 or sfp.matching_enabled = 0)
+                    and sfp.force_take_photos_type is not null
+            ) sf
+        where
+            sf.rk = 1
+    ) a
+left join fle_staging.ka_profile kp on kp.id = a.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = a.client_id
+left join fle_staging.parcel_info pi on pi.pno = a.pno
+left join
+    (
+        select
+            t2.*
+            ,case
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 <= 24 then '1'
+                when timestampdiff(second, t2.updated_time, pr.min_prat)/3600 > 24 then '2'
+                else 0
+            end 24hour
+        from t t2
+        left join
+            (
+                select
+                    pr.pno
+                    ,min(convert_tz(pr.routed_at, '+00:00', '+07:00')) min_prat
+                from rot_pro.parcel_route pr
+                join t t1 on t1.pno = pr.pno
+                join dwm.dwd_dim_dict ddd on ddd.element = pr.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action' and ddd.remark = 'valid'
+                where
+                    pr.routed_at > date_sub(t1.updated_time, interval 7 hour)
+                group by 1
+            ) pr on pr.pno = t2.pno
+    ) b on b.pno = a.pno
+left join dwm.dwd_th_network_spill_detl_rd dt on dt.统计日期 = date(a.created_at) and dt.网点ID = a.last_valid_store_id
+left join
+    (
+        select
+            t1.pno
+            ,group_concat(pl.plt_source) pl_source
+        from
+            (
+                select
+                    plt3.pno
+                    ,plt3.source
+                    ,case plt3.source
+                        WHEN 1 THEN 'A'
+                        WHEN 2 THEN 'B'
+                        WHEN 3 THEN 'C'
+                        WHEN 4 THEN 'D'
+                        WHEN 5 THEN 'E'
+                        WHEN 6 THEN 'F'
+                        WHEN 7 THEN 'G'
+                        WHEN 8 THEN 'H'
+                        WHEN 9 THEN 'I'
+                        WHEN 10 THEN 'J'
+                        when 11 then 'K'
+                        when 12 then 'L'
+                    end plt_source
+                    ,plt3.created_at created_time
+                    ,if(plt3.state in (5,6), plt3.updated_at, now()) updated_time
+                from bi_pro.parcel_lose_task plt3
+                where
+                    plt3.created_at >= '2023-06-14 17:00:00'
+                    and plt3.created_at < '2023-06-30 17:00:00'
+                    and plt3.source != 12 -- 非L来源
+            ) pl
+        join t t1 on t1.pno = pl.pno
+        where
+            pl.updated_time > t1.created_at
+            and pl.created_time < t1.updated_time
+        group by 1
+    ) plt3 on plt3.pno = a.pno
+left join fle_staging.stranded_force_photo_info sfp on sfp.ai_record_id = a.record_id
+left join fle_staging.sys_attachment sa on sa.object_key = sfp.url
+left join po po1 on po1.image = sa.id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = po1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join fle_staging.parcel_info pi2 on pi2.pno = pi.returned_pno;
+;-- -. . -..- - / . -. - .-. -.--
+select
+#     convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+#     ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+#     ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+#     ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+#     ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+#     ,cdt.client_id 客户ID
+#     ,di.order_info_id  订单号
+#     ,oi.remark 订单备注
+#     ,di.pno 运单号
+#     ,ddd.CN_element 疑难原因
+#     ,ddd2.CN_element 二级类型
+#     ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+#     ,case pi.insured
+#         when 1 then '保价'
+#         when 0 then '不保价'
+#     end 保价情况
+#     ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+#     ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+#     ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+#     ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+#     ,case cdt.state
+#         when 0 then '未处理'
+#         when 1 then '已处理'
+#         when 2 then '沟通中'
+#         when 3 then '支付驳回'
+#         when 4 then '客户未处理'
+#         when 5 then '转交闪速系统'
+#         when 6 then '转交QAQC'
+#     end 处理状态
+#     ,case fdt.state
+#         when 0 then '未支付'
+#         when 1 then '已支付'
+#         when 2 then '驳回'
+#         when 3 then '取消'
+#         when 4 then '支付中'
+#         when 5 then '无需支付'
+#     end 财务支付状态
+#     ,cdt.remark 备注
+#     ,t.ProjectTeam
+#     ,t.Sub_ProjectTeam
+#     ,datediff(curdate(), convert_tz(di.created_at, '+00:00', '+07:00')) 处理天数
+    count(cdt.id) num
+from fle_staging.customer_diff_ticket cdt
+join tmpale.tmp_th_client_id_cn_th t on cdt.client_id = t.client_id
+join fle_staging.diff_info di on di.id = cdt.diff_info_id
+left join fle_staging.parcel_info pi on pi.pno = di.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+left join fle_staging.order_info oi on oi.pno = di.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'rejection_category'
+left join fle_staging.sys_store ss on ss.id = di.store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+where
+    cdt.created_at >= date_sub(date_sub(curdate(), interval 31 day ), interval 8 hour);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(cdt.id)
+#     convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+#     ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+#     ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+#     ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+#     ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+#     ,cdt.client_id 客户ID
+#     ,di.order_info_id  订单号
+#     ,oi.remark 订单备注
+#     ,di.pno 运单号
+#     ,ddd.CN_element 疑难原因
+#     ,ddd2.CN_element 二级类型
+#     ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+#     ,case pi.insured
+#         when 1 then '保价'
+#         when 0 then '不保价'
+#     end 保价情况
+#     ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+#     ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+#     ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+#     ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+#     ,case cdt.state
+#         when 0 then '未处理'
+#         when 1 then '已处理'
+#         when 2 then '沟通中'
+#         when 3 then '支付驳回'
+#         when 4 then '客户未处理'
+#         when 5 then '转交闪速系统'
+#         when 6 then '转交QAQC'
+#     end 处理状态
+#     ,case fdt.state
+#         when 0 then '未支付'
+#         when 1 then '已支付'
+#         when 2 then '驳回'
+#         when 3 then '取消'
+#         when 4 then '支付中'
+#         when 5 then '无需支付'
+#     end 财务支付状态
+#     ,cdt.remark 备注
+#     ,t.ProjectTeam
+#     ,t.Sub_ProjectTeam
+#     ,datediff(curdate(), convert_tz(di.created_at, '+00:00', '+07:00')) 处理天数
+from fle_staging.customer_diff_ticket cdt
+join tmpale.tmp_th_client_id_cn_th t on cdt.client_id = t.client_id
+join fle_staging.diff_info di on di.id = cdt.diff_info_id
+left join fle_staging.parcel_info pi on pi.pno = di.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+left join fle_staging.order_info oi on oi.pno = di.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'rejection_category'
+left join fle_staging.sys_store ss on ss.id = di.store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+where
+    cdt.created_at >= date_sub(date_sub(curdate(), interval 31 day ), interval 8 hour)
+    and t.projectteam not in ('LZD', 'SPX', 'TikTok');
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-06'
+        and ds.stat_date <= '2023-07-06'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+
+select
+    a.stat_date 日期
+    ,a.store_id 网点ID
+    ,dp.store_name 网点名称
+    ,dp.region_name 大区
+    ,dp.piece_name 片区
+    ,a.应交接
+    ,a.已交接
+    ,concat(round(a.交接率*100,2),'%') as 交接率
+    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+    ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+    ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+    ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+    ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+from
+    (
+        select
+            t1.store_id
+            ,t1.stat_date
+            ,count(t1.pno) 应交接
+            ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+            ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+            ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+            ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+            ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+            ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+            ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+            ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+        from t t1
+        left join
+            (
+                select
+                    sc.*
+                from
+                    (
+                        select
+                            pr.pno
+                            ,pr.store_id
+                            ,pr.store_name
+                            ,t1.stat_date
+                            ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                            ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                            ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                        from rot_pro.parcel_route pr
+                        join t t1 on t1.pno = pr.pno
+                        where
+                            pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                           and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                          and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                    ) sc
+                where
+                    sc.rk = 1
+            ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+        group by 1,2
+    ) a
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    dp.store_category in (1,10,13,14);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-06'
+        and ds.stat_date <= '2023-07-06'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+, b as
+(
+
+        select
+            a.stat_date 日期
+            ,a.store_id 网点ID
+            ,dp.store_name 网点名称
+            ,if(dp.region_name in ('Area1', 'Area2', 'Area3', 'Area4', 'Area5', 'Area6', 'Area7', 'Area8', 'Area9', 'Area11', 'Area12', 'Area13', 'Area14', 'Area15', 'Area16'), 'Normal_Area', 'Bulky_Area') 区域
+            ,dp.region_name 大区
+            ,dp.piece_name 片区
+            ,a.应交接
+            ,a.已交接
+            ,concat(round(a.交接率*100,2),'%') as 交接率
+            ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+            ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+            ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+            ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+            ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.stat_date
+                    ,count(t1.pno) 应交接
+                    ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+                    ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+                    ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+                    ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+                    ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+                    ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+                    ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+                    ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+                    ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+                    ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+                from t t1
+                left join
+                    (
+                        select
+                            sc.*
+                        from
+                            (
+                                select
+                                    pr.pno
+                                    ,pr.store_id
+                                    ,pr.store_name
+                                    ,t1.stat_date
+                                    ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                                    ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                                    ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                                from rot_pro.parcel_route pr
+                                join t t1 on t1.pno = pr.pno
+                                where
+                                    pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                                   and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                                  and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                            ) sc
+                        where
+                            sc.rk = 1
+                    ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+                group by 1,2
+            ) a
+        left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+        where
+            dp.store_category in (1,10,13)
+)
+select
+    *
+from b b1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-06'
+        and ds.stat_date <= '2023-07-06'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+, b as
+(
+
+        select
+            a.stat_date 日期
+            ,a.store_id 网点ID
+            ,dp.store_name 网点名称
+            ,if(dp.region_name in ('Area1', 'Area2', 'Area3', 'Area4', 'Area5', 'Area6', 'Area7', 'Area8', 'Area9', 'Area11', 'Area12', 'Area13', 'Area14', 'Area15', 'Area16'), 'Normal_Area', 'Bulky_Area') 区域
+            ,dp.region_name 大区
+            ,dp.piece_name 片区
+            ,a.应交接
+            ,a.已交接
+            ,concat(round(a.交接率*100,2),'%') as 交接率
+            ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+            ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+            ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+            ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+            ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.stat_date
+                    ,count(t1.pno) 应交接
+                    ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+                    ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+                    ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+                    ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+                    ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+                    ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+                    ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+                    ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+                    ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+                    ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+                from t t1
+                left join
+                    (
+                        select
+                            sc.*
+                        from
+                            (
+                                select
+                                    pr.pno
+                                    ,pr.store_id
+                                    ,pr.store_name
+                                    ,t1.stat_date
+                                    ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                                    ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                                    ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                                from rot_pro.parcel_route pr
+                                join t t1 on t1.pno = pr.pno
+                                where
+                                    pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                                   and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                                  and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                            ) sc
+                        where
+                            sc.rk = 1
+                    ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+                group by 1,2
+            ) a
+        left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+        where
+            dp.store_category in (1,10,13)
+)
+select
+    b1.日期
+    ,b1.区域
+    ,b1.大区
+    ,count(b1.网点ID) store_num
+from b b1
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-06'
+        and ds.stat_date <= '2023-07-06'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+, b as
+(
+
+        select
+            a.stat_date 日期
+            ,a.store_id 网点ID
+            ,dp.store_name 网点名称
+            ,if(dp.region_name in ('Area1', 'Area2', 'Area3', 'Area4', 'Area5', 'Area6', 'Area7', 'Area8', 'Area9', 'Area11', 'Area12', 'Area13', 'Area14', 'Area15', 'Area16'), 'Normal_Area', 'Bulky_Area') 区域
+            ,dp.region_name 大区
+            ,dp.piece_name 片区
+            ,a.应交接
+            ,a.已交接
+            ,concat(round(a.交接率*100,2),'%') as 交接率
+            ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+            ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+            ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+            ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+            ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.stat_date
+                    ,count(t1.pno) 应交接
+                    ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+                    ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+                    ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+                    ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+                    ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+                    ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+                    ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+                    ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+                    ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+                    ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+                from t t1
+                left join
+                    (
+                        select
+                            sc.*
+                        from
+                            (
+                                select
+                                    pr.pno
+                                    ,pr.store_id
+                                    ,pr.store_name
+                                    ,t1.stat_date
+                                    ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                                    ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                                    ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                                from rot_pro.parcel_route pr
+                                join t t1 on t1.pno = pr.pno
+                                where
+                                    pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                                   and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                                  and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                            ) sc
+                        where
+                            sc.rk = 1
+                    ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+                group by 1,2
+            ) a
+        left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+        where
+            dp.store_category in (1,10,13)
+)
+select
+    b1.日期
+    ,b1.区域
+    ,b1.大区
+    ,b1.交接评级
+    ,count(b1.网点ID) store_num
+from b b1
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-07'
+        and ds.stat_date <= '2023-07-07'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+# , b as
+# (
+
+        select
+            a.stat_date 日期
+            ,a.store_id 网点ID
+            ,dp.store_name 网点名称
+            ,if(dp.region_name in ('Area1', 'Area2', 'Area3', 'Area4', 'Area5', 'Area6', 'Area7', 'Area8', 'Area9', 'Area11', 'Area12', 'Area13', 'Area14', 'Area15', 'Area16'), 'Normal_Area', 'Bulky_Area') 区域
+            ,dp.region_name 大区
+            ,dp.piece_name 片区
+            ,a.应交接
+            ,a.已交接
+            ,concat(round(a.交接率*100,2),'%') as 交接率
+            ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+            ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+            ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+            ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+            ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.stat_date
+                    ,count(t1.pno) 应交接
+                    ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+                    ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+                    ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+                    ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+                    ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+                    ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+                    ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+                    ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+                    ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+                    ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+                from t t1
+                left join
+                    (
+                        select
+                            sc.*
+                        from
+                            (
+                                select
+                                    pr.pno
+                                    ,pr.store_id
+                                    ,pr.store_name
+                                    ,t1.stat_date
+                                    ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                                    ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                                    ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                                from rot_pro.parcel_route pr
+                                join t t1 on t1.pno = pr.pno
+                                where
+                                    pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                                   and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                                  and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                            ) sc
+                        where
+                            sc.rk = 1
+                    ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+                group by 1,2
+            ) a
+        left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+        where
+            dp.store_category in (1,10,13);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-07'
+        and ds.stat_date <= '2023-07-07'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+, b as
+(
+
+        select
+            a.stat_date 日期
+            ,a.store_id 网点ID
+            ,dp.store_name 网点名称
+            ,if(dp.region_name in ('Area1', 'Area2', 'Area3', 'Area4', 'Area5', 'Area6', 'Area7', 'Area8', 'Area9', 'Area11', 'Area12', 'Area13', 'Area14', 'Area15', 'Area16'), 'Normal_Area', 'Bulky_Area') 区域
+            ,dp.region_name 大区
+            ,dp.piece_name 片区
+            ,a.应交接
+            ,a.已交接
+            ,concat(round(a.交接率*100,2),'%') as 交接率
+            ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+            ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+            ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+            ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+            ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.stat_date
+                    ,count(t1.pno) 应交接
+                    ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+                    ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+                    ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+                    ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+                    ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+                    ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+                    ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+                    ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+                    ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+                    ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+                from t t1
+                left join
+                    (
+                        select
+                            sc.*
+                        from
+                            (
+                                select
+                                    pr.pno
+                                    ,pr.store_id
+                                    ,pr.store_name
+                                    ,t1.stat_date
+                                    ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                                    ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                                    ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                                from rot_pro.parcel_route pr
+                                join t t1 on t1.pno = pr.pno
+                                where
+                                    pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                                   and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                                  and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                            ) sc
+                        where
+                            sc.rk = 1
+                    ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+                group by 1,2
+            ) a
+        left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+        where
+            dp.store_category in (1,10,13)
+)
+
+select
+    b1.日期
+    ,b1.区域
+    ,b1.大区
+    ,count(if(b1.交接评级 regexp 'C|D|E' and b1.交接评级 not regexp 'A|B', b1.网点ID, null))/count(b1.网点ID) 占比
+from b b1
+group by 1,2,3
+
+union all
+
+select
+    b1.日期
+    ,b1.区域
+    ,'Total' 大区
+    ,count(if(b1.交接评级 regexp 'C|D|E' and b1.交接评级 not regexp 'A|B', b1.网点ID, null))/count(b1.网点ID) 占比
+from b b1
+group by 1,2
+
+union all
+
+select
+    b1.日期
+    ,'Grand Total' 区域
+    ,'Total' 大区
+    ,count(if(b1.交接评级 regexp 'C|D|E' and b1.交接评级 not regexp 'A|B', b1.网点ID, null))/count(b1.网点ID) 占比
+from b b1
+group by 1;
