@@ -32003,120 +32003,6 @@ where
     and plt.created_at < '2023-07-01';
 ;-- -. . -..- - / . -. - .-. -.--
 select
-    plt.pno 运单号
-    ,plt.parcel_created_at 包裹揽收时间
-    ,plt.created_at 任务生成时间
-    ,case plt.source
-        WHEN 1 THEN 'A-问题件-丢失'
-        WHEN 2 THEN 'B-记录本-丢失'
-        WHEN 3 THEN 'C-包裹状态未更新'
-        WHEN 4 THEN 'D-问题件-破损/短少'
-        WHEN 5 THEN 'E-记录本-索赔-丢失'
-        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
-        WHEN 7 THEN 'G-记录本-索赔-其他'
-        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
-        WHEN 9 THEN 'I-问题件-外包装破损险'
-        WHEN 10 THEN 'J-问题记录本-外包装破损险'
-        when 11 then 'K-超时效包裹'
-        when 12 then 'L-高度疑似丢失'
-    end 问题来源渠道
-    ,ddd.CN_element 进入闪速时的最后有效路由动作
-    ,ss.name 最后有效路由操作网点名称
-    ,case ss.category
-        when 1 then 'SP'
-        when 2 then 'DC'
-        when 4 then 'SHOP'
-        when 5 then 'SHOP'
-        when 6 then 'FH'
-        when 7 then 'SHOP'
-        when 8 then 'Hub'
-        when 9 then 'Onsite'
-        when 10 then 'BDC'
-        when 11 then 'fulfillment'
-        when 12 then 'B-HUB'
-        when 13 then 'CDC'
-        when 14 then 'PDC'
-    end 最后有效路由操作网点类型
-    ,case pi.state
-        when 1 then '已揽收'
-        when 2 then '运输中'
-        when 3 then '派送中'
-        when 4 then '已滞留'
-        when 5 then '已签收'
-        when 6 then '疑难件处理中'
-        when 7 then '已退件'
-        when 8 then '异常关闭'
-        when 9 then '已撤销'
-    end as 包裹状态
-    ,plt.duty_type
-    ,case plt.duty_type
-        when 1 then '快递员100%套餐'
-        when 2 then '仓9主1套餐(仓管90%主管10%)'
-        when 3 then '仓9主1套餐(仓管90%主管10%)'
-        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
-        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
-        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
-        when 8 then 'LH全责（LH100%）'
-        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
-        when 9 then '加盟商套餐'
-        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
-        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
-        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
-    end 套餐
-    ,case plt.`link_type`
-        when 0 then 'ipc计数后丢失'
-        when 1 then '揽收网点已揽件，未收件入仓'
-        when 2 then '揽收网点已收件入仓，未发件出仓'
-        when 3 then '中转已到件入仓扫描，中转未发件出仓'
-        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
-        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
-        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
-        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
-        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
-        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
-        when 10 then '目的地交接扫描，目的地未妥投'
-        when 11 then '目的地妥投后丢失'
-        when 12 then '途中破损/短少'
-        when 13 then '妥投后破损/短少'
-        when 14 then '揽收网点已揽件，未收件入仓'
-        when 15 then '揽收网点已收件入仓，未发件出仓'
-        when 16 then '揽收网点发件出仓到分拨了'
-        when 17 then '目的地到件入仓扫描，目的地未交接'
-        when 18 then '目的地交接扫描，目的地未妥投'
-        when 19 then '目的地妥投后破损短少'
-        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
-        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
-        when 22 then 'ipc计数后丢失'
-        when 23 then '超时效sla'
-        when 24 then '分拨发件出仓到下一站分拨了'
-	end 判责环节
-    ,plt2.ss2_name 责任网点
-    ,plt2.ratio  责任占比
-from bi_pro.parcel_lose_task plt
-left join fle_staging.parcel_info pi on pi.pno = plt.pno
-left join dwm.dwd_dim_dict ddd on ddd.element = plt.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
-left join fle_staging.sys_store ss on ss.id = plt.last_valid_store_id
-left join
-    (
-        select
-            plr.lose_task_id
-            ,ss2.name ss2_name
-            ,sum(plr.duty_ratio)/100 ratio
-        from bi_pro.parcel_lose_task plt2
-        join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt2.id
-        left join fle_staging.sys_store ss2 on ss2.id = plr.store_id
-        where
-            plt2.created_at >= '2023-06-01'
-            and plt2.created_at < '2023-07-01'
-            and plt2.state = 6
-        group by 1,2
-    ) plt2 on plt2.lose_task_id = plt.id
-where
-    plt.state = 6
-    and plt.created_at >= '2023-06-01'
-    and plt.created_at < '2023-07-01';
-;-- -. . -..- - / . -. - .-. -.--
-select
     count(cdt.id)
 from fle_staging.customer_diff_ticket cdt
 left join fle_staging.diff_info di on di.id = cdt.diff_info_id
@@ -33920,3 +33806,3840 @@ select
     ,count(if(b1.交接评级 regexp 'C|D|E' and b1.交接评级 not regexp 'A|B', b1.网点ID, null))/count(b1.网点ID) 占比
 from b b1
 group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    plt.pno 运单号
+    ,plt.parcel_created_at 包裹揽收时间
+    ,plt.created_at 任务生成时间
+    ,case plt.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速时的最后有效路由动作
+    ,ss.name 最后有效路由操作网点名称
+    ,case ss.category
+        when 1 then 'SP'
+        when 2 then 'DC'
+        when 4 then 'SHOP'
+        when 5 then 'SHOP'
+        when 6 then 'FH'
+        when 7 then 'SHOP'
+        when 8 then 'Hub'
+        when 9 then 'Onsite'
+        when 10 then 'BDC'
+        when 11 then 'fulfillment'
+        when 12 then 'B-HUB'
+        when 13 then 'CDC'
+        when 14 then 'PDC'
+    end 最后有效路由操作网点类型
+    ,case pi.state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end as 包裹状态
+    ,plt.duty_type
+    ,case plt.duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 套餐
+    ,case plt.`link_type`
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 判责环节
+    ,plt2.ss2_name 责任网点
+    ,plt2.ratio  责任占比
+from bi_pro.parcel_lose_task plt
+left join fle_staging.parcel_info pi on pi.pno = plt.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = plt.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join fle_staging.sys_store ss on ss.id = plt.last_valid_store_id
+left join
+    (
+        select
+            plr.lose_task_id
+            ,ss2.name ss2_name
+            ,sum(plr.duty_ratio)/100 ratio
+        from bi_pro.parcel_lose_task plt2
+        join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt2.id
+        left join fle_staging.sys_store ss2 on ss2.id = plr.store_id
+        where
+            plt2.created_at >= '2023-06-01'
+            and plt2.created_at < '2023-07-01'
+            and plt2.state = 6
+        group by 1,2
+    ) plt2 on plt2.lose_task_id = plt.id
+where
+    plt.state = 6
+    and plt.created_at >= '2023-06-01'
+    and plt.created_at < '2023-07-01';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    sd.store_id
+from fle_staging.sys_district sd
+group by 1
+
+union all
+
+select
+    sd.separation_store_id store_id
+from fle_staging.sys_district sd
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    sd.store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+group by 1
+
+union all
+
+select
+    sd.separation_store_id store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    sd.store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.store_id is not null 
+group by 1
+
+union all
+
+select
+    sd.separation_store_id store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.separation_store_id is not null
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-07'
+        and ds.stat_date <= '2023-07-07'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+select
+    a.stat_date 日期
+    ,a.store_id 网点ID
+    ,dp.store_name 网点名称
+    ,dp.opening_at 开业时间
+    ,if(dp.region_name in ('Area1', 'Area2', 'Area3', 'Area4', 'Area5', 'Area6', 'Area7', 'Area8', 'Area9', 'Area11', 'Area12', 'Area13', 'Area14', 'Area15', 'Area16'), 'Normal_Area', 'Bulky_Area') 区域
+    ,dp.region_name 大区
+    ,dp.piece_name 片区
+    ,a.应交接
+    ,a.已交接
+    ,concat(round(a.交接率*100,2),'%') as 交接率
+    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+    ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+    ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+    ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+    ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+from
+    (
+        select
+            t1.store_id
+            ,t1.stat_date
+            ,count(t1.pno) 应交接
+            ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+            ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+            ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+            ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+            ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+            ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+            ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+            ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+        from t t1
+        left join
+            (
+                select
+                    sc.*
+                from
+                    (
+                        select
+                            pr.pno
+                            ,pr.store_id
+                            ,pr.store_name
+                            ,t1.stat_date
+                            ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                            ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                            ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                        from rot_pro.parcel_route pr
+                        join t t1 on t1.pno = pr.pno
+                        where
+                            pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                           and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                          and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                    ) sc
+                where
+                    sc.rk = 1
+            ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+        group by 1,2
+    ) a
+join
+    (
+        select
+            sd.store_id
+        from fle_staging.sys_district sd
+        where
+            sd.deleted = 0
+            and sd.store_id is not null
+        group by 1
+
+        union all
+
+        select
+            sd.separation_store_id store_id
+        from fle_staging.sys_district sd
+        where
+            sd.deleted = 0
+            and sd.separation_store_id is not null
+        group by 1
+    ) sd on sd.store_id = a.store_id
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    dp.store_category in (1,10,13);
+;-- -. . -..- - / . -. - .-. -.--
+select json_extract(ss.extra_value, '$.base') from bi_center.ssjudge_system_duty_contrast ss where ss.id = '284';
+;-- -. . -..- - / . -. - .-. -.--
+select json_extract(json_extract(ss.extra_value, '$.base'), '$.lastRoutes') from bi_center.ssjudge_system_duty_contrast ss where ss.id = '284';
+;-- -. . -..- - / . -. - .-. -.--
+select json_unquote(json_extract(json_extract(ss.extra_value, '$.base'), '$.lastRoutes')) from bi_center.ssjudge_system_duty_contrast ss where ss.id = '284';
+;-- -. . -..- - / . -. - .-. -.--
+select replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.lastRoutes') ,'"', '') from bi_center.ssjudge_system_duty_contrast ss where ss.id = '284';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否集包
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.aveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'ph_staging' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh_CN';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.aveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'ph_staging' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh_CN'
+where
+    ss.pno = 'TH01403YF7JU5B0';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.aveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'ph_staging' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh_CN';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'ph_staging' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh_CN';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速前的最后有效路由
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,ss.system_duty_store_one_id '系统判责责任网点1 id'
+    ,ss.system_duty_store_one_name '系统判责责任网点1 名称'
+    ,ss.system_duty_store_two_id '系统判责责任网点2 id'
+    ,ss.system_duty_store_two_name '系统判责责任网点2 名称'
+    ,case ss.system_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 系统判责结果
+    ,t2.t_value 系统判责原因
+    ,case ss.system_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 系统责任套餐
+    ,case ss.system_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 系统判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'ph_staging' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh_CN'
+left join bi_pro.translations t2 on t2.t_key = ss.system_duty_reasons and t.lang = 'zh_CN';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速前的最后有效路由
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,ss.system_duty_store_one_id '系统判责责任网点1 id'
+    ,ss.system_duty_store_one_name '系统判责责任网点1 名称'
+    ,ss.system_duty_store_two_id '系统判责责任网点2 id'
+    ,ss.system_duty_store_two_name '系统判责责任网点2 名称'
+    ,case ss.system_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 系统判责结果
+    ,t2.t_value 系统判责原因
+    ,case ss.system_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 系统责任套餐
+    ,case ss.system_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 系统判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh_CN'
+left join bi_pro.translations t2 on t2.t_key = ss.system_duty_reasons and t.lang = 'zh_CN';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    di.pno
+    ,sdt.pending_handle_category
+
+from fle_staging.diff_info di
+left join fle_staging.customer_diff_ticket cdt on cdt.diff_info_id = di.id
+left join fle_staging.store_diff_ticket sdt on sdt.diff_info_id = di.id
+where
+    di.pno = 'TH620748VJDC8A';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-14 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-14 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-14 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-14 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-14'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno
+            where
+                pr.route_action = 'SORTING_SCAN'
+                and pr.routed_at >= '2023-07-13 17:00:00'
+                and pr.routed_at < '2023-07-14 17:00:00'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-14 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-14 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-14 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-14 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-14'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno
+            where
+                pr.route_action = 'SORTING_SCAN'
+                and pr.routed_at >= '2023-07-13 17:00:00'
+                and pr.routed_at < '2023-07-14 17:00:00'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,f.delivery_count 仓管派件量
+    ,f.delivery_count/count(t1.pno) '当日分拣扫描占比(时效内)'
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_production.finance_keeper_new_achievements f on f.store_id = t1.store_id and f.stat_date = '2023-07-14'
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-14 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-14 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-14 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-14 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-14'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno
+            where
+                pr.route_action = 'SORTING_SCAN'
+                and pr.routed_at >= '2023-07-13 17:00:00'
+                and pr.routed_at < '2023-07-14 17:00:00'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,f.delivery_count 仓管派件量
+    ,f.delivery_count/count(t1.pno) '当日分拣扫描占比(时效内)'
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_pro.finance_keeper_new_achievements_emr  f on f.store_id = t1.store_id and f.stat_date = '2023-07-14'
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno
+            where
+                pr.route_action = 'SORTING_SCAN'
+                and pr.routed_at >= '2023-07-14 17:00:00'
+                and pr.routed_at < '2023-07-15 17:00:00'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null , t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null , t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null , t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_pro.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15'
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno
+            where
+                pr.route_action = 'SORTING_SCAN'
+                and pr.routed_at >= '2023-07-14 17:00:00'
+                and pr.routed_at < '2023-07-15 17:00:00'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null , t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null , t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null , t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15'
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno
+            where
+                pr.route_action = 'SORTING_SCAN'
+                and pr.routed_at >= '2023-07-14 17:00:00'
+                and pr.routed_at < '2023-07-15 17:00:00'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null , t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null , t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null , t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+#                 and pr.routed_at >= '2023-07-14 17:00:00'
+#                 and pr.routed_at < '2023-07-15 17:00:00'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null , t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null , t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null , t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,fs.store_id
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null , t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null , t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-14 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null , t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+left join nl_production.finance_sort_scan_list fs on fs.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+#     ,fs.store_id
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null and s2.rou_time is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+# left join nl_production.finance_sort_scan_list fs on fs.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+        and if(ds.original_store_id is null , 1 = 1, ds.original_store_id != ds.store_id)
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+#     ,fs.store_id
+    ,case t1.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null and s2.rou_time is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+# left join nl_production.finance_sort_scan_list fs on fs.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+        and if(ds.original_store_id is null , 1 = 1, ds.original_store_id != ds.store_id)
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case freq.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null and s2.rou_time is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.store_delivery_frequency) store_delivery_frequency
+        from t t1
+        group by 1
+    ) freq on freq.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,dp.store_category
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+        and if(ds.original_store_id is null , 1 = 1, ds.original_store_id != ds.store_id)
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case t1.store_category
+      when 1 then 'SP'
+      when 2 then 'DC'
+      when 4 then 'SHOP'
+      when 5 then 'SHOP'
+      when 6 then 'FH'
+      when 7 then 'SHOP'
+      when 8 then 'Hub'
+      when 9 then 'Onsite'
+      when 10 then 'BDC'
+      when 11 then 'fulfillment'
+      when 12 then 'B-HUB'
+      when 13 then 'CDC'
+      when 14 then 'PDC'
+    end 网点类型
+    ,case freq.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null and s2.rou_time is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.store_delivery_frequency) store_delivery_frequency
+        from t t1
+        group by 1
+    ) freq on freq.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,dp.store_category
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-15 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-15 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-15 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-15'
+        and if(ds.original_store_id is null , 1 = 1, ds.original_store_id != ds.store_id)
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case t1.store_category
+      when 1 then 'SP'
+      when 2 then 'DC'
+      when 4 then 'SHOP'
+      when 5 then 'SHOP'
+      when 6 then 'FH'
+      when 7 then 'SHOP'
+      when 8 then 'Hub'
+      when 9 then 'Onsite'
+      when 10 then 'BDC'
+      when 11 then 'fulfillment'
+      when 12 then 'B-HUB'
+      when 13 then 'CDC'
+      when 14 then 'PDC'
+    end 网点类型
+    ,if(fs.store_id is not null , '是', '否') 是否提成考核
+    ,case freq.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null and s2.rou_time is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-15 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-15' and f.type = 2
+left join nl_production.finance_sort_scan_list fs on fs.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.store_delivery_frequency) store_delivery_frequency
+        from t t1
+        group by 1
+    ) freq on freq.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        dp.store_name
+        ,dp.store_id
+        ,dp.store_category
+        ,ds.store_delivery_frequency
+        ,dp.piece_name
+        ,dp.region_name
+        ,ds.pno
+        ,ds.arrival_scan_route_at
+        ,ds.vehicle_time
+        ,case
+            when ds.store_delivery_frequency = 1 then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and  ds.arrival_scan_route_at < '2023-07-16 10:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time = '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-16 10:00:00' then 2
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at < '2023-07-16 09:00:00' then 1
+            when ds.store_delivery_frequency = 2 and ds.vehicle_time != '1970-01-01 00:00:00' and ds.arrival_scan_route_at >= '2023-07-16 09:00:00' then 2
+        end delivery_fre
+    from bi_pro.dc_should_delivery_today ds
+    left join dwm.dim_th_sys_store_rd dp on dp.store_id = ds.store_id and dp.stat_date =date_sub(curdate(), interval 1 day)
+    where
+        ds.stat_date = '2023-07-16'
+        and if(ds.original_store_id is null , 1 = 1, ds.original_store_id != ds.store_id)
+)
+,sort as
+(
+    select
+        a.*
+    from
+        (
+            select
+                pr.pno
+                ,convert_tz(pr.routed_at, '+00:00', '+07:00') rou_time
+                ,row_number() over (partition by pr.pno order by pr.routed_at) rk
+            from rot_pro.parcel_route pr
+            join t t1 on t1.pno = pr.pno and pr.store_id = t1.store_id
+            where
+                pr.route_action = 'SORTING_SCAN'
+        ) a
+    where
+        a.rk = 1
+)
+
+select
+    t1.store_name 网点
+    ,t1.store_id 网点ID
+    ,case t1.store_category
+      when 1 then 'SP'
+      when 2 then 'DC'
+      when 4 then 'SHOP'
+      when 5 then 'SHOP'
+      when 6 then 'FH'
+      when 7 then 'SHOP'
+      when 8 then 'Hub'
+      when 9 then 'Onsite'
+      when 10 then 'BDC'
+      when 11 then 'fulfillment'
+      when 12 then 'B-HUB'
+      when 13 then 'CDC'
+      when 14 then 'PDC'
+    end 网点类型
+    ,if(fs.store_id is not null , '是', '否') 是否提成考核
+    ,case freq.store_delivery_frequency
+        when 1 then '一派'
+        when 2 then '二派'
+    end '一派/二派'
+    ,t1.piece_name 片区
+    ,t1.region_name 大区
+    ,count(t1.pno) 应派总量
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null)) 总有效分拣扫描数
+    ,count(if(s2.rou_time is not null , t1.pno, null))/count(t1.pno) 总分拣扫描率
+    ,count(if(f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(t1.pno) 总有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1, t1.pno, null)) 一派应派件数
+    ,ve1.max_veh_time 一派最晚到港时间
+    ,count(if(t1.delivery_fre = 1 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and f.pno is not null and s2.rou_time is not null, t1.pno, null ))/count(if(t1.delivery_fre = 1, t1.pno, null)) 一派有效分拣扫描率
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-16 08:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0800前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-16 08:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0830前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-16 09:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0900前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-16 09:30:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 0930前占比
+    ,count(if(t1.delivery_fre = 1 and s2.rou_time < '2023-07-16 10:00:00', t1.pno, null))/count(if(t1.delivery_fre = 1, t1.pno, null)) 1000前占比
+    ,count(if(t1.delivery_fre = 2, t1.pno, null)) 二派应派件数
+    ,ve2.max_veh_time 二派最晚到港时间
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null )) 二派有效分拣数
+    ,count(if(t1.delivery_fre = 2 and s2.pno is not null, t1.pno, null ))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派分拣扫描率
+    ,count(if(t1.delivery_fre = 2 and f.pno is not null and s2.rou_time is not null, t1.pno, null))/count(if(t1.delivery_fre = 2, t1.pno, null)) 二派有效分拣扫描率
+from t t1
+left join sort s2 on t1.pno = s2.pno
+left join bi_center.finance_keeper_month_parcel_v3_emr f on f.pno = t1.pno and f.store_id = t1.store_id and f.stat_date = '2023-07-16' and f.type = 2
+left join nl_production.finance_sort_scan_list fs on fs.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.store_delivery_frequency) store_delivery_frequency
+        from t t1
+        group by 1
+    ) freq on freq.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 1
+        group by 1
+    ) ve1 on ve1.store_id = t1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,max(t1.vehicle_time) max_veh_time
+        from t t1
+        where
+            t1.delivery_fre = 2
+        group by 1
+    ) ve2 on ve2.store_id = t1.store_id
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+with d as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.state
+        ,ds.stat_date
+    from bi_pro.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '2023-07-18'
+        and ds.stat_date <= '2023-07-18'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+),
+t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+        ,ds.state
+        ,case when pr1.pno is not null then 'N' when pr2.pno is not null then 'N' when ds1.pno is not null  then 'N'  else 'Y' end as handover_type
+    from d ds
+    left join
+    (
+        select
+           pr.pno
+           ,ds.stat_date
+           ,max(convert_tz(pr.routed_at,'+00:00','+07:00')) remote_marker_time
+        from rot_pro.parcel_route pr
+        join d ds on pr.pno = ds.pno
+        where 1=1
+        and pr.routed_at >= date_sub(ds.stat_date, interval 7 hour)
+        and pr.routed_at < date_add(ds.stat_date, interval 17 hour)
+        and pr.route_action = 'DETAIN_WAREHOUSE'
+        and pr.marker_category in (42,43) ##岛屿,偏远地区
+        group by 1,2
+    ) pr1  on ds.pno=pr1.pno#当日留仓标记为偏远地区留待次日派送
+    left join
+    (
+        select
+           pr.pno
+           ,ds.stat_date
+           ,convert_tz(pr.routed_at,'+00:00','+07:00') reschedule_marker_time
+           ,date(date_sub(FROM_UNIXTIME(json_extract(pr.extra_value,'$.desiredAt')),interval 1 hour)) desire_date
+           ,row_number() over(partition by pr.pno order by pr.routed_at desc) rk
+        from rot_pro.parcel_route pr
+        join d ds on pr.pno = ds.pno
+        where 1=1
+        and pr.routed_at >= date_sub(ds.stat_date ,interval 15 day)
+        and pr.routed_at <  date_sub(ds.stat_date ,interval 7 hour) #限定当日之前的改约
+        and pr.route_action = 'DETAIN_WAREHOUSE'
+        and FROM_UNIXTIME(json_extract(pr.extra_value,'$.desiredAt'))> date_add(ds.stat_date, interval 17 hour)
+        and pr.marker_category in (9,14,70) ##客户改约时间
+    ) pr2 on ds.pno=pr2.pno and pr2.rk=1 #当日之前客户改约时间
+
+    left join bi_pro.dc_should_delivery_today ds1
+    on ds.pno=ds1.pno and ds1.state=6
+    and ds1.stat_date=date_sub(ds.stat_date,interval 1 day)
+
+    where case when pr1.pno is not null then 'N' when pr2.pno is not null then 'N' when ds1.pno is not null  then 'N'  else 'Y' end = 'Y'
+)
+
+select
+    a.stat_date 日期
+    ,a.store_id 网点ID
+    ,dp.store_name 网点名称
+    ,dp.opening_at 开业时间
+    ,if(dp.region_name in ('Area1', 'Area2', 'Area3', 'Area4', 'Area5', 'Area6', 'Area7', 'Area8', 'Area9', 'Area11', 'Area12', 'Area13', 'Area14', 'Area15', 'Area16'), 'Normal_Area', 'Bulky_Area') 区域
+    ,dp.region_name 大区
+    ,dp.piece_name 片区
+    ,a.应交接
+    ,a.已交接
+    ,concat(round(a.交接率*100,2),'%') as 交接率
+    ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+    ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+    ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+    ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+    ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+from
+    (
+        select
+            t1.store_id
+            ,t1.stat_date
+            ,count(t1.pno) 应交接
+            ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+            ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+            ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+            ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+            ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+            ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+            ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+            ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+            ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+            ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+        from t t1
+        left join
+            (
+                select
+                    sc.*
+                from
+                    (
+                        select
+                            pr.pno
+                            ,pr.store_id
+                            ,pr.store_name
+                            ,t1.stat_date
+                            ,convert_tz(pr.routed_at, '+00:00', '+07:00') route_time
+                            ,date(convert_tz(pr.routed_at, '+00:00', '+07:00')) route_date
+                            ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                        from rot_pro.parcel_route pr
+                        join t t1 on t1.pno = pr.pno
+                        where
+                            pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                           and pr.routed_at >= date_sub(t1.stat_date, interval 7 hour)
+                          and pr.routed_at < date_add(t1.stat_date, interval 17 hour )
+                    ) sc
+                where
+                    sc.rk = 1
+            ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+        group by 1,2
+    ) a
+join
+    (
+        select
+            sd.store_id
+        from fle_staging.sys_district sd
+        where
+            sd.deleted = 0
+            and sd.store_id is not null
+        group by 1
+
+        union all
+
+        select
+            sd.separation_store_id store_id
+        from fle_staging.sys_district sd
+        where
+            sd.deleted = 0
+            and sd.separation_store_id is not null
+        group by 1
+    ) sd on sd.store_id = a.store_id
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(a.stat_date, interval 1 day)
+where dp.store_category in (1,10,13);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+    ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+    ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+    ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+    ,cdt.client_id 客户ID
+    ,di.order_info_id  订单号
+    ,oi.remark 订单备注
+    ,di.pno 运单号
+    ,ddd.CN_element 疑难原因
+    ,ddd2.CN_element 二级类型
+    ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+    ,case pi.insured
+        when 1 then '保价'
+        when 0 then '不保价'
+    end 保价情况
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+    ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+    ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+    ,case cdt.state
+        when 0 then '未处理'
+        when 1 then '已处理'
+        when 2 then '沟通中'
+        when 3 then '支付驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end 处理状态
+    ,case fdt.state
+        when 0 then '未支付'
+        when 1 then '已支付'
+        when 2 then '驳回'
+        when 3 then '取消'
+        when 4 then '支付中'
+        when 5 then '无需支付'
+    end 财务支付状态
+    ,cdt.remark 备注
+    ,t.ProjectTeam
+    ,t.Sub_ProjectTeam
+    ,datediff(curdate(), convert_tz(di.created_at, '+00:00', '+07:00')) 处理天数
+from fle_staging.customer_diff_ticket cdt
+join tmpale.tmp_th_client_id_cn_th t on cdt.client_id = t.client_id
+join fle_staging.diff_info di on di.id = cdt.diff_info_id
+left join fle_staging.parcel_info pi on pi.pno = di.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+left join fle_staging.order_info oi on oi.pno = di.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'rejection_category'
+left join fle_staging.sys_store ss on ss.id = di.store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+where
+    cdt.created_at >= date_sub(date_sub(curdate(), interval 31 day ), interval 8 hour)
+    and t.projectteam not in ('LZD', 'SPX', 'TikTok')
+    and cdt.organization_type = 2
+    and cdt.vip_enable = 1
+    and cdt.state not in (1);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速前的最后有效路由
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,ss.system_duty_store_one_id '系统判责责任网点1 id'
+    ,ss.system_duty_store_one_name '系统判责责任网点1 名称'
+    ,ss.system_duty_store_two_id '系统判责责任网点2 id'
+    ,ss.system_duty_store_two_name '系统判责责任网点2 名称'
+    ,case ss.system_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 系统判责结果
+    ,t2.t_value 系统判责原因
+    ,case ss.system_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 系统责任套餐
+    ,case ss.system_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 系统判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh-CN'
+left join bi_pro.translations t2 on t2.t_key = ss.system_duty_reasons and t.lang = 'zh-CN';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速前的最后有效路由
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,ss.system_duty_store_one_id '系统判责责任网点1 id'
+    ,ss.system_duty_store_one_name '系统判责责任网点1 名称'
+    ,ss.system_duty_store_two_id '系统判责责任网点2 id'
+    ,ss.system_duty_store_two_name '系统判责责任网点2 名称'
+    ,case ss.system_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 系统判责结果
+    ,t2.t_value 系统判责原因
+    ,case ss.system_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 系统责任套餐
+    ,case ss.system_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 系统判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh-CN'
+left join bi_pro.translations t2 on t2.t_key = ss.system_duty_reasons and t.lang = 'zh-CN'
+where
+    ss.pno = 'TH02014BJXN47M';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速前的最后有效路由
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,ss.system_duty_store_one_id '系统判责责任网点1 id'
+    ,ss.system_duty_store_one_name '系统判责责任网点1 名称'
+    ,ss.system_duty_store_two_id '系统判责责任网点2 id'
+    ,ss.system_duty_store_two_name '系统判责责任网点2 名称'
+    ,case ss.system_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 系统判责结果
+    ,t2.t_value 系统判责原因
+    ,case ss.system_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 系统责任套餐
+    ,case ss.system_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 系统判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh-CN'
+left join bi_pro.translations t2 on t2.t_key = ss.system_duty_reasons and t2.lang = 'zh-CN'
+where
+    ss.pno = 'TH02014BJXN47M';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    ss.pno
+    ,ss.parcel_created_at 揽收时间
+    ,case ss.source
+        WHEN 1 THEN 'A-问题件-丢失'
+        WHEN 2 THEN 'B-记录本-丢失'
+        WHEN 3 THEN 'C-包裹状态未更新'
+        WHEN 4 THEN 'D-问题件-破损/短少'
+        WHEN 5 THEN 'E-记录本-索赔-丢失'
+        WHEN 6 THEN 'F-记录本-索赔-破损/短少'
+        WHEN 7 THEN 'G-记录本-索赔-其他'
+        WHEN 8 THEN 'H-包裹状态未更新-IPC计数'
+        WHEN 9 THEN 'I-问题件-外包装破损险'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K-超时效包裹'
+        when 12 then 'L-高度疑似丢失'
+    end 问题来源渠道
+    ,ddd.CN_element 进入闪速前的最后有效路由
+    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
+    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    ,case ss.last_valid_action_store_category
+      when '1' then 'SP'
+      when '2' then 'DC'
+      when '4' then 'SHOP'
+      when '5' then 'SHOP'
+      when '6' then 'FH'
+      when '7' then 'SHOP'
+      when '8' then 'Hub'
+      when '9' then 'Onsite'
+      when '10' then 'BDC'
+      when '11' then 'fulfillment'
+      when '12' then 'B-HUB'
+      when '13' then 'CDC'
+      when '14' then 'PDC'
+    end 进入闪速前的最后有效路由网点类型
+    ,case ss.parcel_state
+        when 1 then '已揽收'
+        when 2 then '运输中'
+        when 3 then '派送中'
+        when 4 then '已滞留'
+        when 5 then '已签收'
+        when 6 then '疑难件处理中'
+        when 7 then '已退件'
+        when 8 then '异常关闭'
+        when 9 then '已撤销'
+    end  运单当前状态
+    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
+    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
+    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
+    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    ,case ss.reality_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 人工判责结果
+    ,t.t_value 人工判责原因
+    ,case ss.reality_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 人工责任套餐
+    ,case ss.reality_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 人工判罚环节
+    ,ss.system_duty_store_one_id '系统判责责任网点1 id'
+    ,ss.system_duty_store_one_name '系统判责责任网点1 名称'
+    ,ss.system_duty_store_two_id '系统判责责任网点2 id'
+    ,ss.system_duty_store_two_name '系统判责责任网点2 名称'
+    ,case ss.system_duty_result
+        when 1 then '丢失'
+        when 2 then '破损'
+        when 3 then '超时效'
+    end 系统判责结果
+    ,t2.t_value 系统判责原因
+    ,case ss.system_duty_type
+        when 1 then '快递员100%套餐'
+        when 2 then '仓9主1套餐(仓管90%主管10%)'
+        when 3 then '仓9主1套餐(仓管90%主管10%)'
+        when 4 then '双黄套餐(A网点仓管40%主管10%B网点仓管40%主管10%)'
+        when 5 then '快递员721套餐(快递员70%仓管20%主管10%)'
+        when 6 then '仓管721套餐(仓管70%快递员20%主管10%)'
+        when 8 then 'LH全责（LH100%）'
+        when 7 then '其他(仅勾选“该运单的责任人需要特殊处理”时才能使用该项)'
+        when 9 then '加盟商套餐'
+        when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
+        when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
+    end 系统责任套餐
+    ,case ss.system_link_type
+        when 0 then 'ipc计数后丢失'
+        when 1 then '揽收网点已揽件，未收件入仓'
+        when 2 then '揽收网点已收件入仓，未发件出仓'
+        when 3 then '中转已到件入仓扫描，中转未发件出仓'
+        when 4 then '揽收网点已发件出仓扫描，分拨未到件入仓(集包)'
+        when 5 then '揽收网点已发件出仓扫描，分拨未到件入仓(单件)'
+        when 6 then '分拨发件出仓扫描，目的地未到件入仓(集包)'
+        when 7 then '分拨发件出仓扫描，目的地未到件入仓(单件)'
+        when 8 then '目的地到件入仓扫描，目的地未交接,当日遗失'
+        when 9 then '目的地到件入仓扫描，目的地未交接,次日遗失'
+        when 10 then '目的地交接扫描，目的地未妥投'
+        when 11 then '目的地妥投后丢失'
+        when 12 then '途中破损/短少'
+        when 13 then '妥投后破损/短少'
+        when 14 then '揽收网点已揽件，未收件入仓'
+        when 15 then '揽收网点已收件入仓，未发件出仓'
+        when 16 then '揽收网点发件出仓到分拨了'
+        when 17 then '目的地到件入仓扫描，目的地未交接'
+        when 18 then '目的地交接扫描，目的地未妥投'
+        when 19 then '目的地妥投后破损短少'
+        when 20 then '分拨已发件出仓，下一站分拨未到件入仓(集包)'
+        when 21 then '分拨已发件出仓，下一站分拨未到件入仓(单件)'
+        when 22 then 'ipc计数后丢失'
+        when 23 then '超时效sla'
+        when 24 then '分拨发件出仓到下一站分拨了'
+	end 系统判罚环节
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 下一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
+        when '1' then 'SP'
+        when '2' then 'DC'
+        when '4' then 'SHOP'
+        when '5' then 'SHOP'
+        when '6' then 'FH'
+        when '7' then 'SHOP'
+        when '8' then 'Hub'
+        when '9' then 'Onsite'
+        when '10' then 'BDC'
+        when '11' then 'fulfillment'
+        when '12' then 'B-HUB'
+        when '13' then 'CDC'
+        when '14' then 'PDC'
+    end 上一站网点类型
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否集包
+    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否卸车
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否上报有发无到
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是主管或仓管的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end 是否要求是快递员的动作
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
+        when 1 then '是'
+        when 0 then '否'
+        when 'false' then '否'
+    end '是否要求有收件入仓动作'
+from bi_center.ssjudge_system_duty_contrast ss
+left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh-CN'
+left join bi_pro.translations t2 on t2.t_key = ss.system_duty_reasons and t2.lang = 'zh-CN';

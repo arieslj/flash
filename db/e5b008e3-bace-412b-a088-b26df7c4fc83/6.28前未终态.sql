@@ -10,9 +10,8 @@ with t as
         ,pi.cod_enabled
     from ph_staging.parcel_info pi
     where
-        pi.created_at < '2023-06-14 16:00:00'
+        pi.created_at < '2023-06-28 16:00:00'
         and pi.state not in (5,7,8,9)
-#         and pi.pno = 'P35231NPHV3BE'
 )
 select
     t1.pno
