@@ -51,9 +51,9 @@
                 ,fsr.pno
             from fle_dwd.dwd_fle_store_receivable_bill_detail_di fsr
             where
-                fsr.p_date >= '2022-12-01'
+                fsr.p_date >= '2023-01-01'
                 and fsr.state = '0'
-                and fsr.staff_info_id in ('602153','46014','34086','613593','626237','605495','622621','606637','68032')
+                and fsr.staff_info_id in ('606637','617640','603778','628753','610320','630598','638027','612048')
         ) t
     left join
         (
@@ -83,10 +83,10 @@
                         ,pi.ticket_delivery_store_id
                     from fle_dwd.dwd_fle_parcel_info_di pi
                     where
-                        pi.p_date >= '2022-10-01'
-                        and pi.p_date < '2023-06-01'
+                        pi.p_date >= '2023-01-01'
+--                         and pi.p_date < '2023-06-01'
                 ) pi
-            join test.tmp_th_m_pno_0724 t on t.pno = pi.pno
+--             join test.tmp_th_m_pno_0724 t on t.pno = pi.pno
         ) a1 on a1.pno = t.pno
     left join
         (
@@ -101,11 +101,11 @@
                         ,sa.object_key
                     from fle_dwd.dwd_fle_sys_attachment_di sa
                     where
-                        sa.p_date >= '2022-12-01'
+                        sa.p_date >= '2023-01-01'
 --                         and sa.p_date < '2023-04-01'
                         and sa.oss_bucket_type = 'DELIVERY_CONFIRM'
                 ) sa
-            join test.tmp_th_m_pno_0724 t on t.pno = sa.oss_bucket_key
+--             join test.tmp_th_m_pno_0724 t on t.pno = sa.oss_bucket_key
         ) a2 on a2.oss_bucket_key = a1.pno
     left join
         (

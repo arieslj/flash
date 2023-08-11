@@ -189,7 +189,6 @@ where
 ;
 
 
-
 select
     de.pno 运单号
     ,de.src_store 揽件网点
@@ -228,7 +227,7 @@ where
     pr.routed_at is null
     and de.pickup_time < curdate()
     and de.dst_store != de.src_store -- 剔除自揽自派
-    and de.parcel_state not in (5,7,8,9)
+    and pi.state not in (5,7,8,9)
     and de.client_id != 'AA0038' -- 物料仓
     and ss.category != 6
     and de.last_store_id = de.src_store_id
@@ -270,10 +269,11 @@ left join ph_staging.parcel_info pi on pi.pno = de.pno
 # left join ph_staging.parcel_route pr on pr.pno = pi.pno and pr.store_id = pi.ticket_pickup_store_id and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
 left join ph_staging.sys_store ss on ss.id = de.src_store_id
 where
-    de.src_hub_out_time is null
+    de.pickup_out_time is null
+    and de.src_hub_out_time is null
     and de.pickup_time < curdate()
     and de.dst_store != de.src_store -- 剔除自揽自派
-    and de.parcel_state not in (5,7,8,9)
+    and pi.state not in (5,7,8,9)
     and de.client_id = 'AA0038' -- 物料仓
     and ss.category != 6 -- 非FH
 
@@ -319,11 +319,9 @@ where
     and de.pickup_time < curdate()
     and de.dst_store != de.src_store -- 剔除自揽自派
     and de.last_store_id = pi.ticket_pickup_store_id
-    and de.parcel_state not in (5,7,8,9)
+    and pi.state not in (5,7,8,9)
     and de.client_id != 'AA0038' -- 物料仓
     and ss.category = 6 -- 非FH
-
-
 
 
 

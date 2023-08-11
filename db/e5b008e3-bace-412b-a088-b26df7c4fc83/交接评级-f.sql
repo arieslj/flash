@@ -1,14 +1,13 @@
 with d as
 (
     select
-         ds.store_id
+         ds.dst_store_id store_id
         ,ds.pno
-        ,ds.stat_date
-    from ph_bi.dc_should_delivery_today ds
+        ,ds.p_date stat_date
+    from dwm.dwd_ph_dc_should_be_delivery ds
     where
-        ds.stat_date >= '${date1}'
-        and ds.stat_date <= '${date2}'
-        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+        ds.should_delevry_type = '1派应派包裹'
+        and ds.p_date = '${date}'
 )
 , t as
 (

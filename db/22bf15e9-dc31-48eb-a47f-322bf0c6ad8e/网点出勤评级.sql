@@ -12,10 +12,10 @@ with t as
                     select
                         ad.*
                         ,ad.attendance_time + ad.BT + ad.CT + ad.BT_Y + ad.AB total
-                    from ph_bi.attendance_data_v2 ad
-                    join ph_bi.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,1000,37,16) -- 在职且非待离职
+                    from bi_pro.attendance_data_v2 ad
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,1000,37,16) -- 在职且非待离职
                     where
-                        ad.stat_date < '${date}'
+                        ad.stat_date < curdate()
 #                         and hsi.hire_date <= date_sub(curdate(), interval 7 day )
 #                         and ad.stat_date >= date_sub(curdate(), interval 30 day )
                 ) ad
@@ -111,8 +111,8 @@ from
                             ) a
                         group by 1
                     ) st
-                left join ph_bi.hr_staff_info hsi2 on hsi2.staff_info_id = st.staff_info_id
-                left join dwm.dim_ph_sys_store_rd dp on dp.store_id = hsi2.sys_store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+                left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = st.staff_info_id
+                left join dwm.dim_th_sys_store_rd dp on dp.store_id = hsi2.sys_store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
             ) s
         group by 1
     ) ss
@@ -129,18 +129,18 @@ left join
             ,count(if(hsi3.job_title in (13,110,1000), hsi3.staff_info_id, null)) on_dri_cnt
             ,count(if(hsi3.job_title in (37), hsi3.staff_info_id, null)) on_dco_cnt
             ,count(if(hsi3.job_title in (16), hsi3.staff_info_id, null)) on_dcs_cnt
-        from ph_bi.hr_staff_transfer  hsi3
-        left join ph_staging.sys_store ss2 on ss2.id = hsi3.store_id
-        left join ph_staging.sys_manage_piece smp on smp.id = ss2.manage_piece
-        left join ph_staging.sys_manage_region smr on smr.id = ss2.manage_region
+        from bi_pro.hr_staff_transfer  hsi3
+        left join fle_staging.sys_store ss2 on ss2.id = hsi3.store_id
+        left join fle_staging.sys_manage_piece smp on smp.id = ss2.manage_piece
+        left join fle_staging.sys_manage_region smr on smr.id = ss2.manage_region
         where
             hsi3.state = 1
             and hsi3.formal=1
-            and hsi3.stat_date = date_sub('${date}', interval 1 day)
+            and hsi3.stat_date = date_sub(curdate(), interval 1 day)
         group by 1,2,3,4,5,6
     )dp on dp.store_id = ss.store_id
 where
-    dp.store_category = 1
+    dp.store_category in (1,10)
 
 ;
 

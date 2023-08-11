@@ -1,19 +1,201 @@
+with d as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from ph_bi.dc_should_delivery_today ds
+    where
+        ds.stat_date >= '${date1}'
+        and ds.stat_date <= '${date2}'
+        and ds.arrival_scan_route_at < concat(ds.stat_date, ' 09:00:00')
+)
+, t as
+(
+    select
+         ds.store_id
+        ,ds.pno
+        ,ds.stat_date
+    from d ds
+    left join
+        (
+            select
+                pr.pno
+                ,ds.stat_date
+                ,max(convert_tz(pr.routed_at,'+00:00','+08:00')) remote_marker_time
+            from ph_staging.parcel_route pr
+            join d ds on pr.pno = ds.pno
+            where 1=1
+                and pr.routed_at >= date_sub(ds.stat_date, interval 8 hour)
+                and pr.routed_at < date_add(ds.stat_date, interval 16 hour)
+                and pr.route_action = 'DETAIN_WAREHOUSE'
+                and pr.marker_category in (42,43) ##岛屿,偏远地区
+            group by 1,2
+        ) pr1  on ds.pno = pr1.pno and ds.stat_date = pr1.stat_date  #当日留仓标记为偏远地区留待次日派送
+    left join
+        (
+            select
+               pr.pno
+                ,ds.stat_date
+               ,convert_tz(pr.routed_at,'+00:00','+08:00') reschedule_marker_time
+               ,row_number() over(partition by ds.stat_date, pr.pno order by pr.routed_at desc) rk
+            from ph_staging.parcel_route pr
+            join d ds on ds.pno = pr.pno
+            where 1=1
+                and pr.routed_at >= date_sub(ds.stat_date ,interval 15 day)
+                and pr.routed_at <  date_sub(ds.stat_date ,interval 8 hour) #限定当日之前的改约
+                and pr.route_action = 'DETAIN_WAREHOUSE'
+                and from_unixtime(json_extract(pr.extra_value,'$.desiredat')) > date_add(ds.stat_date, interval 16 hour)
+                and pr.marker_category in (9,14,70) ##客户改约时间
+        ) pr2 on ds.pno = pr2.pno and pr2.stat_date = ds.stat_date and  pr2.rk = 1 #当日之前客户改约时间
+    left join ph_bi.dc_should_delivery_today ds1 on ds.pno = ds1.pno and ds1.state = 6 and ds1.stat_date = date_sub(ds.stat_date,interval 1 day)
+    where
+        case
+            when pr1.pno is not null then 'N'
+            when pr2.pno is not null then 'N'
+            when ds1.pno is not null  then 'N'  else 'Y'
+        end = 'Y'
+)
+, b as
+(
+
+        select
+            a.stat_date 日期
+            ,a.store_id 网点ID
+            ,dp.store_name 网点名称
+            ,case
+                when dp.region_name in ('Area3', 'Area6') then '彭万松'
+                when dp.region_name in ('Area4', 'Area9') then '韩钥'
+                when dp.region_name in ('Area7','Area10', 'Area11','FHome') then '张可新'
+                when dp.region_name in ( 'Area8') then '黄勇'
+                when dp.region_name in ('Area1', 'Area2','Area5', 'Area12', 'Area13') then '李俊'
+            end 区域
+            ,dp.region_name 大区
+            ,dp.piece_name 片区
+            ,a.应交接
+            ,a.已交接
+            ,concat(round(a.交接率*100,2),'%') as 交接率
+            ,concat(ifnull(a.a_check,''), ifnull(a.b_check,''), ifnull(a.d_check,''), ifnull(a.e_check,''),if(a.a_check is null  and a.d_check is null and a.b_check is null and a.e_check is null, 'C', '')) 交接评级
+            ,concat(round(a.A_rate * 100,2),'%')  'A时段（<0930 ）'
+            ,concat(round(a.B_rate * 100,2),'%') 'B时段（0930<=X<1200）'
+            ,concat(round(a.C_rate * 100,2),'%')'C时段（1200<=X<1600 ）'
+            ,concat(round(a.D_rate * 100,2),'%')'D时段（>=1600）'
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.stat_date
+                    ,count(t1.pno) 应交接
+                    ,count(if(sc.pno is not null , t1.pno, null)) 已交接
+                    ,count(if(sc.pno is not null , t1.pno, null))/count(t1.pno) 交接率
+                    ,count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as A_rate
+                    ,count(if(time(sc.route_time) >= '09:30:00' and time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as B_rate
+                    ,count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as C_rate
+                    ,count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) as D_rate
+
+                    ,if(count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.95, 'A', null ) a_check
+                    ,if(count(if(time(sc.route_time) < '12:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.98 and count(if(time(sc.route_time) < '09:30:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) <= 0.95, 'B', null ) b_check
+                    ,if(count(if(time(sc.route_time) >= '12:00:00' and time(sc.route_time) < '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03, 'D', null ) d_check
+                    ,if(count(if(time(sc.route_time) >= '16:00:00', t1.pno, null))/count(if(sc.pno is not null , t1.pno, null)) > 0.03 , 'E', null ) e_check
+                from t t1
+                left join
+                    (
+                        select
+                            sc.*
+                        from
+                            (
+                                select
+                                    pr.pno
+                                    ,pr.store_id
+                                    ,pr.store_name
+                                    ,t1.stat_date
+                                    ,convert_tz(pr.routed_at, '+00:00', '+08:00') route_time
+                                    ,date(convert_tz(pr.routed_at, '+00:00', '+08:00')) route_date
+                                    ,row_number() over (partition by pr.pno,t1.stat_date order by pr.routed_at) rk
+                                from ph_staging.parcel_route pr
+                                join t t1 on t1.pno = pr.pno
+                                where
+                                    pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+                                   and pr.routed_at >= date_sub(t1.stat_date, interval 8 hour)
+                                  and pr.routed_at < date_add(t1.stat_date, interval 16 hour )
+                            ) sc
+                        where
+                            sc.rk = 1
+                    ) sc on sc.pno = t1.pno and t1.stat_date = sc.stat_date
+                group by 1,2
+            ) a
+        join
+            (
+                select
+                    sd.store_id
+                from ph_staging.sys_district sd
+                where
+                    sd.deleted = 0
+                    and sd.store_id is not null
+                group by 1
+
+                union all
+
+                select
+                    sd.separation_store_id store_id
+                from ph_staging.sys_district sd
+                where
+                    sd.deleted = 0
+                    and sd.separation_store_id is not null
+                group by 1
+            ) sd on sd.store_id = a.store_id
+        left join dwm.dim_ph_sys_store_rd dp on dp.store_id = a.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+        where
+            dp.store_category in (1,10,13)
+)
 select
-    if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+08:00')) 'Delivered Date 妥投日期'
-    ,sr.pno 'Waybill No. 单号'
-    ,pi.dst_name 'Customer (收件人)'
-    ,pi.dst_phone 'Customer Cellphone No. 手机号'
-    ,pi.cod_amount/100 'COD Amount'
-    ,ddd.EN_element '包裹状态delivered'
-    ,sr.staff_info_id 'Courier ID 快递员ID'
-    ,hsi.name 'Courier name名字'
-    ,group_concat(concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/', sa.object_key) separator ';') POD
-from store_receivable_bill_detail sr
-left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = sr.staff_info_id
-left join ph_staging.parcel_info pi on  pi.pno = sr.pno
-left join ph_staging.sys_attachment sa on sa.oss_bucket_key = pi.pno and sa.oss_bucket_type = 'DELIVERY_CONFIRM'
-left join dwm.dwd_dim_dict ddd on ddd.element = pi.state and ddd.db = 'ph_staging' and ddd.tablename = 'parcel_info' and ddd.fieldname = 'state'
-where
-    sr.state = 0
-    and sr.staff_info_id in ('150911','152334','122227','149610','146846','151913','154223','148312','148003','148864','139759','151307','155096','150296','148384','147707','159856','147045','143711','135266','154511','151309','138920','158577','151526','159845','151484','157717','159478','156449','151595','147691','147432','143686','145201','121732','155492','145449','148895','147654','149005','130589','143787','158697','150642','145203','150549','149477','143986','157118','147097','149245','147561','147652','154777','371173','146775','134193','151027','153092','146774','130649','151317','151467','142939','157690','157956','155152','152857','149407','153054','148602','145193','154824','156276','150014','155346','158096','146507','153624','147318','134656','147776','148831','150007','155182','139055','157185','149352','149863','149265','150347','149160','146703','135558','148927','148946','131258','156827','149847','149421','121659','144719','121392','142116','147350','122852','154346','140976','150387','149998','153480','142069','360705','157393','132084','152100','150002','143108','147960','144016','153836','145324','148448','148566','146389','140839','126623','146179','152025','130339','151353','135102','146757','151622','135323','151738','153886','130896','154923','155094','151260','135027','152483','156378','123024','148325','149113','147006','139100','149932','148349','141022','145504','137819','152021','136061','148099','132906','157152','146556','145894','150756','151668','144641','155667','150769','151804','156306','144479','148268','148720','133871','138253','149051','152156','155748','132752','147550','145488','141434','148627','139555','138797','156353','149289','151672','144914','140317','133912','141220','120890','148765','127779','148709','138395','149551','150034','139303','146462','154448','134890','147539','150187','142136','145273','149527','154085','145755','152319','141076','142398','150210','144047','148619','151869','128053','150606','148317','147847','143267','143495','142058','148769','152254','145116','151756','143706','135428','145932','151114','144652','152015','148729','139171','367544','148294','155419','129548','149623','143806','150134','121302','134845','129368','137955','137267','144343','148979','139258','123557','149984','128073','130290','151164','149339','140685','146884','143265','130728','140766','158123','151343','150421','143081','136330','147714','121760')
-group by 2
+    t1.日期
+    ,t1.区域
+    ,t1.交接评级
+    ,t1.store_num 网点数
+    ,t1.store_num/t2.store_num 网点占比
+from
+    (
+        select
+            b1.日期
+            ,b1.区域
+            ,b1.交接评级
+            ,count(b1.网点ID) store_num
+        from b b1
+        group by 1,2,3
+    ) t1
+left join
+    (
+        select
+            b1.日期
+            ,b1.区域
+            ,count(b1.网点ID) store_num
+        from b b1
+        group by 1,2
+    ) t2 on t2.区域 = t1.区域 and  t2.日期 = t1.日期
+
+union all
+
+select
+    t1.日期
+    , 'Grand Total' 区域
+    ,t1.交接评级
+    ,t1.store_num 网点数
+    ,t1.store_num/t2.store_num 网点占比
+from
+    (
+        select
+            b1.日期
+            ,b1.交接评级
+            ,count(b1.网点ID) store_num
+        from b b1
+        group by 1,2
+    ) t1
+left join
+    (
+        select
+            b1.日期
+            ,count(b1.网点ID) store_num
+        from b b1
+        group by 1
+    ) t2 on  t2.日期 = t1.日期

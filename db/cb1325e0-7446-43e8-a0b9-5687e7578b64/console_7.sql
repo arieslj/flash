@@ -4,7 +4,7 @@ with d as
          ds.store_id
         ,ds.pno
         ,ds.stat_date
-    from my_bi.dc_should_delivery_today ds
+    from my_bi.dc_should_delivery_2023_07 ds
     where
         ds.stat_date >= '${date1}'
         and ds.stat_date <= '${date2}'

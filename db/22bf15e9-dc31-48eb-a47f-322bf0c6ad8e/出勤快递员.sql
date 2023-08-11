@@ -12,10 +12,10 @@ with t as
                     select
                         ad.*
                         ,ad.attendance_time + ad.BT + ad.CT + ad.BT_Y + ad.AB total
-                    from ph_bi.attendance_data_v2 ad
-                    join ph_bi.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,1000,37,16) -- 在职且非待离职
+                    from bi_pro.attendance_data_v2 ad
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and /*hsi.job_title in (13,110,1000,37,16)*/  hsi.sys_store_id != '-1' -- 在职且非待离职
                     where
-                        ad.stat_date < '${date}'
+                        ad.stat_date < curdate()
 #                         and hsi.hire_date <= date_sub(curdate(), interval 7 day )
                 ) ad
             where
@@ -34,6 +34,8 @@ select
         when hsi2.job_title in (37) then '仓管员'
         when hsi2.job_title in (16) then '主管'
     end 角色
+    ,hsi2.job_title
+    ,hjt.job_name
     ,st.late_num 迟到次数
     ,st.absence_sum 缺勤数据
     ,st.late_time_sum 迟到时长
@@ -62,8 +64,9 @@ from
             ) a
         group by 1
     ) st
-left join ph_bi.hr_staff_info hsi2 on hsi2.staff_info_id = st.staff_info_id
-left join dwm.dim_ph_sys_store_rd dp on dp.store_id = hsi2.sys_store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = st.staff_info_id
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = hsi2.sys_store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
 order by 2,1
 
 

@@ -1,22 +1,7 @@
 select
-    a.pno
-    ,a.client_id `客户ID`
-    ,a.created_at `揽收时间`
-    ,case a.state
-        when '1' then '已揽收'
-        when '2' then '运输中'
-        when '3' then '派送中'
-        when '4' then '已滞留'
-        when '5' then '已签收'
-        when '6' then '疑难件处理中'
-        when '7' then '已退件'
-        when '8' then '异常关闭'
-        when '9' then '已撤销'
-    end `包裹状态`
-    ,a.created_at `揽收时间`
-    ,ss.name `目的地网点`
-    ,case a.route_action
-         when 'ACCEPT_PARCEL' then '接件扫描'
+    t.*
+    ,case pr.route_action
+        when 'ACCEPT_PARCEL' then '接件扫描'
          when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
          when 'ARRIVAL_WAREHOUSE_SCAN' then '到件入仓扫描'
          when 'CANCEL_ARRIVAL_WAREHOUSE_SCAN' then '取消到件入仓扫描'
@@ -103,56 +88,24 @@ select
          when 'VEHICLE_ACCIDENT_REGISTRATION' then '车辆车祸登记'
          when 'VEHICLE_WET_DAMAGE_REG' then '车辆湿损登记'
          when 'VEHICLE_WET_DAMAGE_REGISTRATION' then '车辆湿损登记'
-    end `最后一条有效路由`
-    ,a.routed_at `最后一条有效路由日期`
+    end as `路由`
+    ,pr.routed_at `路由时间`
 from
     (
         select
-            a.*
-        from
-            (
-                select
-                    pi.*
-                    ,pr.route_action
-                    ,pr.routed_at
-                    ,row_number() over (partition by pr.pno order by pr.routed_at desc) rk
-                from
-                    (
-                        select
-                            pi.pno
-                            ,pi.dst_store_id
-                            ,pi.client_id
-                            ,pi.p_date
-                            ,pi.state
-                            ,pi.created_at
-                        from fle_dwd.dwd_fle_parcel_info_di pi
-                        where
-                            pi.p_date >= '2021-07-01'
-                            and pi.p_date < '2023-01-01'
-                            and pi.state not in ('5', '7', '8', '9')
-                    ) pi
-                left join
-                    (
-                        select
-                            dw.pno
-                            ,dw.route_action
-                            ,dw.routed_at
-                        from fle_dwd.dwd_wide_fle_route_and_parcel_created_at dw
-                        where
-                            dw.p_date >= '2021-07-01'
-                            and dw.p_date < '2023-01-01'
-                            and dw.valid_route = '1'
-                    ) pr on pr.pno = pi.pno
-            ) a
+            *
+        from test.tmp_plt_pno_0728 t
         where
-            a.rk = 1
-    ) a
+            t.parcel_created_at >= '2023-01-01'
+            and t.parcel_created_at < '2023-02-01'
+    ) t
 left join
     (
         select
-            *
-        from fle_dim.dim_fle_sys_store_da ss
+            pr.route_action
+            ,pr.routed_at
+            ,pr.pno
+        from fle_dwd.dwd_rot_parcel_route_di pr
         where
-            ss.p_date = date_sub(`current_date`(), 1)
-    ) ss on ss.id = a.dst_store_id
-
+            pr.p_date >= '2023-01-01'
+    ) pr on pr.pno = t.pno and pr.routed_at < t.task_created_at

@@ -1,6 +1,7 @@
 select
     ss.pno
-    ,ss.parcel_created_at 揽收时间
+    ,ss.parcel_created_at
+    ,ss.task_created_at
     ,case ss.source
         WHEN 1 THEN 'A-问题件-丢失'
         WHEN 2 THEN 'B-记录本-丢失'
@@ -14,10 +15,10 @@ select
         WHEN 10 THEN 'J-问题记录本-外包装破损险'
         when 11 then 'K-超时效包裹'
         when 12 then 'L-高度疑似丢失'
-    end 问题来源渠道
-    ,ddd.CN_element 进入闪速前的最后有效路由
-    ,ss.last_valid_action_store_id 进入闪速前的最后有效路由网点ID
-    ,ss.last_valid_action_store_name 进入闪速前的最后有效路由网点
+    end source
+    ,ddd.CN_element last_valid_action
+    ,ss.last_valid_action_store_id
+    ,ss.last_valid_action_store_name
     ,case ss.last_valid_action_store_category
       when '1' then 'SP'
       when '2' then 'DC'
@@ -32,7 +33,7 @@ select
       when '12' then 'B-HUB'
       when '13' then 'CDC'
       when '14' then 'PDC'
-    end 进入闪速前的最后有效路由网点类型
+    end last_valid_action_store_category
     ,case ss.parcel_state
         when 1 then '已揽收'
         when 2 then '运输中'
@@ -43,17 +44,17 @@ select
         when 7 then '已退件'
         when 8 then '异常关闭'
         when 9 then '已撤销'
-    end  运单当前状态
-    ,ss.reality_duty_store_one_id '人工判责责任网点1 id'
-    ,ss.reality_duty_store_one_name '人工判责责任网点1 名称'
-    ,ss.reality_duty_store_two_id '人工判责责任网点2 id'
-    ,ss.reality_duty_store_two_name '人工判责责任网点2 名称'
+    end  parcel_state
+    ,ss.reality_duty_store_one_id
+    ,ss.reality_duty_store_one_name
+    ,ss.reality_duty_store_two_id
+    ,ss.reality_duty_store_two_name
     ,case ss.reality_duty_result
         when 1 then '丢失'
         when 2 then '破损'
         when 3 then '超时效'
-    end 人工判责结果
-    ,t.t_value 人工判责原因
+    end reality_duty_result
+    ,t.t_value reality_duty_reasons
     ,case ss.reality_duty_type
         when 1 then '快递员100%套餐'
         when 2 then '仓9主1套餐(仓管90%主管10%)'
@@ -67,7 +68,7 @@ select
         when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
         when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
         when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
-    end 人工责任套餐
+    end reality_duty_type
     ,case ss.reality_link_type
         when 0 then 'ipc计数后丢失'
         when 1 then '揽收网点已揽件，未收件入仓'
@@ -94,17 +95,17 @@ select
         when 22 then 'ipc计数后丢失'
         when 23 then '超时效sla'
         when 24 then '分拨发件出仓到下一站分拨了'
-	end 人工判罚环节
-    ,ss.system_duty_store_one_id '系统判责责任网点1 id'
-    ,ss.system_duty_store_one_name '系统判责责任网点1 名称'
-    ,ss.system_duty_store_two_id '系统判责责任网点2 id'
-    ,ss.system_duty_store_two_name '系统判责责任网点2 名称'
+	end reality_link_type
+    ,ss.system_duty_store_one_id
+    ,ss.system_duty_store_one_name
+    ,ss.system_duty_store_two_id
+    ,ss.system_duty_store_two_name
     ,case ss.system_duty_result
         when 1 then '丢失'
         when 2 then '破损'
         when 3 then '超时效'
-    end 系统判责结果
-    ,t2.t_value 系统判责原因
+    end system_duty_result
+    ,t2.t_value system_duty_reasons
     ,case ss.system_duty_type
         when 1 then '快递员100%套餐'
         when 2 then '仓9主1套餐(仓管90%主管10%)'
@@ -118,7 +119,7 @@ select
         when 10 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
         when 19 then '双黄套餐(计数网点仓管40%计数网点主管10%对接分拨仓管40%对接分拨主管10%)'
         when 20 then  '加盟商双黄套餐（加盟商50%网点仓管45%主管5%）'
-    end 系统责任套餐
+    end system_duty_type
     ,case ss.system_link_type
         when 0 then 'ipc计数后丢失'
         when 1 then '揽收网点已揽件，未收件入仓'
@@ -145,7 +146,7 @@ select
         when 22 then 'ipc计数后丢失'
         when 23 then '超时效sla'
         when 24 then '分拨发件出仓到下一站分拨了'
-	end 系统判罚环节
+	end system_link_type
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.nextStoreCategory') ,'"', '')
         when '1' then 'SP'
         when '2' then 'DC'
@@ -160,7 +161,7 @@ select
         when '12' then 'B-HUB'
         when '13' then 'CDC'
         when '14' then 'PDC'
-    end 下一站网点类型
+    end nextstorecategory
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.previousStoreCategory') ,'"', '')
         when '1' then 'SP'
         when '2' then 'DC'
@@ -175,54 +176,66 @@ select
         when '12' then 'B-HUB'
         when '13' then 'CDC'
         when '14' then 'PDC'
-    end 上一站网点类型
+    end previousstorecategory
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end 是否集包
-    ,replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isPack') ,'"', '')
+    end isPack
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isUnload') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end 是否卸车
+    end isUnload
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveSendNotArrive') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end 是否上报有发无到
+    end haveSendNotArrive
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isDirectorOrKeeper') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end 是否要求是主管或仓管的动作
+    end isDirectorOrKeeper
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.isCourier') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end 是否要求是快递员的动作
+    end isCourier
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveKeeperSpecialRoute') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end '是否要求仓管当天有留仓、疑难件交接、盘库路由'
+    end haveKeeperSpecialRoute
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.sameDayUnload') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end '是否要求最后有效路由跟车辆卸车是否同一天'
+    end sameDayUnload
     ,case replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.haveReceiveWarehouse') ,'"', '')
         when 1 then '是'
         when 0 then '否'
         when 'false' then '否'
-    end '是否要求有收件入仓动作'
+    end haveReceiveWarehouse
+#     ,ddd2.CN_element 路由动作
+#     ,convert_tz(pr.routed_at, '+00:00', '+07:00')   路由时间
 from bi_center.ssjudge_system_duty_contrast ss
 left join dwm.dwd_dim_dict ddd on ddd.element = ss.last_valid_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
 left join bi_pro.translations t on t.t_key = ss.reality_duty_reasons and t.lang = 'zh-CN'
 left join bi_pro.translations t2 on t2.t_key = ss.system_duty_reasons and t2.lang = 'zh-CN'
-# where
-#     ss.pno = 'TH02014BJXN47M'
+# left join rot_pro.parcel_route pr on pr.pno = ss.pno and pr.routed_at < date_sub(ss.task_created_at, interval  7 hour) and pr.routed_at > '2023-04-30 17:00:00'
+# join dwm.dwd_dim_dict ddd2 on ddd2.element = pr.route_action and ddd2.db = 'rot_pro' and ddd2.tablename = 'parcel_route' and ddd2.fieldname = 'route_action' and ddd2.remark = 'valid'
+where
+    ss.parcel_created_at >= '2023-01-01'
+    and
+
 ;
 
-# select replace(json_extract(json_extract(ss.extra_value, '$.base'), '$.lastRoutes') ,'"', '') from bi_center.ssjudge_system_duty_contrast ss where ss.id = '284'
+select
+#     ss.*
+#     ,ddd2.CN_element 路由动作
+#     ,convert_tz(pr.routed_at, '+00:00', '+07:00') 路由时间
+    count(ss.pno)
+from tmpale.tmp_th_plt_pno_0728 ss
+left join rot_pro.parcel_route pr on pr.pno = ss.pno and pr.routed_at < date_sub(ss.task_created_at, interval  7 hour) and pr.routed_at > '2023-04-30 17:00:00'
+join dwm.dwd_dim_dict ddd2 on ddd2.element = pr.route_action and ddd2.db = 'rot_pro' and ddd2.tablename = 'parcel_route' and ddd2.fieldname = 'route_action' and ddd2.remark = 'valid'

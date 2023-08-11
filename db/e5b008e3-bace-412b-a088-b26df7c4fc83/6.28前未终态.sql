@@ -10,7 +10,7 @@ with t as
         ,pi.cod_enabled
     from ph_staging.parcel_info pi
     where
-        pi.created_at < '2023-06-28 16:00:00'
+        pi.created_at < '2023-07-19 16:00:00'
         and pi.state not in (5,7,8,9)
 )
 select
@@ -152,7 +152,6 @@ select
 #     end 卡点原因
 #     ,de.last_store_name 当前节点
     ,datediff(now(), convert_tz(pr.routed_at, '+00:00', '+08:00')) 最后有效路由距今天数
-#     ,de.last_cn_route_action 最新一条有效路由
     ,case pr.route_action # 路由动作
          when 'ACCEPT_PARCEL' then '接件扫描'
          when 'ARRIVAL_GOODS_VAN_CHECK_SCAN' then '车货关联到港'
@@ -213,7 +212,7 @@ select
          when 'PRINTING' then '打印面单'
          when 'QAQC_OPERATION' then 'QAQC判责'
          when 'RECEIVE_WAREHOUSE_SCAN' then '收件入仓'
-         when 'RECEIVED' then '已揽收,初始化动作，实际情况并没有作用'
+         when 'RECEIVED' then '已揽收'
          when 'REFUND_CONFIRM' then '退件妥投'
          when 'REPAIRED' then '上报问题修复路由'
          when 'REPLACE_PNO' then '换单'
@@ -246,6 +245,8 @@ select
     ,convert_tz(pr.routed_at ,'+00:00', '+08:00') 最新一条有效路由时间
     ,datediff(now(), de.dst_routed_at) 目的地网点停留时间
     ,de.dst_store 目的地网点
+    ,de.dst_piece
+    ,de.dst_region
     ,de.src_store 揽收网点
     ,de.pickup_time 揽收时间
     ,de.pick_date 揽收日期
@@ -388,9 +389,9 @@ group by t1.pno
 #     ,fp.name
 # from ph_staging.parcel_info pi
 # join tmpale.tmp_ph_pno_0621 t on t.pno = pi.pno
-# left join ph_staging.sys_store ss on ss.id = pi.ticket_pickup_store_id
-# left join ph_staging.franchisee_profile fp on fp.id = ss.franchisee_id
-#
+# left join ph_staging.syranchisee_profile fp on fp.id = ss.franchisee_id
+# #s_store ss on ss.id = pi.ticket_pickup_store_id
+# left join ph_staging.f
 #
 # ;
 # select

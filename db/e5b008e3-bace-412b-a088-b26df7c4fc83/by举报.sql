@@ -10,6 +10,7 @@ select
     ,hsi.sys_store_id
     ,ra.event_date
     ,ra.remark
+    ,ra.final_approval_time
     ,group_concat(concat('https://fex-ph-asset-pro.oss-ap-southeast-1.aliyuncs.com/', sa.object_key) separator ';') picture
 from ph_backyard.report_audit ra
 left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = ra.report_id
@@ -20,6 +21,7 @@ left join ph_backyard.sys_attachment sa on sa.oss_bucket_key = ra.id and sa.oss_
 where
     ra.created_at >= '2023-07-10' -- QC不看之前的数据
     and ra.status = 2
+#     and hsi.sys_store_id = -1
     and ra.final_approval_time >= date_sub(curdate(), interval 11 hour)
     and ra.final_approval_time < date_add(curdate(), interval 13 hour )
 group by 1
