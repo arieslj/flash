@@ -52,9 +52,9 @@
                 ,fsr.pno
             from fle_dwd.dwd_fle_store_receivable_bill_detail_di fsr
             where
-                fsr.p_date >= '2023-02-11'
+                fsr.p_date >= '2023-02-01'
                 and fsr.state = '0'
-                and fsr.staff_info_id in ('619809','630904','623826','610530','638785','610836','84268','625401','628583','635640','614505','634001','607743','631979','632501','68032','619809','630904','623826','610530','638785','610836','84268','625401','628583','635640')
+                and fsr.staff_info_id in ('630598','638027','25587','41106','620709','617889','625652','629659','642060','641074','641017')
         ) t
     left join
         (
@@ -84,7 +84,7 @@
                         ,pi.ticket_delivery_store_id
                     from fle_dwd.dwd_fle_parcel_info_di pi
                     where
-                        pi.p_date >= '2023-01-15'
+                        pi.p_date >= '2023-02-01'
 --                         and pi.p_date < '2023-07-11'
                 ) pi
         ) a1 on a1.pno = t.pno
@@ -101,7 +101,7 @@
                         ,sa.object_key
                     from fle_dwd.dwd_fle_sys_attachment_di sa
                     where
-                        sa.p_date >= '2023-01-15'
+                        sa.p_date >= '2023-02-01'
 --                         and sa.p_date < '2023-04-01'
                         and sa.oss_bucket_type = 'DELIVERY_CONFIRM'
                 ) sa

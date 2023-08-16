@@ -24,6 +24,8 @@ where
 #     and hsi.sys_store_id = -1
     and ra.final_approval_time >= date_sub(curdate(), interval 11 hour)
     and ra.final_approval_time < date_add(curdate(), interval 13 hour )
+#     and ra.final_approval_time < '2023-08-13 00:00:00'
+#     and ra.final_approval_time > '2023-08-12 00:00:00'
 group by 1
 )
 , mw as

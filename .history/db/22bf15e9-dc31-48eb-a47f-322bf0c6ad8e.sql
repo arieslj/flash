@@ -44337,3 +44337,21 @@ from
 where
     a.store_id in ('TH65010808','TH01180135','TH01410223','TH01080144','TH01390232','TH19070136','TH02030523','TH01010127','TH04060232','TH67010525','TH04060162','TH02030432','TH68040618','TH20070230','TH01050214','TH67010432','TH01470132','TH02010234','TH01220311','TH01420113','TH01430144','TH02010631','TH02030329','TH02030132')
 group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    sr.pno
+    ,pi.created_at
+from fle_staging.store_receivable_bill_detail sr
+left join fle_staging.parcel_info pi on pi.pno = sr.pno
+where
+    staff_info_id in ('630598','638027','25587','41106','620709','617889','625652','629659','642060','641074','641017')
+    and state = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    sr.pno
+    ,pi.created_at
+from fle_staging.store_receivable_bill_detail sr
+left join fle_staging.parcel_info pi on pi.pno = sr.pno
+where
+    sr.staff_info_id in ('630598','638027','25587','41106','620709','617889','625652','629659','642060','641074','641017')
+    and sr.state = 0;

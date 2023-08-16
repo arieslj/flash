@@ -5,11 +5,11 @@ with t as
         ,ds.pno
         ,ds.store_id
         ,ss.name
-    from my_bi.dc_should_delivery_2023_07 ds
+    from my_bi.dc_should_delivery_today ds
     left join my_staging.sys_store ss on ds.store_id = ss.id
     where
-        ds.stat_date >= '2023-07-28'
-        and ds.stat_date <= '2023-07-31'
+        ds.stat_date >= '2023-08-11'
+        and ds.stat_date <= '2023-08-13'
 )
 select
     t1.stat_date 统计日期

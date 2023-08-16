@@ -19,7 +19,7 @@ with t as
         and pr.routed_at < date_add('${date}', interval 16 hour)
         and ds.should_delevry_type != '非当日应派'
 #         and hst.stat_date = '${date}'
-#         and ds.dst_store_id = 'PH35172802'
+#         and ds.dst_store_id in ('PH35300N06', 'PH35172804')
 )
     select
         dr.store_id 网点ID

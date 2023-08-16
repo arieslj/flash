@@ -133,19 +133,17 @@ select
     ,dp.store_name 操作网点
     ,dp.piece_name 片区
     ,dp.region_name 大区
-    ,pr.remark 路由备注
 from ph_staging.parcel_route pr
 left join ph_staging.parcel_info pi on pi.pno = pr.pno
 join ph_staging.ka_profile kp on kp.id = pi.client_id
-left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
 left join dwm.dwd_dim_dict ddd on ddd.element = json_extract(pr.extra_value, '$.rejectionCategory') and ddd.db = 'ph_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'rejection_category'
 left join dwm.dim_ph_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
 where
     pr.route_action = 'DELIVERY_MARKER'
-    and pr.routed_at >= '2023-06-30 16:00:00'
-    and pr.routed_at < '2023-07-31 16:00:00'
+    and pr.routed_at >= '2023-07-31 16:00:00'
+    and pr.routed_at < '2023-08-13 16:00:00'
     and pr.marker_category in (2,17)
-    and bc.client_id is null
+    and pi.client_id in ('CA3691','BA0643','CA2953','BA0588','BA0631','CA3535','BA0546','BA0663','BA0632','BA0543','BA0496','BA0660','BA0617','BA0642','BA0658','BA0646','AA0150','BA0659','BA0592','CA3362','BA0544','BA0622','CA0590','CA0198','BA0700','CA2853','CA3473','BA0682','CA3689','BA0388','BA0459')
 # group by 1,2
 
 ;
@@ -539,30 +537,47 @@ where
 
 select
     vrv.link_id
-    ,if(di2.id = di.id , 'y', 'n') 是否相同
-
+    ,vrv.type
+    ,case cdt.state
+		  when 0 then '未处理'
+		  when 1 then '已处理'
+		  when 2 then '正在沟通中'
+		  when 3 then '财务驳回'
+		  when 4 then '客户未处理'
+		  when 5 then '转交闪速系统'
+		  when 6 then '转交QAQC'
+		  else cdt.state
+		  end '客服处理情况'
+    ,date_add(di.created_at, interval 8 hour) di_time
 from nl_production.violation_return_visit vrv
 left join dwm.dwd_dim_bigClient bc on bc.client_id = vrv.client_id
 left join ph_staging.parcel_info pi on pi.pno = vrv.link_id
 left join ph_staging.diff_info di on di.id = json_extract(vrv.extra_value, '$.diff_id')
 left join ph_staging.diff_info di2 on di2.pno = pi.pno
-join ph_staging.store_diff_ticket sdt on sdt.diff_info_id = di2.id and sdt.state != 2
+join ph_staging.customer_diff_ticket cdt on cdt.diff_info_id = di2.id
 where
-    vrv.type = 8
+    vrv.type in (3,8)
     and vrv.visit_state in (3,4,5,6,7)
-    and pi.state = 6
+    and di.state = 0
 
 ;
 
 select
     bc.client_name
-    ,count(if(vrv.visit_state = 1, vrv.id, null)) 待回访
-    ,count(if(vrv.visit_state = 2, vrv.id, null)) 沟通中
-    ,count(if(di.created_at < '2023-08-09 16:00:00', vrv.id, null)) 今日之前创建疑难件
+#     ,vrv.link_id
+#     ,vrv.visit_state
+#     ,vrv.created_at
+    ,count(if(vrv.visit_state = 1, vrv.mobile, null)) 待回访
+    ,count(if(vrv.visit_state = 2, vrv.mobile, null)) 沟通中
+    ,min(convert_tz(di.created_at, '+00:00', '+08:00')) 最早创建时间
 from nl_production.violation_return_visit vrv
-left join dwm.dwd_dim_bigClient bc on bc.client_id = vrv.client_id
+join dwm.dwd_dim_bigClient bc on bc.client_id = vrv.client_id
 left join ph_staging.diff_info di on di.id = json_extract(vrv.extra_value, '$.diff_id')
 where
     vrv.visit_state in (1,2)
     and vrv.type = 8
+    and vrv.created_at >= date_sub(curdate() , interval 7 day )
 group by 1
+;
+
+

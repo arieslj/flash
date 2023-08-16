@@ -569,3 +569,13 @@ left join
         join tmpale.tmp_ph_pno_lj_0810 t on t.pno = psd.pno
     ) seal on seal.pno = pi.pno and seal.rk = 1
 ;
+
+
+select
+    td.pno
+from ph_staging.ticket_delivery td
+left join ph_staging.parcel_info pi on pi.pno = td.pno
+where
+    pi.state = 5
+    and td.delivery_opt = 4
+limit 10
