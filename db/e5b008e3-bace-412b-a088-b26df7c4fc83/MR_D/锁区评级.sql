@@ -57,16 +57,23 @@ with t as
         ,coalesce(a2.self_avg_staff_del_code, 0) 自有快递员三段码平均妥投量
         ,coalesce(a2.other_avg_staff_del_code, 0) '外协+支援快递员三段码平均妥投量'
         ,coalesce(a2.avg_code_staff, 0) 三段码平均交接快递员数
-        ,case
+        ,if(a3.self_staff_num + other_staff_num > coalesce(sdb.code_num, 0),
+           case
+            when a2.avg_staff_code < 2 then 'A'
+            when a2.avg_staff_code >= 2 and a2.avg_staff_code < 3 then 'B'
+            when a2.avg_staff_code >= 3 and a2.avg_staff_code < 4 then 'C'
+            when a2.avg_staff_code >= 4 then 'D'
+        end,
+           case
             when a2.avg_code_staff < 2 then 'A'
             when a2.avg_code_staff >= 2 and a2.avg_code_staff < 3 then 'B'
             when a2.avg_code_staff >= 3 and a2.avg_code_staff < 4 then 'C'
             when a2.avg_code_staff >= 4 then 'D'
-        end 评级
-        ,a2.code_num
-        ,a2.staff_code_num
-        ,a2.staff_num
-        ,a2.fin_staff_code_num
+        end ) 评级
+#         ,a2.code_num
+#         ,a2.staff_code_num
+#         ,a2.staff_num
+#         ,a2.fin_staff_code_num
     from
         (
             select
@@ -75,6 +82,7 @@ with t as
                 ,count(distinct if(a1.job_title in (13,110,1000), a1.third_sorting_code, null)) code_num
                 ,count(distinct if(a1.job_title in (13,110,1000), a1.staff_info_id, null)) staff_num
                 ,count(distinct if(a1.job_title in (13,110,1000), a1.staff_code, null)) fin_staff_code_num
+                ,count(distinct if(a1.job_title in (13,110,1000), a1.staff_code, null))/count(distinct if(a1.job_title in (13,110,1000), a1.staff_info_id, null)) avg_staff_code
                 ,count(distinct if(a1.job_title in (13,110,1000), a1.staff_code, null))/ count(distinct if(a1.job_title in (13,110,1000), a1.third_sorting_code, null)) avg_code_staff
                 ,count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,1000), a1.staff_code, null))/count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,1000), a1.staff_info_id, null)) self_avg_staff_code
                 ,count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,1000), a1.staff_code, null))/count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,1000), a1.staff_info_id, null)) other_avg_staff_code

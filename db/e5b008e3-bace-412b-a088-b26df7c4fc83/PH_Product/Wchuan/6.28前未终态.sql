@@ -10,7 +10,7 @@ with t as
         ,pi.cod_enabled
     from ph_staging.parcel_info pi
     where
-        pi.created_at < '2023-07-19 16:00:00'
+        pi.created_at < date_sub(date_sub(curdate(), interval 21 day), interval 8 hour)
         and pi.state not in (5,7,8,9)
 )
 select

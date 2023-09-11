@@ -1,3 +1,4 @@
+
 with t as
 (
     select
@@ -7,16 +8,17 @@ with t as
         ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
         ,pi.ticket_delivery_staff_info_id
         ,pi.state
+        ,hs.is_sub_staff
         ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
         ,coalesce(hsi.job_title, hs.job_title) job_title
         ,coalesce(hsi.formal, hs.formal) formal
         ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
         ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
-    from dwm.dwd_ph_dc_should_be_delivery ds
-    join ph_staging.parcel_info pi on pi.pno = ds.pno
-    left join ph_staging.sys_store ss on ss.id = ds.dst_store_id
-    left join ph_bi.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '${date}'
-    left join ph_bi.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '${date}')
+    from dwm.dwd_th_dc_should_be_delivery_d ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '${date}'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '${date}')
 #     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
     where
         pi.state = 5
@@ -26,7 +28,7 @@ with t as
         and pi.finished_at >= date_sub('${date}', interval 8 hour )
         and pi.finished_at < date_add('${date}', interval 16 hour)
         and ds.should_delevry_type != '非当日应派'
-#         and ds.dst_store_id = 'PH81180100'
+#         and ds.dst_store_id = 'TH16020303'
 )
 select
     dp.store_id 网点ID
@@ -45,15 +47,6 @@ select
     ,coalesce(del_cou.other_effect, 0) 当日人效_外协支援
     ,coalesce(del_cou.dco_dcs_effect, 0) 仓管主管人效
     ,coalesce(del_hour.avg_del_hour, 0) 派件小时数
-
-    ,coalesce(backlog.in_house_count, 0) 在仓包裹数
-    ,coalesce(backlog.big_in_house_count, 0) 在仓大件包裹数
-    ,coalesce(backlog.big_client_count, 0) 在仓平台客户包裹数
-    ,coalesce(backlog.small_client_count, 0) 在仓非平台客户包裹数
-    ,coalesce(backlog.3_within_backlog_bigclient, 0) 平台客户在仓积压3天内包裹数
-    ,coalesce(backlog.3_5_backlog_bigclient, 0) 平台客户在仓积压3_5天内包裹数
-    ,coalesce(backlog.5_more_backlog_bigclient, 0) 平台客户在仓积压5天以上包裹数
-    ,coalesce(backlog.tt_overtime_count, 0) tiktok超时效包裹数
 from
     (
         select
@@ -62,22 +55,23 @@ from
             ,dp.opening_at
             ,dp.piece_name
             ,dp.region_name
-        from dwm.dim_ph_sys_store_rd dp
+        from dwm.dim_th_sys_store_rd dp
+        left join fle_staging.sys_store ss on ss.id = dp.store_id
         where
             dp.state_desc = '激活'
             and dp.stat_date = date_sub(curdate(), interval 1 day)
-            and dp.store_category in (1)
+            and ss.category in (1,10)
     ) dp
 left join
     (
         select
             hr.sys_store_id sys_store_id
             ,count(distinct hr.staff_info_id) staf_num
-        from  ph_bi.hr_staff_info  hr
+        from  bi_pro.hr_staff_info hr
         where
             hr.formal = 1
             and hr.state = 1
-            and hr.job_title in (13,110,1000)
+            and hr.job_title in (13,110,452)
 #             and hr.stat_date = '${date}'
         group by 1
     ) cour on cour.sys_store_id = dp.store_id
@@ -86,7 +80,7 @@ left join
         select
             ds.dst_store_id
             ,count(distinct ds.pno) sd_num
-        from dwm.dwd_ph_dc_should_be_delivery ds
+        from dwm.dwd_th_dc_should_be_delivery ds
         where
              ds.should_delevry_type != '非当日应派'
             and ds.p_date = '${date}'
@@ -104,10 +98,10 @@ left join
     (
         select
             t1.store_id
-            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,1000) and t1.formal = 1, t1.ticket_delivery_staff_info_id, null)) self_staff_num
-            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,1000) and t1.formal = 1, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,1000) and t1.formal = 1, t1.ticket_delivery_staff_info_id, null)) self_effect
-            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1) and t1.job_title in (13,110,1000), t1.ticket_delivery_staff_info_id, null)) other_staff_num
-            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1) and t1.job_title in (13,110,1000), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1) and t1.job_title in (13,110,1000), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452), t1.ticket_delivery_staff_info_id, null)) other_effect
 
             ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
             ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
@@ -140,26 +134,53 @@ left join
             ) a
         group by 1,2
     ) del_hour on del_hour.store_id = dp.store_id
-left join
-    (
-        select
-            ds.dst_store_id
-            ,count(distinct ds.pno) in_house_count
-            ,count(distinct if(pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80, ds.pno, null)) big_in_house_count
-            ,count(distinct if(bc.client_id is not null, ds.pno, null)) big_client_count
-            ,count(distinct if(bc.client_id is null, ds.pno, null)) small_client_count
-            ,count(distinct if(datediff(now(), ds.first_valid_routed_at) <= 3 and bc.client_id is not null, ds.pno, null)) 3_within_backlog_bigclient
-            ,count(distinct if(datediff(now(), ds.first_valid_routed_at) > 3 and datediff(now(), ds.first_valid_routed_at) <= 5 and bc.client_id is not null, ds.pno, null)) 3_5_backlog_bigclient
-            ,count(distinct if(datediff(now(), ds.first_valid_routed_at) > 5 and bc.client_id is not null, ds.pno, null)) 5_more_backlog_bigclient
-            ,count(distinct if(tsd.end_date < curdate(), ds.pno, null)) tt_overtime_count
-        from dwm.dwd_ph_dc_should_be_delivery ds
-        join ph_staging.parcel_info pi on pi.pno = ds.pno and pi.state not in (5,7,8,9)
-        left join dwm.dwd_dim_bigClient bc on bc.client_id = pi.client_id
-        left join dwm.dwd_ex_ph_tiktok_sla_detail tsd on tsd.pno = ds.pno
-        where
-            ds.p_date = '${date}'
-        group by 1
-    ) backlog on backlog.dst_store_id = dp.store_id
 
 ;
 
+
+select
+		pi.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+07:00') as finished_at
+		,pi.ticket_delivery_staff_info_id
+		,sd.staff_info_id
+		,sd.sub_staff_info_id
+		,ss.name
+		,ss.id
+from fle_staging.parcel_info pi
+join fle_staging.sys_store ss on pi.dst_store_id=ss.id
+left join backyard_pro.hr_staff_apply_support_store sd on pi.ticket_delivery_staff_info_id=sd.sub_staff_info_id
+where ss.name='DID_SP-ดินแดง'
+and pi.finished_at>'2023-08-22 17:00:00'
+and pi.finished_at<'2023-08-23 17:00:00'
+
+;
+select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '${date}'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '${date}')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '${date}'
+        and pi.finished_at >= date_sub('${date}', interval 8 hour )
+        and pi.finished_at < date_add('${date}', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH01080138'

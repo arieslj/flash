@@ -45,7 +45,7 @@ select
     pcr.operator_id 操作员工工号
     ,pcr.operator_name 操作员工姓名
     ,pcd.new_value 修改后的号码
-    ,pr.store_id 网点ID
+    ,pr.store_id 网点ID 
     ,pr.store_name 网点名称
     ,count(distinct pcd.pno) 修改数量
     ,group_concat(distinct pcd.pno) 修改号码运单号
@@ -54,8 +54,8 @@ left join fle_staging.parcel_change_record pcr on pcd.record_id = pcr.id
 left join rot_pro.parcel_route pr on pr.pno = pcr.pno and json_extract(pr.extra_value, '$.parcelChangeId') = pcr.id and pr.route_action = 'CHANGE_PARCEL_INFO'
 where
     pcd.field_name in ('dst_phone')
-    and pcd.created_at > '2023-06-30 16:00:00'
-    and pcd.created_at < '2023-07-31 16:00:00'
+    and pcd.created_at > '2023-08-02 16:00:00'
+#     and pcd.created_at < '2023-07-31 16:00:00'
 group by 1,2,3,4,5
 
 ;

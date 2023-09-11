@@ -11,7 +11,7 @@ with t as
                 (
                     select
                         ad.*
-                        ,ad.attendance_time + ad.BT + ad.CT + ad.BT_Y + ad.AB total
+                        ,ad.attendance_time + ad.BT + ad.BT_Y + ad.AB total
                     from ph_bi.attendance_data_v2 ad
                     join ph_bi.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,1000,37,16) -- 在职且非待离职
                     where
@@ -19,7 +19,7 @@ with t as
 #                         and hsi.hire_date <= date_sub(curdate(), interval 7 day )
                 ) ad
             where
-                ad.total = 10
+                ad.total > 0
         ) ad
     where
         ad.rk < 8
@@ -59,6 +59,23 @@ from
 #                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, timestampdiff(second, t1.attendance_end_at, t1.shift_end)/60, 0) early_yime
                     ,t1.AB/10 absence_time
                 from t t1
+                where
+                    t1.total = 10
+                    or (t1.total =  5 and t1.leave_time_type = 2)
+
+                union all
+
+                select
+                    t1.*
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , 'y', 'n') late_or_not
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , timestampdiff(minute , date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), t1.attendance_started_at), 0) late_time
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, 'y', 'n' ) early_or_not
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, timestampdiff(second, t1.attendance_end_at, t1.shift_end)/60, 0) early_yime
+                    ,t1.AB/10 absence_time
+                from t t1
+                where
+                    t1.total = 5
+                    and t1.leave_time_type = 1 -- 上午请假
             ) a
         group by 1
     ) st

@@ -9,20 +9,20 @@ select -- 基于当日应派取扫描率
     ,ifnull(tt.scan_fished_counts/shoud_counts,0) 分拣扫描率
 
     ,tt.youxiao_counts 有效分拣扫描数
-    ,ifnull(tt.youxiao_counts/tt.scan_fished_counts,0) 有效分拣扫描率
+    ,ifnull(tt.youxiao_counts/tt.shoud_counts,0) 有效分拣扫描率
 
     ,tt.1pai_counts 一派应派数
     ,tt.1pai_scan_fished_counts 一派分拣扫描数
     ,ifnull(tt.1pai_scan_fished_counts/tt.1pai_counts,0) 一派分拣扫描率
 
     ,tt.1pai_youxiao_counts 一派有效分拣扫描数
-    ,ifnull(tt.1pai_youxiao_counts/tt.1pai_scan_fished_counts,0) 一派有效分拣扫描率
-    ,
-    case
-	    when tt.1pai_youxiao_counts/tt.1pai_scan_fished_counts>=0.95 then 'A'
-	    when tt.1pai_youxiao_counts/tt.1pai_scan_fished_counts>=0.90 then 'B'
-	    when tt.1pai_youxiao_counts/tt.1pai_scan_fished_counts>=0.85 then 'C'
-	    when tt.1pai_youxiao_counts/tt.1pai_scan_fished_counts>=0.80 then 'D'
+    ,ifnull(tt.1pai_youxiao_counts/tt.1pai_counts,0) 一派有效分拣扫描率
+
+    ,case
+	    when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+	    when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+	    when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+	    when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
 	    else 'E'
 	 end 一派有效分拣评级 -- 一派有效分拣
 
@@ -32,20 +32,20 @@ select -- 基于当日应派取扫描率
         when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95  then 'C'
         when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95  then 'D'
         else 'E'
-       end 一派分拣评级
+    end 一派分拣评级
 
     ,ifnull(tt.1pai_hour_8_fished_counts/tt.1pai_counts,0) 一派8点前扫描占比
     ,ifnull(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,0) 一派8点半前扫描占比
     ,ifnull(tt.1pai_hour_9_fished_counts/tt.1pai_counts,0) 一派9点前扫描占比
     ,ifnull(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,0) 一派9点半前扫描占比
-	,tt2.late_proof_counts 是否有迟到超过规划时间20分钟的常规车
+	,if(tt2.late_proof_counts is null , '否', '是') 是否有迟到超过规划时间20分钟的常规车
     ,tt2.max_real_arrive_time_normal 一派常规车最晚实际到达时间
-    ,tt2.max_real_arrive_proof_id 一派常规车最晚实际到达车线
-    ,tt2.max_real_arrive_vol 一派常规车最晚实际到达车线包裹量
+#     ,tt2.max_real_arrive_proof_id 一派常规车最晚实际到达车线
+#     ,tt2.max_real_arrive_vol 一派常规车最晚实际到达车线包裹量
     ,tt2.line_1_latest_plan_arrive_time 一派常规车最晚规划到达时间
     ,tt2.max_real_arrive_time_innormal 一派加班车最晚实际到达时间
-    ,tt2.max_real_arrive_innormal_proof_id  一派加班车最晚实际到达车线
-    ,tt2.max_real_arrive_innormal_vol  一派加班车最晚实际到达包裹量
+#     ,tt2.max_real_arrive_innormal_proof_id  一派加班车最晚实际到达车线
+#     ,tt2.max_real_arrive_innormal_vol  一派加班车最晚实际到达包裹量
     ,tt2.max_actual_plan_arrive_time_innormal 一派加班车最晚规划到达时间
 
 

@@ -52,7 +52,7 @@
                 ,fsr.pno
             from fle_dwd.dwd_fle_store_receivable_bill_detail_di fsr
             where
-                fsr.p_date >= '2023-02-01'
+                fsr.p_date >= '2023-01-01'
                 and fsr.state = '0'
                 and fsr.staff_info_id in ('630598','638027','25587','41106','620709','617889','625652','629659','642060','641074','641017')
         ) t
@@ -84,7 +84,7 @@
                         ,pi.ticket_delivery_store_id
                     from fle_dwd.dwd_fle_parcel_info_di pi
                     where
-                        pi.p_date >= '2023-02-01'
+                        pi.p_date >= '2023-01-01'
 --                         and pi.p_date < '2023-07-11'
                 ) pi
         ) a1 on a1.pno = t.pno
@@ -101,7 +101,7 @@
                         ,sa.object_key
                     from fle_dwd.dwd_fle_sys_attachment_di sa
                     where
-                        sa.p_date >= '2023-02-01'
+                        sa.p_date >= '2023-01-01'
 --                         and sa.p_date < '2023-04-01'
                         and sa.oss_bucket_type = 'DELIVERY_CONFIRM'
                 ) sa
@@ -112,7 +112,7 @@
                 *
             from fle_dim.dim_fle_sys_store_da ss
             where
-                ss.p_date = date_sub(`current_date`(), 1)
+                ss.p_date = date_sub(`current_date`(), 2)
         ) s1 on s1.id = a1.ticket_pickup_store_id
     left join
         (
@@ -120,7 +120,7 @@
                 *
             from fle_dim.dim_fle_sys_store_da ss
             where
-                ss.p_date = date_sub(`current_date`(), 1)
+                ss.p_date = date_sub(`current_date`(), 2)
         ) s2 on s2.id = a1.ticket_delivery_store_id
     group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18
     ;

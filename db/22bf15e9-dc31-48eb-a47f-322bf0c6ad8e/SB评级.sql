@@ -12,12 +12,11 @@ with t as
                 (
                     select
                         ad.*
-                        ,ad.attendance_time + ad.BT + ad.CT + ad.BT_Y + ad.AB total
+                        ,ad.attendance_time + ad.BT + ad.BT_Y + ad.AB total
                     from bi_pro.attendance_data_v2 ad
-                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,452,37,16) -- 在职且非待离职
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,452,37,16,451,1497) -- 在职且非待离职,1497 van-feeder
                     where
                         ad.stat_date < '${date}'
-
                 ) ad
             where
                 ad.total = 10
@@ -31,8 +30,8 @@ select
     ,dp.piece_name 片区
     ,dp.region_name 大区
     ,case
-        when hsi2.job_title in (13,110,452) then '快递员'
-        when hsi2.job_title in (37) then '仓管员'
+        when hsi2.job_title in (13,110,452,1497) then '快递员'
+        when hsi2.job_title in (37,451) then '仓管员' -- 451副主管
         when hsi2.job_title in (16) then '主管'
     end 角色
     ,hsi2.job_title
@@ -59,6 +58,23 @@ from
                     ,if(t1.attendance_started_at > date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 1 minute ) , timestampdiff(minute , concat(t1.stat_date, ' ', t1.shift_start), t1.attendance_started_at), 0) late_time
                     ,t1.AB/10 absence_time
                 from t t1
+                where
+                    t1.total = 10
+                    or (t1.total =  5 and t1.leave_time_type = 2)
+
+                union all
+
+                select
+                    t1.*
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , 'y', 'n') late_or_not
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , timestampdiff(minute , date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), t1.attendance_started_at), 0) late_time
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, 'y', 'n' ) early_or_not
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, timestampdiff(second, t1.attendance_end_at, t1.shift_end)/60, 0) early_yime
+                    ,t1.AB/10 absence_time
+                from t t1
+                where
+                    t1.total = 5
+                    and t1.leave_time_type = 1 -- 上午请假
             ) a
         group by 1
     ) st
@@ -84,9 +100,9 @@ with t as
                 (
                     select
                         ad.*
-                        ,ad.attendance_time + ad.BT + ad.CT + ad.BT_Y + ad.AB total
+                        ,ad.attendance_time + ad.BT + ad.BT_Y + ad.AB total
                     from bi_pro.attendance_data_v2 ad
-                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,452,37,16) -- 在职且非待离职
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,452,37,16,451,1497) -- 在职且非待离职
                     where
                         ad.stat_date < '${date}'
 #                         and hsi.hire_date <= date_sub(curdate(), interval 7 day )
@@ -151,8 +167,8 @@ from
                     ,dp.piece_name
                     ,dp.region_name
                     ,case
-                        when hsi2.job_title in (13,110,452) then '快递员'
-                        when hsi2.job_title in (37) then '仓管员'
+                        when hsi2.job_title in (13,110,452,1497) then '快递员'
+                        when hsi2.job_title in (37,451) then '仓管员'
                         when hsi2.job_title in (16) then '主管'
                     end roles
                     ,st.late_num
@@ -181,6 +197,23 @@ from
 #                                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, timestampdiff(second, t1.attendance_end_at, t1.shift_end)/60, 0) early_yime
                                     ,t1.AB/10 absence_time
                                 from t t1
+                                where
+                                    t1.total = 10
+                                    or (t1.total =  5 and t1.leave_time_type = 2)
+
+                                union all
+
+                                select
+                                    t1.*
+                                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , 'y', 'n') late_or_not
+                                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , timestampdiff(minute , date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), t1.attendance_started_at), 0) late_time
+                #                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, 'y', 'n' ) early_or_not
+                #                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, timestampdiff(second, t1.attendance_end_at, t1.shift_end)/60, 0) early_yime
+                                    ,t1.AB/10 absence_time
+                                from t t1
+                                where
+                                    t1.total = 5
+                                    and t1.leave_time_type = 1 -- 上午请假
                             ) a
                         group by 1
                     ) st
@@ -198,9 +231,9 @@ left join
             ,smr.name region_name
             ,ss2.category store_category
             ,ss2.opening_at
-            ,count(if(hsi3.job_title in (13,110,452,37,16), hsi3.staff_info_id, null)) on_emp_cnt
-            ,count(if(hsi3.job_title in (13,110,452), hsi3.staff_info_id, null)) on_dri_cnt
-            ,count(if(hsi3.job_title in (37), hsi3.staff_info_id, null)) on_dco_cnt
+            ,count(if(hsi3.job_title in (13,110,452,37,16,1497,451), hsi3.staff_info_id, null)) on_emp_cnt
+            ,count(if(hsi3.job_title in (13,110,452,1497), hsi3.staff_info_id, null)) on_dri_cnt
+            ,count(if(hsi3.job_title in (37,451), hsi3.staff_info_id, null)) on_dco_cnt
             ,count(if(hsi3.job_title in (16), hsi3.staff_info_id, null)) on_dcs_cnt
         from bi_pro.hr_staff_transfer  hsi3
         left join fle_staging.sys_store ss2 on ss2.id = hsi3.store_id
@@ -278,7 +311,6 @@ t as
 
     where case when pr1.pno is not null then 'N' when pr2.pno is not null then 'N' when ds1.pno is not null  then 'N'  else 'Y' end = 'Y'
 )
-
 select
     a.stat_date 日期
     ,a.store_id 网点ID
@@ -430,6 +462,10 @@ with t as
             when a2.avg_code_staff >= 3 and a2.avg_code_staff < 4 then 'C'
             when a2.avg_code_staff >= 4 then 'D'
         end 评级
+        ,case
+            when sts.store_id is not null then '乡编号'
+            when stf.store_id is not null  then '围栏'
+        end 锁区判断参考
         ,a2.code_num
         ,a2.staff_code_num
         ,a2.staff_num
@@ -438,15 +474,15 @@ with t as
         (
             select
                 a1.store_id
-                ,count(distinct if(a1.job_title in (13,110,1 ), a1.staff_code, null)) staff_code_num
-                ,count(distinct if(a1.job_title in (13,110,452), a1.third_sorting_code, null)) code_num
-                ,count(distinct if(a1.job_title in (13,110,452), a1.staff_info_id, null)) staff_num
-                ,count(distinct if(a1.job_title in (13,110,452), a1.staff_code, null)) fin_staff_code_num
-                ,count(distinct if(a1.job_title in (13,110,452), a1.staff_code, null))/ count(distinct if(a1.job_title in (13,110,452), a1.third_sorting_code, null)) avg_code_staff
-                ,count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,452), a1.staff_code, null))/count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,452), a1.staff_info_id, null)) self_avg_staff_code
-                ,count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,452), a1.staff_code, null))/count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,452), a1.staff_info_id, null)) other_avg_staff_code
-                ,count(distinct if(a1.state = 5 and a1.is_self = 'y' and a1.job_title in (13,110,452), a1.staff_code, null))/count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,452), a1.staff_info_id, null)) self_avg_staff_del_code
-                ,count(distinct if(a1.state = 5 and a1.is_self = 'n' and a1.job_title in (13,110,452), a1.staff_code, null))/count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,452), a1.staff_info_id, null)) other_avg_staff_del_code
+                ,count(distinct if(a1.job_title in (13,110,452,1497), a1.staff_code, null)) staff_code_num
+                ,count(distinct if(a1.job_title in (13,110,452,1497), a1.third_sorting_code, null)) code_num
+                ,count(distinct if(a1.job_title in (13,110,452,1497), a1.staff_info_id, null)) staff_num
+                ,count(distinct if(a1.job_title in (13,110,452,1497), a1.staff_code, null)) fin_staff_code_num
+                ,count(distinct if(a1.job_title in (13,110,452,1497), a1.staff_code, null))/ count(distinct if(a1.job_title in (13,110,452), a1.third_sorting_code, null)) avg_code_staff
+                ,count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,452,1497), a1.staff_code, null))/count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,452,1497), a1.staff_info_id, null)) self_avg_staff_code
+                ,count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,452,1497), a1.staff_code, null))/count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,452,1497), a1.staff_info_id, null)) other_avg_staff_code
+                ,count(distinct if(a1.state = 5 and a1.is_self = 'y' and a1.job_title in (13,110,452,1497), a1.staff_code, null))/count(distinct if(a1.is_self = 'y' and a1.job_title in (13,110,452,1497), a1.staff_info_id, null)) self_avg_staff_del_code
+                ,count(distinct if(a1.state = 5 and a1.is_self = 'n' and a1.job_title in (13,110,452,1497), a1.staff_code, null))/count(distinct if(a1.is_self = 'n' and a1.job_title in (13,110,452,1497), a1.staff_info_id, null)) other_avg_staff_del_code
             from
                 (
                 select
@@ -482,7 +518,7 @@ left join
             hr.formal = 1
             and hr.is_sub_staff= 0
             and hr.state = 1
-            and hr.job_title in (13,110,452)
+            and hr.job_title in (13,110,452,1497)
         group by 1
     ) emp_cnt on emp_cnt.sys_store_id = a2.store_id
 # left join
@@ -507,13 +543,13 @@ left join
     (
         select
             t1.store_id
-            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.formal = 1  and t1.job_title in (13,110,452), t1.staff_info_id, null))  self_staff_num
-            ,count(distinct if(t1.job_title in (13,110,452) and ( t1.hr_store_id != t1.store_id or t1.formal != 1  ), t1.staff_info_id, null )) other_staff_num
-            ,count(distinct if(t1.job_title in (13,110,452), t1.pno, null))/count(distinct if(t1.job_title in (13,110,452),  t1.staff_info_id, null)) avg_scan_num
-            ,count(distinct if(t1.job_title in (13,110,452) and t1.state = 5, t1.pno, null))/count(distinct if(t1.job_title in (13,110,452) and t1.state = 5,  t1.staff_info_id, null)) avg_del_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.formal = 1  and t1.job_title in (13,110,452,1497), t1.staff_info_id, null))  self_staff_num
+            ,count(distinct if(t1.job_title in (13,110,452,1497) and ( t1.hr_store_id != t1.store_id or t1.formal != 1  ), t1.staff_info_id, null )) other_staff_num
+            ,count(distinct if(t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.job_title in (13,110,452,1497),  t1.staff_info_id, null)) avg_scan_num
+            ,count(distinct if(t1.job_title in (13,110,452,1497) and t1.state = 5, t1.pno, null))/count(distinct if(t1.job_title in (13,110,452,1497) and t1.state = 5,  t1.staff_info_id, null)) avg_del_num
 
-            ,count(distinct if(t1.job_title in (37,16), t1.staff_info_id, null)) dco_dcs_num
-            ,count(distinct if(t1.job_title in (37,16), t1.pno, null))/count(distinct if(t1.job_title in (37,16), t1.staff_info_id, null)) dco_dcs_avg_scan
+            ,count(distinct if(t1.job_title in (37,16,451), t1.staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.job_title in (37,16,451), t1.pno, null))/count(distinct if(t1.job_title in (37,16,451), t1.staff_info_id, null)) dco_dcs_avg_scan
         from t t1
         group by 1
     ) a3  on a3.store_id = a2.store_id
@@ -542,6 +578,26 @@ left join
             ) a
         group by 1
     ) sdb on sdb.store_id = a2.store_id
+left join
+    (
+        select
+            sts.store_id
+            ,count(sts.sorting_code) code_num
+        from fle_staging.sys_three_sorting sts
+        where
+            sts.deleted = 0
+        group by 1
+    )  sts on sts.store_id = a2.store_id
+left join
+    (
+        select
+            stf.store_id
+            ,count(sorting_fence_code) code
+        from fle_staging.sys_three_fence_sorting stf
+        where
+            stf.deleted = 0
+        group by 1
+    ) stf on stf.store_id = a2.store_id
 where
     ss.category in (1,10)
     and sdb.store_id is not null
@@ -561,9 +617,11 @@ with t as
         ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
         ,pi.ticket_delivery_staff_info_id
         ,pi.state
+        ,hs.is_sub_staff
         ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
         ,coalesce(hsi.job_title, hs.job_title) job_title
         ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
         ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
         ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
     from dwm.dwd_th_dc_should_be_delivery ds
@@ -571,6 +629,7 @@ with t as
     left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
     left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '${date}'
     left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '${date}')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
 #     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
     where
         pi.state = 5
@@ -594,9 +653,14 @@ select
     ,coalesce(del_cou.self_staff_num, 0) 参与妥投快递员_自有
     ,coalesce(del_cou.other_staff_num, 0) 参与妥投快递员_外协支援
     ,coalesce(del_cou.dco_dcs_num, 0) 参与妥投_仓管主管
-
     ,coalesce(del_cou.self_effect, 0) 当日人效_自有
     ,coalesce(del_cou.other_effect, 0) 当日人效_外协支援
+
+    ,coalesce(del_cou.other_staff_apply_num, 0) 参与妥投快递员_外协支援_申请
+    ,coalesce(del_cou.other_staff_apply_effect, 0) 当日人效_外协支援_申请
+    ,coalesce(del_cou.other_staff_noapply_num, 0) 参与妥投快递员_外协支援_未申请
+    ,coalesce(del_cou.other_staff_noapply_effect, 0) 当日人效_外协支援_未申请
+
     ,coalesce(del_cou.dco_dcs_effect, 0) 仓管主管人效
     ,coalesce(del_hour.avg_del_hour, 0) 派件小时数
 from
@@ -623,7 +687,7 @@ left join
         where
             hr.formal = 1
             and hr.state = 1
-            and hr.job_title in (13,110,452)
+            and hr.job_title in (13,110,452,1497)
 #             and hr.stat_date = '${date}'
         group by 1
     ) cour on cour.sys_store_id = dp.store_id
@@ -650,13 +714,16 @@ left join
     (
         select
             t1.store_id
-            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452) and t1.formal = 1, t1.ticket_delivery_staff_info_id, null)) self_staff_num
-            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452) and t1.formal = 1, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452) and t1.formal = 1, t1.ticket_delivery_staff_info_id, null)) self_effect
-            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1) and t1.job_title in (13,110,452), t1.ticket_delivery_staff_info_id, null)) other_staff_num
-            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1) and t1.job_title in (13,110,452), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1) and t1.job_title in (13,110,452), t1.ticket_delivery_staff_info_id, null)) other_effect
-
-            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
-            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
         from t t1
         group by 1
     ) del_cou on del_cou.store_id = dp.store_id
@@ -714,5 +781,5 @@ from
             stf.deleted = 0
     ) a
 where
-    a.store_id in ('TH65010808','TH01180135','TH01410223','TH01080144','TH01390232','TH19070136','TH02030523','TH01010127','TH04060232','TH67010525','TH04060162','TH02030432','TH68040618','TH20070230','TH01050214','TH67010432','TH01470132','TH02010234','TH01220311','TH01420113','TH01430144','TH02010631','TH02030329','TH02030132')
+    a.store_id in ('TH02030329','TH01430144','TH04060162','TH01050214','TH67010432','TH02010631','TH01420113','TH01410223','TH68010290','TH01080144','TH01470132','TH04060232','TH02030523','TH01010127','TH67010525','TH01220311','TH02010234','TH02030132','TH65010808','TH01180135','TH19070136','TH01390232','TH68040618','TH20070230','TH02030432')
 group by 1
