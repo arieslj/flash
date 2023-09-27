@@ -416,8 +416,8 @@ with t as
 #     left join ph_bi.hr_staff_transfer hst  on hst.staff_info_id = pr.staff_info_id
     where
         ds.p_date = '${date}'
-        and pr.routed_at >= date_sub('${date}', interval 8 hour )
-        and pr.routed_at < date_add('${date}', interval 16 hour)
+        and pr.routed_at >= date_sub('${date}', interval 7 hour )
+        and pr.routed_at < date_add('${date}', interval 17 hour)
         and ds.should_delevry_type != '非当日应派'
 )
     select
@@ -636,8 +636,8 @@ with t as
 #         and pi.finished_at >= '2023-08-01 16:00:00'
 #         and pi.finished_at < '2023-08-02 16:00:00'
         and ds.p_date = '${date}'
-        and pi.finished_at >= date_sub('${date}', interval 8 hour )
-        and pi.finished_at < date_add('${date}', interval 16 hour)
+        and pi.finished_at >= date_sub('${date}', interval 7 hour )
+        and pi.finished_at < date_add('${date}', interval 17 hour)
         and ds.should_delevry_type != '非当日应派'
 #         and ds.dst_store_id = 'TH16020303'
 )
@@ -783,3 +783,55 @@ from
 where
     a.store_id in ('TH02030329','TH01430144','TH04060162','TH01050214','TH67010432','TH02010631','TH01420113','TH01410223','TH68010290','TH01080144','TH01470132','TH04060232','TH02030523','TH01010127','TH67010525','TH01220311','TH02010234','TH02030132','TH65010808','TH01180135','TH19070136','TH01390232','TH68040618','TH20070230','TH02030432')
 group by 1
+
+
+;
+
+
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '${date}'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '${date}')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '${date}'
+        and pi.finished_at >= date_sub('${date}', interval 8 hour )
+        and pi.finished_at < date_add('${date}', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH02030214'
+)
+select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1

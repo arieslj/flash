@@ -160,6 +160,7 @@ left join
         select
             sdb.store_id
             ,count(distinct sdb.delivery_code) code_num
+            ,count(distinct sdb.district_code) barangay_num
         from ph_staging.store_delivery_barangay_group_info sdb
         where
             sdb.deleted = 0
@@ -169,3 +170,97 @@ left join
 where
     dr.store_category = 1
     and sdb.store_id is not null
+
+;
+
+
+
+
+
+
+
+
+with t as
+(
+    select
+        ds.dst_store_id as store_id
+        ,pr.pno
+        ,hst.sys_store_id hr_store_id
+        ,hst.formal
+        ,pr.staff_info_id
+        ,pi.state
+        ,hst.job_title
+    from dwm.dwd_ph_dc_should_be_delivery ds
+    left join ph_staging.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'DELIVERY_TICKET_CREATION_SCAN'
+    left join ph_staging.parcel_info pi on pi.pno = pr.pno
+    left join ph_bi.hr_staff_info hst on hst.staff_info_id = pr.staff_info_id
+#     left join ph_bi.hr_staff_transfer hst  on hst.staff_info_id = pr.staff_info_id
+    where
+        ds.p_date = '${date}'
+        and pr.routed_at >= date_sub('${date}', interval 8 hour )
+        and pr.routed_at < date_add('${date}', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+#         and hst.stat_date = '${date}'
+#         and ds.dst_store_id in ('PH35300N06', 'PH35172804')
+)
+
+select
+    a1.store_id
+    ,ss.name 网点
+    ,ss2.staff_count 交接员工数
+    ,sdb.code_num 网点现有三段码数
+    ,if(ss2.staff_count > sdb.code_num, '人比码多', '码比人多') 人码对比
+    ,sdb.barangay_num 网点绑定三段码barangay数
+    ,a1.third_sorting_code
+#     ,if(a1.is_self = 'y', '本网点', '非本网点') 员工归属
+#     ,hjt.job_name 岗位
+    ,count(distinct a1.staff_info_id) 交接三段码数
+    ,group_concat(distinct a1.staff_info_id) 交接三段码
+from
+    (
+        select
+            a1.*
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.pno
+                    ,t1.staff_info_id
+                    ,if(t1.formal = 1 and t1.store_id = t1.hr_store_id, 'y', 'n') is_self
+                    ,t1.state
+                    ,t1.job_title
+                    ,ps.third_sorting_code
+                    ,rank() over (partition by t1.pno order by ps.created_at desc) rk
+                from t t1
+                join ph_drds.parcel_sorting_code_info ps on  ps.pno = t1.pno and ps.dst_store_id = t1.store_id and ps.third_sorting_code != 'XX'
+            ) a1
+        where
+            a1.rk = 1
+    ) a1
+left join ph_staging.sys_store ss on ss.id = a1.store_id
+left join ph_bi.hr_job_title hjt on hjt.id = a1.job_title
+left join
+    (
+        select
+            sdb.store_id
+            ,count(distinct sdb.delivery_code) code_num
+            ,count(distinct sdb.district_code) barangay_num
+        from ph_staging.store_delivery_barangay_group_info sdb
+        where
+            sdb.deleted = 0
+            and sdb.delivery_code != 'XX'
+        group by 1
+    ) sdb on sdb.store_id = a1.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct t1.staff_info_id) staff_count
+        from t t1
+        where
+            t1.job_title in (13,110,1000)
+        group by 1
+    ) ss2 on ss2.store_id = a1.store_id
+where
+    a1.job_title in (13,110,1000) -- 快递员
+group by 1,2,3,4,5,6,7

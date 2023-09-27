@@ -54104,3 +54104,13486 @@ from
     ) fn
 group by 1,2,3,4
 order by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    a.*
+from
+    (
+        select
+            a1.pick_date 揽件日期
+            ,a1.client_id 客户ID
+            ,a4.客户名称
+            ,a4.是否冻结过
+            ,a4.当前账号开通状态
+            ,a4.账号创建日期
+            ,a4.归属部门
+            ,a4.归属网点
+            ,ss.name  正向揽件网点
+            ,a4.销售代表
+            ,a4.项目经理
+            ,a1.当日总包裹
+            ,a1.当日COD包裹
+            ,a1.当日COD包裹率
+            ,a1.拒收包裹量
+            ,a1.拒收率
+            ,a1.未购买量
+            ,a1.未购买率
+            ,a1.COD包裹退件量
+            ,a1.COD包裹退件率
+            ,a1.COD包裹重量1_2kg
+            ,a1.COD包裹重量1_2kg占比
+            ,a1.COD包裹重量3_5kg
+            ,a1.COD包裹重量5以上
+            ,a1.包裹最终状态_派送中
+            ,a1.包裹最终状态_已滞留
+            ,a1.包裹最终状态_已签收
+            ,a1.包裹最终状态_疑难件处理中
+            ,a1.包裹最终状态_已退件
+            ,a1.平均COD金额
+            ,a2.rate_d 占比最高的商品类型占比率
+            ,case a2.article_category
+                when 0 then '文件/document'
+                when 1 then '干燥食品/dry food'
+                when 2 then '日用品/daily necessities'
+                when 3 then '数码产品/digital product'
+                when 4 then '衣物/clothes'
+                when 5 then '书刊/Books'
+                when 6 then '汽车配件/auto parts'
+                when 7 then '鞋包/shoe bag'
+                when 8 then '体育器材/sports equipment'
+                when 9 then '化妆品/cosmetics'
+                when 10 then '家居用具/Houseware'
+                when 11 then '水果/fruit'
+                when 99 then '其它/other'
+            end 占比最高的商品类型
+        from
+            (
+                select
+                    t1.pick_date
+                    ,t1.client_id
+                    ,t1.ticket_pickup_store_id
+                    ,count(t1.pno) 当日总包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                    ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                from t  t1
+                group by 1,2,3
+            ) a1
+        left join
+            (
+                select
+                    a3.pick_date
+                    ,a3.client_id
+                    ,a3.article_category
+                    ,a3.pno_num
+                    ,a2.pno_num total
+                    ,a3.pno_num/a2.pno_num rate_d
+                    ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                from
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,t1.article_category
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2,3
+                    ) a3
+                left join
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2
+                    ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+            ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+        left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+        left join
+            (
+                select
+                    cli.client_id
+                    ,kp.name 客户名称
+                    ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,sd.name 归属部门
+                    ,ss2.name 归属网点
+                    ,kp.staff_info_name 销售代表
+                    ,si.name 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.ka_profile kp
+                join
+                    (
+                        select
+                            t1.client_id
+                        from t t1
+                        group by 1
+                    ) cli on cli.client_id = kp.id
+                left join fle_staging.sys_department sd on sd.id = kp.department_id
+                left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                group by 1
+
+                union all
+
+                select
+                    ui.id client_id
+                    ,ui.name 客户名称
+                    ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,'' 归属部门
+                    ,'' 归属网点
+                    ,'' 销售代表
+                    ,'' 项目经理
+                    ,'' 是否冻结过
+                from fle_staging.user_info ui
+            ) a4 on a4.client_id = a1.client_id
+    ) a
+where
+    a.当日COD包裹 < 300
+    and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 > 0.2);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    a.*
+from
+    (
+        select
+            a1.pick_date 揽件日期
+            ,a1.client_id 客户ID
+            ,a4.客户名称
+            ,a4.是否冻结过
+            ,a4.当前账号开通状态
+            ,a4.账号创建日期
+            ,a4.归属部门
+            ,a4.归属网点
+            ,ss.name  正向揽件网点
+            ,a4.销售代表
+            ,a4.项目经理
+            ,a1.当日总包裹
+            ,a1.当日COD包裹
+            ,a1.当日COD包裹率
+            ,a1.拒收包裹量
+            ,a1.拒收率
+            ,a1.未购买量
+            ,a1.未购买率
+            ,a1.COD包裹退件量
+            ,a1.COD包裹退件率
+            ,a1.COD包裹重量1_2kg
+            ,a1.COD包裹重量1_2kg占比
+            ,a1.COD包裹重量3_5kg
+            ,a1.COD包裹重量5以上
+            ,a1.包裹最终状态_派送中
+            ,a1.包裹最终状态_已滞留
+            ,a1.包裹最终状态_已签收
+            ,a1.包裹最终状态_疑难件处理中
+            ,a1.包裹最终状态_已退件
+            ,a1.平均COD金额
+            ,a2.rate_d 占比最高的商品类型占比率
+            ,case a2.article_category
+                when 0 then '文件/document'
+                when 1 then '干燥食品/dry food'
+                when 2 then '日用品/daily necessities'
+                when 3 then '数码产品/digital product'
+                when 4 then '衣物/clothes'
+                when 5 then '书刊/Books'
+                when 6 then '汽车配件/auto parts'
+                when 7 then '鞋包/shoe bag'
+                when 8 then '体育器材/sports equipment'
+                when 9 then '化妆品/cosmetics'
+                when 10 then '家居用具/Houseware'
+                when 11 then '水果/fruit'
+                when 99 then '其它/other'
+            end 占比最高的商品类型
+        from
+            (
+                select
+                    t1.pick_date
+                    ,t1.client_id
+                    ,t1.ticket_pickup_store_id
+                    ,count(t1.pno) 当日总包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                    ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                from t  t1
+                group by 1,2,3
+            ) a1
+        left join
+            (
+                select
+                    a3.pick_date
+                    ,a3.client_id
+                    ,a3.article_category
+                    ,a3.pno_num
+                    ,a2.pno_num total
+                    ,a3.pno_num/a2.pno_num rate_d
+                    ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                from
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,t1.article_category
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2,3
+                    ) a3
+                left join
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2
+                    ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+            ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+        left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+        left join
+            (
+                select
+                    cli.client_id
+                    ,kp.name 客户名称
+                    ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,sd.name 归属部门
+                    ,ss2.name 归属网点
+                    ,kp.staff_info_name 销售代表
+                    ,si.name 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.ka_profile kp
+                join
+                    (
+                        select
+                            t1.client_id
+                        from t t1
+                        group by 1
+                    ) cli on cli.client_id = kp.id
+                left join fle_staging.sys_department sd on sd.id = kp.department_id
+                left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                group by 1
+
+                union all
+
+                select
+                    ui.id client_id
+                    ,ui.name 客户名称
+                    ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,'' 归属部门
+                    ,'' 归属网点
+                    ,'' 销售代表
+                    ,'' 项目经理
+                    ,'' 是否冻结过
+                from fle_staging.user_info ui
+            ) a4 on a4.client_id = a1.client_id
+    ) a
+where
+    a.当日COD包裹 >= 300
+    and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 > 0.2);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    pi.pno
+    ,pssn.store_name
+    ,count(pssn.store_id) hub_count
+from fle_staging.parcel_info pi
+left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = pi.pno
+where
+    pssn.valid_store_order is not null
+    and pssn.store_category in (8,12)
+    and pi.state not in (5,7,8,9)
+    and pi.created_at >= '2023-07-31 16:00:00'
+group by 1,2
+having count(pssn.store_id) >= 2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pssn.store_id
+        ,pi.dst_store_id
+    from fle_staging.parcel_info pi
+    left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = pi.pno
+    where
+        pssn.shipped_at >= date_sub(curdate(), interval 1 day)
+        and pssn.shipped_at < curdate()
+        and pssn.store_category in (1,10)
+        and pssn.next_store_category in (8,12)
+        and pssn.store_id != pi.ticket_pickup_store_id
+        and pi.state not in (5,7,8,9)
+)
+select
+    a.pno
+    ,a.网点 多次到达的网点
+    ,a.目的地网点 包裹目的地网点
+    ,a.van_arrived_at 网点第一次到港时间
+    ,a.first_valid_routed_at 网点第一次有效路由时间
+from
+    (
+        select
+            pssn.pno
+            ,pssn.store_name 网点
+            ,ss.name  目的地网点
+            ,pssn.van_arrived_at
+            ,pssn.first_valid_routed_at
+            ,row_number() over (partition by pssn.pno order by pssn.created_at desc ) rk1
+            ,count(pssn.pno) over(partition by pssn.pno) store_count
+        from dw_dmd.parcel_store_stage_new pssn
+        join t t1 on t1.pno = pssn.pno and t1.store_id = pssn.store_id
+        left join fle_staging.sys_store ss on ss.id = t1.dst_store_id
+        where
+            pssn.valid_store_order is not null
+    ) a
+where
+    a.rk1 = 1
+    and store_count >= 2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pssn.store_id
+        ,pssn.next_store_id
+        ,pi.dst_store_id
+    from fle_staging.parcel_info pi
+    left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = pi.pno
+    where
+        pssn.shipped_at >= date_sub(curdate(), interval 1 day)
+        and pssn.shipped_at < curdate()
+        and pssn.store_category in (1,10)
+        and pssn.next_store_category in (8,12)
+        and pssn.store_id != pi.ticket_pickup_store_id
+        and pi.state not in (5,7,8,9)
+)
+# select
+#     a.pno
+#     ,a.网点 多次到达的网点
+#     ,a.目的地网点 包裹目的地网点
+#     ,a.van_arrived_at 网点第一次到港时间
+#     ,a.first_valid_routed_at 网点第一次有效路由时间
+# from
+#     (
+        select
+            pssn.pno
+            ,pssn.store_name 网点
+            ,ss.name  目的地网点
+            ,pssn.van_arrived_at
+            ,pssn.first_valid_routed_at
+            ,row_number() over (partition by pssn.pno order by pssn.created_at desc ) rk1
+        from dw_dmd.parcel_store_stage_new pssn
+        join t t1 on t1.pno = pssn.pno and t1.store_id = pssn.next_store_id and t1.next_store_id = pssn.store_id
+        left join fle_staging.sys_store ss on ss.id = t1.dst_store_id
+        where
+            pssn.valid_store_order is not null;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    a.*
+from
+    (
+        select
+            a1.pick_date 揽件日期
+            ,a1.client_id 客户ID
+            ,a4.客户名称
+            ,a1.当日COD包裹
+            ,a1.当日COD包裹率
+            ,a1.拒收包裹量
+            ,a1.拒收率
+            ,a1.未购买量
+            ,a1.未购买率
+            ,a1.COD包裹退件量
+            ,a1.包裹最终状态_派送中
+            ,a1.包裹最终状态_已滞留
+            ,a1.包裹最终状态_已签收
+            ,a1.包裹最终状态_疑难件处理中
+            ,a1.包裹最终状态_已退件
+        from
+            (
+                select
+                    t1.pick_date
+                    ,t1.client_id
+                    ,t1.ticket_pickup_store_id
+                    ,count(t1.pno) 当日总包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                    ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                from t  t1
+                group by 1,2,3
+            ) a1
+        left join
+            (
+                select
+                    a3.pick_date
+                    ,a3.client_id
+                    ,a3.article_category
+                    ,a3.pno_num
+                    ,a2.pno_num total
+                    ,a3.pno_num/a2.pno_num rate_d
+                    ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                from
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,t1.article_category
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2,3
+                    ) a3
+                left join
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2
+                    ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+            ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+        left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+        left join
+            (
+                select
+                    cli.client_id
+                    ,kp.name 客户名称
+                    ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,sd.name 归属部门
+                    ,ss2.name 归属网点
+                    ,kp.staff_info_name 销售代表
+                    ,si.name 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.ka_profile kp
+                join
+                    (
+                        select
+                            t1.client_id
+                        from t t1
+                        group by 1
+                    ) cli on cli.client_id = kp.id
+                left join fle_staging.sys_department sd on sd.id = kp.department_id
+                left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                group by 1
+
+                union all
+
+                select
+                    ui.id client_id
+                    ,ui.name 客户名称
+                    ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,'' 归属部门
+                    ,'' 归属网点
+                    ,'' 销售代表
+                    ,'' 项目经理
+                    ,'' 是否冻结过
+                from fle_staging.user_info ui
+            ) a4 on a4.client_id = a1.client_id
+    ) a
+where
+    a.当日COD包裹 >= 300
+    and a.拒收率 >= 0.3
+    and a.未购买率 >= 0.5
+    and a.揽件日期 between '2023-06-01' and '2023-09-07';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    a.*
+from
+    (
+        select
+            a1.pick_date 揽件日期
+            ,a1.client_id 客户ID
+            ,a4.客户名称
+            ,a4.是否冻结过
+            ,a4.当前账号开通状态
+            ,a4.账号创建日期
+            ,a4.归属部门
+            ,a4.归属网点
+            ,ss.name  正向揽件网点
+            ,a4.销售代表
+            ,a4.项目经理
+            ,a1.当日总包裹
+            ,a1.当日COD包裹
+            ,a1.当日COD包裹率
+            ,a1.拒收包裹量
+            ,a1.拒收率
+            ,a1.未购买量
+            ,a1.未购买率
+            ,a1.COD包裹退件量
+            ,a1.COD包裹退件率
+            ,a1.COD包裹重量1_2kg
+            ,a1.COD包裹重量1_2kg占比
+            ,a1.COD包裹重量3_5kg
+            ,a1.COD包裹重量5以上
+            ,a1.包裹最终状态_派送中
+            ,a1.包裹最终状态_已滞留
+            ,a1.包裹最终状态_已签收
+            ,a1.包裹最终状态_疑难件处理中
+            ,a1.包裹最终状态_已退件
+            ,a1.平均COD金额
+            ,a2.rate_d 占比最高的商品类型占比率
+            ,case a2.article_category
+                when 0 then '文件/document'
+                when 1 then '干燥食品/dry food'
+                when 2 then '日用品/daily necessities'
+                when 3 then '数码产品/digital product'
+                when 4 then '衣物/clothes'
+                when 5 then '书刊/Books'
+                when 6 then '汽车配件/auto parts'
+                when 7 then '鞋包/shoe bag'
+                when 8 then '体育器材/sports equipment'
+                when 9 then '化妆品/cosmetics'
+                when 10 then '家居用具/Houseware'
+                when 11 then '水果/fruit'
+                when 99 then '其它/other'
+            end 占比最高的商品类型
+        from
+            (
+                select
+                    t1.pick_date
+                    ,t1.client_id
+                    ,t1.ticket_pickup_store_id
+                    ,count(t1.pno) 当日总包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                    ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                from t  t1
+                group by 1,2,3
+            ) a1
+        left join
+            (
+                select
+                    a3.pick_date
+                    ,a3.client_id
+                    ,a3.article_category
+                    ,a3.pno_num
+                    ,a2.pno_num total
+                    ,a3.pno_num/a2.pno_num rate_d
+                    ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                from
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,t1.article_category
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2,3
+                    ) a3
+                left join
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2
+                    ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+            ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+        left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+        left join
+            (
+                select
+                    cli.client_id
+                    ,kp.name 客户名称
+                    ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,sd.name 归属部门
+                    ,ss2.name 归属网点
+                    ,kp.staff_info_name 销售代表
+                    ,si.name 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.ka_profile kp
+                join
+                    (
+                        select
+                            t1.client_id
+                        from t t1
+                        group by 1
+                    ) cli on cli.client_id = kp.id
+                left join fle_staging.sys_department sd on sd.id = kp.department_id
+                left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                group by 1
+
+                union all
+
+                select
+                    ui.id client_id
+                    ,ui.name 客户名称
+                    ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,'' 归属部门
+                    ,'' 归属网点
+                    ,'' 销售代表
+                    ,'' 项目经理
+                    ,'' 是否冻结过
+                from fle_staging.user_info ui
+            ) a4 on a4.client_id = a1.client_id
+    ) a
+where
+    a.当日COD包裹 >= 300
+    and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2);
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    a.*
+from
+    (
+        select
+            a1.pick_date 揽件日期
+            ,a1.client_id 客户ID
+            ,a4.客户名称
+            ,a4.是否冻结过
+            ,a4.当前账号开通状态
+            ,a4.账号创建日期
+            ,a4.归属部门
+            ,a4.归属网点
+            ,ss.name  正向揽件网点
+            ,a4.销售代表
+            ,a4.项目经理
+            ,a1.当日总包裹
+            ,a1.当日COD包裹
+            ,a1.当日COD包裹率
+            ,a1.拒收包裹量
+            ,a1.拒收率
+            ,a1.未购买量
+            ,a1.未购买率
+            ,a1.COD包裹退件量
+            ,a1.COD包裹退件率
+            ,a1.COD包裹重量1_2kg
+            ,a1.COD包裹重量1_2kg占比
+            ,a1.COD包裹重量3_5kg
+            ,a1.COD包裹重量5以上
+            ,a1.包裹最终状态_派送中
+            ,a1.包裹最终状态_已滞留
+            ,a1.包裹最终状态_已签收
+            ,a1.包裹最终状态_疑难件处理中
+            ,a1.包裹最终状态_已退件
+            ,a1.平均COD金额
+            ,a2.rate_d 占比最高的商品类型占比率
+            ,case a2.article_category
+                when 0 then '文件/document'
+                when 1 then '干燥食品/dry food'
+                when 2 then '日用品/daily necessities'
+                when 3 then '数码产品/digital product'
+                when 4 then '衣物/clothes'
+                when 5 then '书刊/Books'
+                when 6 then '汽车配件/auto parts'
+                when 7 then '鞋包/shoe bag'
+                when 8 then '体育器材/sports equipment'
+                when 9 then '化妆品/cosmetics'
+                when 10 then '家居用具/Houseware'
+                when 11 then '水果/fruit'
+                when 99 then '其它/other'
+            end 占比最高的商品类型
+        from
+            (
+                select
+                    t1.pick_date
+                    ,t1.client_id
+                    ,t1.ticket_pickup_store_id
+                    ,count(t1.pno) 当日总包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                    ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                from t  t1
+                group by 1,2,3
+            ) a1
+        left join
+            (
+                select
+                    a3.pick_date
+                    ,a3.client_id
+                    ,a3.article_category
+                    ,a3.pno_num
+                    ,a2.pno_num total
+                    ,a3.pno_num/a2.pno_num rate_d
+                    ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                from
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,t1.article_category
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2,3
+                    ) a3
+                left join
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2
+                    ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+            ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+        left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+        left join
+            (
+                select
+                    cli.client_id
+                    ,kp.name 客户名称
+                    ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,sd.name 归属部门
+                    ,ss2.name 归属网点
+                    ,kp.staff_info_name 销售代表
+                    ,si.name 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.ka_profile kp
+                join
+                    (
+                        select
+                            t1.client_id
+                        from t t1
+                        group by 1
+                    ) cli on cli.client_id = kp.id
+                left join fle_staging.sys_department sd on sd.id = kp.department_id
+                left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                group by 1
+
+                union all
+
+                select
+                    ui.id client_id
+                    ,ui.name 客户名称
+                    ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,'' 归属部门
+                    ,'' 归属网点
+                    ,'' 销售代表
+                    ,'' 项目经理
+                    ,'' 是否冻结过
+                from fle_staging.user_info ui
+            ) a4 on a4.client_id = a1.client_id
+    ) a
+where
+    a.当日COD包裹 >= 300
+    and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+    and a.揽件日期 between '2023-06-01' and '2023-09-07';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        *
+    from
+        (
+            select
+                ad.*
+                ,row_number() over (partition by ad.staff_info_id order by ad.stat_date desc) rk
+            from
+                (
+                    select
+                        ad.*
+                        ,ad.attendance_time + ad.BT + ad.BT_Y + ad.AB total
+                    from bi_pro.attendance_data_v2 ad
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,452,37,16,451,1497) -- 在职且非待离职,1497 van-feeder
+                    where
+                        ad.stat_date < '2023-09-14'
+                ) ad
+            where
+                ad.total = 10
+        ) ad
+    where
+        ad.rk < 8
+)
+select
+    st.staff_info_id 工号
+    ,if(hsi2.sys_store_id = '-1', 'Head office', dp.store_name) 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,case
+        when hsi2.job_title in (13,110,452,1497) then '快递员'
+        when hsi2.job_title in (37,451) then '仓管员' -- 451副主管
+        when hsi2.job_title in (16) then '主管'
+    end 角色
+    ,st.stat_date 迟到日期
+    ,st.late_time 当日迟到分钟
+    ,count(st.stat_date) over (partition by st.staff_info_id) 近7应出勤迟到次数
+from
+    (
+        select
+            a.staff_info_id
+            ,a.stat_date
+            ,a.late_time
+#             ,count(if(a.late_or_not = 'y' ,a.stat_date, null)) late_num
+#             ,sum(if(a.late_or_not = 'y', a.late_time, 0)) late_time_sum
+#             ,sum(a.absence_time) absence_sum
+        from
+            (
+                select
+                    t1.*
+                    ,if(t1.attendance_started_at > date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 1 minute ) , 'y', 'n') late_or_not
+                    ,if(t1.attendance_started_at > date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 1 minute ) , timestampdiff(minute , concat(t1.stat_date, ' ', t1.shift_start), t1.attendance_started_at), 0) late_time
+                    ,t1.AB/10 absence_time
+                from t t1
+                where
+                    t1.total = 10
+                    or (t1.total =  5 and t1.leave_time_type = 2)
+
+                union all
+
+                select
+                    t1.*
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , 'y', 'n') late_or_not
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , timestampdiff(minute , date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), t1.attendance_started_at), 0) late_time
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, 'y', 'n' ) early_or_not
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, timestampdiff(second, t1.attendance_end_at, t1.shift_end)/60, 0) early_yime
+                    ,t1.AB/10 absence_time
+                from t t1
+                where
+                    t1.total = 5
+                    and t1.leave_time_type = 1 -- 上午请假
+            ) a
+    ) st
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = st.staff_info_id
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = hsi2.sys_store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    hsi2.job_title = 16
+order by 2,1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        *
+    from
+        (
+            select
+                ad.*
+                ,row_number() over (partition by ad.staff_info_id order by ad.stat_date desc) rk
+            from
+                (
+                    select
+                        ad.*
+                        ,ad.attendance_time + ad.BT + ad.BT_Y + ad.AB total
+                    from bi_pro.attendance_data_v2 ad
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = ad.staff_info_id and hsi.state = 1 and hsi.wait_leave_state = 0 and hsi.job_title in (13,110,452,37,16,451,1497) -- 在职且非待离职,1497 van-feeder
+                    where
+                        ad.stat_date < '2023-09-14'
+                ) ad
+            where
+                ad.total = 10
+        ) ad
+    where
+        ad.rk < 8
+)
+select
+    st.staff_info_id 工号
+    ,if(hsi2.sys_store_id = '-1', 'Head office', dp.store_name) 网点
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,case
+        when hsi2.job_title in (13,110,452,1497) then '快递员'
+        when hsi2.job_title in (37,451) then '仓管员' -- 451副主管
+        when hsi2.job_title in (16) then '主管'
+    end 角色
+    ,st.stat_date 迟到日期
+    ,st.late_time 当日迟到分钟
+    ,count(st.stat_date) over (partition by st.staff_info_id) 近7应出勤迟到次数
+from
+    (
+        select
+            a.staff_info_id
+            ,a.stat_date
+            ,a.late_time
+#             ,count(if(a.late_or_not = 'y' ,a.stat_date, null)) late_num
+#             ,sum(if(a.late_or_not = 'y', a.late_time, 0)) late_time_sum
+#             ,sum(a.absence_time) absence_sum
+        from
+            (
+                select
+                    t1.*
+                    ,if(t1.attendance_started_at > date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 1 minute ) , 'y', 'n') late_or_not
+                    ,if(t1.attendance_started_at > date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 1 minute ) , timestampdiff(minute , concat(t1.stat_date, ' ', t1.shift_start), t1.attendance_started_at), 0) late_time
+                    ,t1.AB/10 absence_time
+                from t t1
+                where
+                    t1.total = 10
+                    or (t1.total =  5 and t1.leave_time_type = 2)
+
+                union all
+
+                select
+                    t1.*
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , 'y', 'n') late_or_not
+                    ,if(t1.attendance_started_at > date_add(date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), interval 1 minute ) , timestampdiff(minute , date_add(concat(t1.stat_date, ' ', t1.shift_start), interval 5 hour), t1.attendance_started_at), 0) late_time
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, 'y', 'n' ) early_or_not
+#                     ,if(date_format(t1.attendance_end_at, '%H:%i') < t1.shift_end, timestampdiff(second, t1.attendance_end_at, t1.shift_end)/60, 0) early_yime
+                    ,t1.AB/10 absence_time
+                from t t1
+                where
+                    t1.total = 5
+                    and t1.leave_time_type = 1 -- 上午请假
+            ) a
+        where
+            a.late_or_not = 'y'
+    ) st
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = st.staff_info_id
+left join dwm.dim_th_sys_store_rd dp on dp.store_id = hsi2.sys_store_id and dp.stat_date = date_sub(curdate(), interval 1 day)
+where
+    hsi2.job_title = 16
+order by 2,1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.客户ID order by a.当日COD包裹 desc ) rk
+        from
+            (
+                select
+                    a1.pick_date 揽件日期
+                    ,a1.client_id 客户ID
+                    ,a4.客户名称
+                    ,a4.是否冻结过
+                    ,a4.当前账号开通状态
+                    ,a4.账号创建日期
+                    ,a4.归属部门
+                    ,a4.归属网点
+                    ,ss.name  正向揽件网点
+                    ,a4.销售代表
+                    ,a4.项目经理
+                    ,a1.当日总包裹
+                    ,a1.当日COD包裹
+                    ,a1.当日COD包裹率
+                    ,a1.拒收包裹量
+                    ,a1.拒收率
+                    ,a1.未购买量
+                    ,a1.未购买率
+                    ,a1.COD包裹退件量
+                    ,a1.COD包裹退件率
+                    ,a1.COD包裹重量1_2kg
+                    ,a1.COD包裹重量1_2kg占比
+                    ,a1.COD包裹重量3_5kg
+                    ,a1.COD包裹重量5以上
+                    ,a1.包裹最终状态_派送中
+                    ,a1.包裹最终状态_已滞留
+                    ,a1.包裹最终状态_已签收
+                    ,a1.包裹最终状态_疑难件处理中
+                    ,a1.包裹最终状态_已退件
+                    ,a1.平均COD金额
+                    ,a2.rate_d 占比最高的商品类型占比率
+                    ,case a2.article_category
+                        when 0 then '文件/document'
+                        when 1 then '干燥食品/dry food'
+                        when 2 then '日用品/daily necessities'
+                        when 3 then '数码产品/digital product'
+                        when 4 then '衣物/clothes'
+                        when 5 then '书刊/Books'
+                        when 6 then '汽车配件/auto parts'
+                        when 7 then '鞋包/shoe bag'
+                        when 8 then '体育器材/sports equipment'
+                        when 9 then '化妆品/cosmetics'
+                        when 10 then '家居用具/Houseware'
+                        when 11 then '水果/fruit'
+                        when 99 then '其它/other'
+                    end 占比最高的商品类型
+                from
+                    (
+                        select
+                            t1.pick_date
+                            ,t1.client_id
+                            ,t1.ticket_pickup_store_id
+                            ,count(t1.pno) 当日总包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                            ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                        from t  t1
+                        group by 1,2,3
+                    ) a1
+                left join
+                    (
+                        select
+                            a3.pick_date
+                            ,a3.client_id
+                            ,a3.article_category
+                            ,a3.pno_num
+                            ,a2.pno_num total
+                            ,a3.pno_num/a2.pno_num rate_d
+                            ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                        from
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,t1.article_category
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2,3
+                            ) a3
+                        left join
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2
+                            ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+                    ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+                left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+                left join
+                    (
+                        select
+                            cli.client_id
+                            ,kp.name 客户名称
+                            ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(kp.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,sd.name 归属部门
+                            ,ss2.name 归属网点
+                            ,kp.staff_info_name 销售代表
+                            ,si.name 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.ka_profile kp
+                        join
+                            (
+                                select
+                                    t1.client_id
+                                from t t1
+                                group by 1
+                            ) cli on cli.client_id = kp.id
+                        left join fle_staging.sys_department sd on sd.id = kp.department_id
+                        left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                        left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                        group by 1
+
+                        union all
+
+                        select
+                            ui.id client_id
+                            ,ui.name 客户名称
+                            ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(ui.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,'' 归属部门
+                            ,'' 归属网点
+                            ,'' 销售代表
+                            ,'' 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.user_info ui
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = ui.id and kaol.forbid_status in (1,2,6)
+                    ) a4 on a4.client_id = a1.client_id
+            ) a
+        where
+            a.当日COD包裹 >= 300
+            and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+            and a.揽件日期 between '2023-06-01' and '2023-09-07'
+    ) a1
+where
+    a1.rk = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.客户ID order by a.当日COD包裹 desc ) rk
+        from
+            (
+                select
+                    a1.pick_date 揽件日期
+                    ,a1.client_id 客户ID
+                    ,a4.客户名称
+                    ,a4.是否冻结过
+                    ,a4.当前账号开通状态
+                    ,a4.是否禁止下单
+                    ,a4.账号创建日期
+                    ,a4.归属部门
+                    ,a4.归属网点
+                    ,ss.name  正向揽件网点
+                    ,a4.销售代表
+                    ,a4.项目经理
+                    ,a1.当日总包裹
+                    ,a1.当日COD包裹
+                    ,a1.当日COD包裹率
+                    ,a1.拒收包裹量
+                    ,a1.拒收率
+                    ,a1.未购买量
+                    ,a1.未购买率
+                    ,a1.COD包裹退件量
+                    ,a1.COD包裹退件率
+                    ,a1.COD包裹重量1_2kg
+                    ,a1.COD包裹重量1_2kg占比
+                    ,a1.COD包裹重量3_5kg
+                    ,a1.COD包裹重量5以上
+                    ,a1.包裹最终状态_派送中
+                    ,a1.包裹最终状态_已滞留
+                    ,a1.包裹最终状态_已签收
+                    ,a1.包裹最终状态_疑难件处理中
+                    ,a1.包裹最终状态_已退件
+                    ,a1.平均COD金额
+                    ,a2.rate_d 占比最高的商品类型占比率
+                    ,case a2.article_category
+                        when 0 then '文件/document'
+                        when 1 then '干燥食品/dry food'
+                        when 2 then '日用品/daily necessities'
+                        when 3 then '数码产品/digital product'
+                        when 4 then '衣物/clothes'
+                        when 5 then '书刊/Books'
+                        when 6 then '汽车配件/auto parts'
+                        when 7 then '鞋包/shoe bag'
+                        when 8 then '体育器材/sports equipment'
+                        when 9 then '化妆品/cosmetics'
+                        when 10 then '家居用具/Houseware'
+                        when 11 then '水果/fruit'
+                        when 99 then '其它/other'
+                    end 占比最高的商品类型
+                from
+                    (
+                        select
+                            t1.pick_date
+                            ,t1.client_id
+                            ,t1.ticket_pickup_store_id
+                            ,count(t1.pno) 当日总包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                            ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                        from t  t1
+                        group by 1,2,3
+                    ) a1
+                left join
+                    (
+                        select
+                            a3.pick_date
+                            ,a3.client_id
+                            ,a3.article_category
+                            ,a3.pno_num
+                            ,a2.pno_num total
+                            ,a3.pno_num/a2.pno_num rate_d
+                            ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                        from
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,t1.article_category
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2,3
+                            ) a3
+                        left join
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2
+                            ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+                    ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+                left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+                left join
+                    (
+                        select
+                            cli.client_id
+                            ,kp.name 客户名称
+                            ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(kp.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,sd.name 归属部门
+                            ,ss2.name 归属网点
+                            ,kp.staff_info_name 销售代表
+                            ,si.name 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.ka_profile kp
+                        join
+                            (
+                                select
+                                    t1.client_id
+                                from t t1
+                                group by 1
+                            ) cli on cli.client_id = kp.id
+                        left join fle_staging.sys_department sd on sd.id = kp.department_id
+                        left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                        left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                        group by 1
+
+                        union all
+
+                        select
+                            ui.id client_id
+                            ,ui.name 客户名称
+                            ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(ui.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,'' 归属部门
+                            ,'' 归属网点
+                            ,'' 销售代表
+                            ,'' 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.user_info ui
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = ui.id and kaol.forbid_status in (1,2,6)
+                    ) a4 on a4.client_id = a1.client_id
+            ) a
+        where
+            a.当日COD包裹 >= 300
+            and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+            and a.揽件日期 between '2023-06-01' and '2023-09-07'
+    ) a1
+where
+    a1.rk = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.客户ID order by a.当日COD包裹 desc ) rk
+        from
+            (
+                select
+                    a1.pick_date 揽件日期
+                    ,a1.client_id 客户ID
+                    ,a4.客户名称
+                    ,a4.是否冻结过
+                    ,a4.当前账号开通状态
+                    ,a4.是否禁止下单
+                    ,a4.账号创建日期
+                    ,a4.归属部门
+                    ,a4.归属网点
+                    ,ss.name  正向揽件网点
+                    ,a4.销售代表
+                    ,a4.项目经理
+                    ,a1.当日总包裹
+                    ,a1.当日COD包裹
+                    ,a1.当日COD包裹率
+                    ,a1.拒收包裹量
+                    ,a1.拒收率
+                    ,a1.未购买量
+                    ,a1.未购买率
+                    ,a1.COD包裹退件量
+                    ,a1.COD包裹退件率
+                    ,a1.COD包裹重量1_2kg
+                    ,a1.COD包裹重量1_2kg占比
+                    ,a1.COD包裹重量3_5kg
+                    ,a1.COD包裹重量5以上
+                    ,a1.包裹最终状态_派送中
+                    ,a1.包裹最终状态_已滞留
+                    ,a1.包裹最终状态_已签收
+                    ,a1.包裹最终状态_疑难件处理中
+                    ,a1.包裹最终状态_已退件
+                    ,a1.平均COD金额
+                    ,a2.rate_d 占比最高的商品类型占比率
+                    ,case a2.article_category
+                        when 0 then '文件/document'
+                        when 1 then '干燥食品/dry food'
+                        when 2 then '日用品/daily necessities'
+                        when 3 then '数码产品/digital product'
+                        when 4 then '衣物/clothes'
+                        when 5 then '书刊/Books'
+                        when 6 then '汽车配件/auto parts'
+                        when 7 then '鞋包/shoe bag'
+                        when 8 then '体育器材/sports equipment'
+                        when 9 then '化妆品/cosmetics'
+                        when 10 then '家居用具/Houseware'
+                        when 11 then '水果/fruit'
+                        when 99 then '其它/other'
+                    end 占比最高的商品类型
+                from
+                    (
+                        select
+                            t1.pick_date
+                            ,t1.client_id
+                            ,t1.ticket_pickup_store_id
+                            ,count(t1.pno) 当日总包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                            ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                        from t  t1
+                        group by 1,2,3
+                    ) a1
+                left join
+                    (
+                        select
+                            a3.pick_date
+                            ,a3.client_id
+                            ,a3.article_category
+                            ,a3.pno_num
+                            ,a2.pno_num total
+                            ,a3.pno_num/a2.pno_num rate_d
+                            ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                        from
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,t1.article_category
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2,3
+                            ) a3
+                        left join
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2
+                            ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+                    ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+                left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+                left join
+                    (
+                        select
+                            cli.client_id
+                            ,kp.name 客户名称
+                            ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(kp.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,sd.name 归属部门
+                            ,ss2.name 归属网点
+                            ,kp.staff_info_name 销售代表
+                            ,si.name 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.ka_profile kp
+                        join
+                            (
+                                select
+                                    t1.client_id
+                                from t t1
+                                group by 1
+                            ) cli on cli.client_id = kp.id
+                        left join fle_staging.sys_department sd on sd.id = kp.department_id
+                        left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                        left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                        group by 1
+
+                        union all
+
+                        select
+                            ui.id client_id
+                            ,ui.name 客户名称
+                            ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(ui.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,'' 归属部门
+                            ,'' 归属网点
+                            ,'' 销售代表
+                            ,'' 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.user_info ui
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = ui.id and kaol.forbid_status in (1,2,6)
+                    ) a4 on a4.client_id = a1.client_id
+            ) a
+        where
+            a.当日COD包裹 < 300
+            and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+            and a.揽件日期 between '2023-06-01' and '2023-09-07'
+    ) a1
+where
+    a1.rk = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.客户ID,a.揽件日期 order by a.当日COD包裹 desc ) rk
+        from
+            (
+                select
+                    a1.pick_date 揽件日期
+                    ,a1.client_id 客户ID
+                    ,a4.客户名称
+                    ,a4.是否冻结过
+                    ,a4.当前账号开通状态
+                    ,a4.是否禁止下单
+                    ,a4.账号创建日期
+                    ,a4.归属部门
+                    ,a4.归属网点
+                    ,ss.name  正向揽件网点
+                    ,a4.销售代表
+                    ,a4.项目经理
+                    ,a1.当日总包裹
+                    ,a1.当日COD包裹
+                    ,a1.当日COD包裹率
+                    ,a1.拒收包裹量
+                    ,a1.拒收率
+                    ,a1.未购买量
+                    ,a1.未购买率
+                    ,a1.COD包裹退件量
+                    ,a1.COD包裹退件率
+                    ,a1.COD包裹重量1_2kg
+                    ,a1.COD包裹重量1_2kg占比
+                    ,a1.COD包裹重量3_5kg
+                    ,a1.COD包裹重量5以上
+                    ,a1.包裹最终状态_派送中
+                    ,a1.包裹最终状态_已滞留
+                    ,a1.包裹最终状态_已签收
+                    ,a1.包裹最终状态_疑难件处理中
+                    ,a1.包裹最终状态_已退件
+                    ,a1.平均COD金额
+                    ,a2.rate_d 占比最高的商品类型占比率
+                    ,case a2.article_category
+                        when 0 then '文件/document'
+                        when 1 then '干燥食品/dry food'
+                        when 2 then '日用品/daily necessities'
+                        when 3 then '数码产品/digital product'
+                        when 4 then '衣物/clothes'
+                        when 5 then '书刊/Books'
+                        when 6 then '汽车配件/auto parts'
+                        when 7 then '鞋包/shoe bag'
+                        when 8 then '体育器材/sports equipment'
+                        when 9 then '化妆品/cosmetics'
+                        when 10 then '家居用具/Houseware'
+                        when 11 then '水果/fruit'
+                        when 99 then '其它/other'
+                    end 占比最高的商品类型
+                from
+                    (
+                        select
+                            t1.pick_date
+                            ,t1.client_id
+                            ,t1.ticket_pickup_store_id
+                            ,count(t1.pno) 当日总包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                            ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                        from t  t1
+                        group by 1,2,3
+                    ) a1
+                left join
+                    (
+                        select
+                            a3.pick_date
+                            ,a3.client_id
+                            ,a3.article_category
+                            ,a3.pno_num
+                            ,a2.pno_num total
+                            ,a3.pno_num/a2.pno_num rate_d
+                            ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                        from
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,t1.article_category
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2,3
+                            ) a3
+                        left join
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2
+                            ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+                    ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+                left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+                left join
+                    (
+                        select
+                            cli.client_id
+                            ,kp.name 客户名称
+                            ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(kp.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,sd.name 归属部门
+                            ,ss2.name 归属网点
+                            ,kp.staff_info_name 销售代表
+                            ,si.name 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.ka_profile kp
+                        join
+                            (
+                                select
+                                    t1.client_id
+                                from t t1
+                                group by 1
+                            ) cli on cli.client_id = kp.id
+                        left join fle_staging.sys_department sd on sd.id = kp.department_id
+                        left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                        left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                        group by 1
+
+                        union all
+
+                        select
+                            ui.id client_id
+                            ,ui.name 客户名称
+                            ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(ui.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,'' 归属部门
+                            ,'' 归属网点
+                            ,'' 销售代表
+                            ,'' 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.user_info ui
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = ui.id and kaol.forbid_status in (1,2,6)
+                    ) a4 on a4.client_id = a1.client_id
+            ) a
+        where
+            a.当日COD包裹 >= 300
+            and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+            and a.揽件日期 between '2023-06-01' and '2023-09-07'
+    ) a1
+where
+    a1.rk = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+select
+    *
+from
+    (
+        select
+            a.*
+            ,row_number() over (partition by a.客户ID,a.揽件日期 order by a.当日COD包裹 desc ) rk
+        from
+            (
+                select
+                    a1.pick_date 揽件日期
+                    ,a1.client_id 客户ID
+                    ,a4.客户名称
+                    ,a4.是否冻结过
+                    ,a4.当前账号开通状态
+                    ,a4.是否禁止下单
+                    ,a4.账号创建日期
+                    ,a4.归属部门
+                    ,a4.归属网点
+                    ,ss.name  正向揽件网点
+                    ,a4.销售代表
+                    ,a4.项目经理
+                    ,a1.当日总包裹
+                    ,a1.当日COD包裹
+                    ,a1.当日COD包裹率
+                    ,a1.拒收包裹量
+                    ,a1.拒收率
+                    ,a1.未购买量
+                    ,a1.未购买率
+                    ,a1.COD包裹退件量
+                    ,a1.COD包裹退件率
+                    ,a1.COD包裹重量1_2kg
+                    ,a1.COD包裹重量1_2kg占比
+                    ,a1.COD包裹重量3_5kg
+                    ,a1.COD包裹重量5以上
+                    ,a1.包裹最终状态_派送中
+                    ,a1.包裹最终状态_已滞留
+                    ,a1.包裹最终状态_已签收
+                    ,a1.包裹最终状态_疑难件处理中
+                    ,a1.包裹最终状态_已退件
+                    ,a1.平均COD金额
+                    ,a2.rate_d 占比最高的商品类型占比率
+                    ,case a2.article_category
+                        when 0 then '文件/document'
+                        when 1 then '干燥食品/dry food'
+                        when 2 then '日用品/daily necessities'
+                        when 3 then '数码产品/digital product'
+                        when 4 then '衣物/clothes'
+                        when 5 then '书刊/Books'
+                        when 6 then '汽车配件/auto parts'
+                        when 7 then '鞋包/shoe bag'
+                        when 8 then '体育器材/sports equipment'
+                        when 9 then '化妆品/cosmetics'
+                        when 10 then '家居用具/Houseware'
+                        when 11 then '水果/fruit'
+                        when 99 then '其它/other'
+                    end 占比最高的商品类型
+                from
+                    (
+                        select
+                            t1.pick_date
+                            ,t1.client_id
+                            ,t1.ticket_pickup_store_id
+                            ,count(t1.pno) 当日总包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                            ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                            ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                            ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                            ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                            ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                            ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                        from t  t1
+                        group by 1,2,3
+                    ) a1
+                left join
+                    (
+                        select
+                            a3.pick_date
+                            ,a3.client_id
+                            ,a3.article_category
+                            ,a3.pno_num
+                            ,a2.pno_num total
+                            ,a3.pno_num/a2.pno_num rate_d
+                            ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                        from
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,t1.article_category
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2,3
+                            ) a3
+                        left join
+                            (
+                                select
+                                    t1.client_id
+                                    ,t1.pick_date
+                                    ,count(t1.pno) pno_num
+                                from t t1
+                                where
+                                    t1.cod_enabled = 1
+                                group by 1,2
+                            ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+                    ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+                left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+                left join
+                    (
+                        select
+                            cli.client_id
+                            ,kp.name 客户名称
+                            ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(kp.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,sd.name 归属部门
+                            ,ss2.name 归属网点
+                            ,kp.staff_info_name 销售代表
+                            ,si.name 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.ka_profile kp
+                        join
+                            (
+                                select
+                                    t1.client_id
+                                from t t1
+                                group by 1
+                            ) cli on cli.client_id = kp.id
+                        left join fle_staging.sys_department sd on sd.id = kp.department_id
+                        left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                        left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                        group by 1
+
+                        union all
+
+                        select
+                            ui.id client_id
+                            ,ui.name 客户名称
+                            ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                            ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                            ,if(ui.forbid_call_order = 0, '否', '是') 是否禁止下单
+                            ,'' 归属部门
+                            ,'' 归属网点
+                            ,'' 销售代表
+                            ,'' 项目经理
+                            ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                        from fle_staging.user_info ui
+                        left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = ui.id and kaol.forbid_status in (1,2,6)
+                    ) a4 on a4.client_id = a1.client_id
+            ) a
+        where
+            a.当日COD包裹 < 300
+            and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+            and a.揽件日期 between '2023-06-01' and '2023-09-07'
+    ) a1
+where
+    a1.rk = 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+
+select
+    a.*
+#     ,row_number() over (partition by a.客户ID,a.揽件日期 order by a.当日COD包裹 desc ) rk
+from
+    (
+        select
+            a1.pick_date 揽件日期
+            ,a1.client_id 客户ID
+            ,a4.客户名称
+            ,a4.是否冻结过
+            ,a4.当前账号开通状态
+            ,a4.是否禁止下单
+            ,a4.账号创建日期
+            ,a4.归属部门
+            ,a4.归属网点
+            ,a4.销售代表
+            ,a4.项目经理
+            ,a1.当日总包裹
+            ,a1.当日COD包裹
+            ,a1.当日COD包裹率
+            ,a1.拒收包裹量
+            ,a1.拒收率
+            ,a1.未购买量
+            ,a1.未购买率
+            ,a1.COD包裹退件量
+            ,a1.COD包裹退件率
+            ,a1.COD包裹重量1_2kg
+            ,a1.COD包裹重量1_2kg占比
+            ,a1.COD包裹重量3_5kg
+            ,a1.COD包裹重量5以上
+            ,a1.包裹最终状态_派送中
+            ,a1.包裹最终状态_已滞留
+            ,a1.包裹最终状态_已签收
+            ,a1.包裹最终状态_疑难件处理中
+            ,a1.包裹最终状态_已退件
+            ,a1.平均COD金额
+            ,a2.rate_d 占比最高的商品类型占比率
+            ,case a2.article_category
+                when 0 then '文件/document'
+                when 1 then '干燥食品/dry food'
+                when 2 then '日用品/daily necessities'
+                when 3 then '数码产品/digital product'
+                when 4 then '衣物/clothes'
+                when 5 then '书刊/Books'
+                when 6 then '汽车配件/auto parts'
+                when 7 then '鞋包/shoe bag'
+                when 8 then '体育器材/sports equipment'
+                when 9 then '化妆品/cosmetics'
+                when 10 then '家居用具/Houseware'
+                when 11 then '水果/fruit'
+                when 99 then '其它/other'
+            end 占比最高的商品类型
+        from
+            (
+                select
+                    t1.pick_date
+                    ,t1.client_id
+#                     ,t1.ticket_pickup_store_id
+                    ,count(t1.pno) 当日总包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                    ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                from t  t1
+                group by 1,2
+            ) a1
+        left join
+            (
+                select
+                    a3.pick_date
+                    ,a3.client_id
+                    ,a3.article_category
+                    ,a3.pno_num
+                    ,a2.pno_num total
+                    ,a3.pno_num/a2.pno_num rate_d
+                    ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                from
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,t1.article_category
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2,3
+                    ) a3
+                left join
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2
+                    ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+            ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+#         left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+        left join
+            (
+                select
+                    cli.client_id
+                    ,kp.name 客户名称
+                    ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,if(kp.forbid_call_order = 0, '否', '是') 是否禁止下单
+                    ,sd.name 归属部门
+                    ,ss2.name 归属网点
+                    ,kp.staff_info_name 销售代表
+                    ,si.name 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.ka_profile kp
+                join
+                    (
+                        select
+                            t1.client_id
+                        from t t1
+                        group by 1
+                    ) cli on cli.client_id = kp.id
+                left join fle_staging.sys_department sd on sd.id = kp.department_id
+                left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                group by 1
+
+                union all
+
+                select
+                    ui.id client_id
+                    ,ui.name 客户名称
+                    ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,if(ui.forbid_call_order = 0, '否', '是') 是否禁止下单
+                    ,'' 归属部门
+                    ,'' 归属网点
+                    ,'' 销售代表
+                    ,'' 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.user_info ui
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = ui.id and kaol.forbid_status in (1,2,6)
+            ) a4 on a4.client_id = a1.client_id
+    ) a
+where
+    a.当日COD包裹 >= 300
+    and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+    and a.揽件日期 between '2023-06-01' and '2023-09-07';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        t1.pno
+        ,t1.client_id
+        ,t1.ticket_pickup_store_id
+        ,t1.cod_enabled
+        ,t1.state
+        ,t1.exhibition_weight
+        ,t1.pick_time
+        ,t1.pick_date
+        ,t1.cod_amount
+        ,t1.article_category
+        ,max(t1.reject) reject_or_not
+        ,max(t1.reject_not_purchased) not_purchased_or_not
+    from
+        (
+            select
+                pi.pno
+                ,pi.client_id
+                ,pi.ticket_pickup_store_id
+                ,pi.cod_enabled
+                ,pi.state
+                ,pi.exhibition_weight
+                ,pi.cod_amount
+                ,pi.article_category
+                ,convert_tz(pi.created_at, '+00:00', '+08:00') pick_time
+                ,date(convert_tz(pi.created_at, '+00:00', '+08:00')) pick_date
+                ,if(di.pno is not null , 1, 0) reject
+                ,if(di.rejection_category = 1, 1, 0) reject_not_purchased
+            from fle_staging.parcel_info pi
+            left join fle_staging.diff_info di on di.pno = pi.pno and di.diff_marker_category in (2,17) and di.created_at >= '2023-06-01'
+            where
+                pi.created_at >= '2023-06-01'
+                and pi.returned = 0
+                and pi.state < 9
+        ) t1
+    group by 1,2,3,4,5,6,7,8,9,10
+)
+
+select
+    a.*
+#     ,row_number() over (partition by a.客户ID,a.揽件日期 order by a.当日COD包裹 desc ) rk
+from
+    (
+        select
+            a1.pick_date 揽件日期
+            ,a1.client_id 客户ID
+            ,a4.客户名称
+            ,a4.是否冻结过
+            ,a4.当前账号开通状态
+            ,a4.是否禁止下单
+            ,a4.账号创建日期
+            ,a4.归属部门
+            ,a4.归属网点
+            ,a4.销售代表
+            ,a4.项目经理
+            ,a1.当日总包裹
+            ,a1.当日COD包裹
+            ,a1.当日COD包裹率
+            ,a1.拒收包裹量
+            ,a1.拒收率
+            ,a1.未购买量
+            ,a1.未购买率
+            ,a1.COD包裹退件量
+            ,a1.COD包裹退件率
+            ,a1.COD包裹重量1_2kg
+            ,a1.COD包裹重量1_2kg占比
+            ,a1.COD包裹重量3_5kg
+            ,a1.COD包裹重量5以上
+            ,a1.包裹最终状态_派送中
+            ,a1.包裹最终状态_已滞留
+            ,a1.包裹最终状态_已签收
+            ,a1.包裹最终状态_疑难件处理中
+            ,a1.包裹最终状态_已退件
+            ,a1.平均COD金额
+            ,a2.rate_d 占比最高的商品类型占比率
+            ,case a2.article_category
+                when 0 then '文件/document'
+                when 1 then '干燥食品/dry food'
+                when 2 then '日用品/daily necessities'
+                when 3 then '数码产品/digital product'
+                when 4 then '衣物/clothes'
+                when 5 then '书刊/Books'
+                when 6 then '汽车配件/auto parts'
+                when 7 then '鞋包/shoe bag'
+                when 8 then '体育器材/sports equipment'
+                when 9 then '化妆品/cosmetics'
+                when 10 then '家居用具/Houseware'
+                when 11 then '水果/fruit'
+                when 99 then '其它/other'
+            end 占比最高的商品类型
+        from
+            (
+                select
+                    t1.pick_date
+                    ,t1.client_id
+#                     ,t1.ticket_pickup_store_id
+                    ,count(t1.pno) 当日总包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null)) 当日COD包裹
+                    ,count(if(t1.cod_enabled = 1, t1.pno, null))/count(t1.pno) 当日COD包裹率
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null)) 拒收包裹量
+                    ,count(if(t1.reject_or_not = 1, t1.pno, null))/count(t1.pno) 拒收率
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null)) 未购买量
+                    ,count(if(t1.not_purchased_or_not = 1, t1.pno, null))/count(if(t1.reject_or_not = 1, t1.pno, null)) 未购买率
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) COD包裹退件量
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹退件率
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null)) COD包裹重量1_2kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 1000 and t1.exhibition_weight < 2000, t1.pno, null))/count(if(t1.cod_enabled = 1, t1.pno, null)) COD包裹重量1_2kg占比
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 3000 and t1.exhibition_weight < 5000, t1.pno, null)) COD包裹重量3_5kg
+                    ,count(if(t1.cod_enabled = 1 and t1.exhibition_weight >= 5000, t1.pno, null)) COD包裹重量5以上
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 3, t1.pno, null)) 包裹最终状态_派送中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 4, t1.pno, null)) 包裹最终状态_已滞留
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 5, t1.pno, null)) 包裹最终状态_已签收
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 6, t1.pno, null)) 包裹最终状态_疑难件处理中
+                    ,count(if(t1.cod_enabled = 1 and t1.state = 7, t1.pno, null)) 包裹最终状态_已退件
+                    ,sum(if(t1.cod_enabled = 1, t1.cod_amount/100, 0))/count(if(t1.cod_enabled = 1, t1.pno, null)) 平均COD金额
+                from t  t1
+                group by 1,2
+            ) a1
+        left join
+            (
+                select
+                    a3.pick_date
+                    ,a3.client_id
+                    ,a3.article_category
+                    ,a3.pno_num
+                    ,a2.pno_num total
+                    ,a3.pno_num/a2.pno_num rate_d
+                    ,row_number() over (partition by a2.pick_date, a2.client_id order by a3.pno_num desc) rk
+                from
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,t1.article_category
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2,3
+                    ) a3
+                left join
+                    (
+                        select
+                            t1.client_id
+                            ,t1.pick_date
+                            ,count(t1.pno) pno_num
+                        from t t1
+                        where
+                            t1.cod_enabled = 1
+                        group by 1,2
+                    ) a2 on a2.pick_date = a3.pick_date and a2.client_id = a3.client_id
+            ) a2 on a2.pick_date = a1.pick_date and a2.client_id = a1.client_id and a2.rk = 1
+#         left join fle_staging.sys_store ss on ss.id = a1.ticket_pickup_store_id
+        left join
+            (
+                select
+                    cli.client_id
+                    ,kp.name 客户名称
+                    ,date(convert_tz(kp.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(kp.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,if(kp.forbid_call_order = 0, '否', '是') 是否禁止下单
+                    ,sd.name 归属部门
+                    ,ss2.name 归属网点
+                    ,kp.staff_info_name 销售代表
+                    ,si.name 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.ka_profile kp
+                join
+                    (
+                        select
+                            t1.client_id
+                        from t t1
+                        group by 1
+                    ) cli on cli.client_id = kp.id
+                left join fle_staging.sys_department sd on sd.id = kp.department_id
+                left join fle_staging.sys_store ss2 on ss2.id = kp.store_id
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = kp.id and kaol.forbid_status in (1,2,6)
+                left join fle_staging.staff_info si on si.id = kp.project_manager_id
+                group by 1
+
+                union all
+
+                select
+                    ui.id client_id
+                    ,ui.name 客户名称
+                    ,date(convert_tz(ui.created_at, '+00:00', '+08:00')) 账号创建日期
+                    ,if(ui.state = 1, '开通', '未开通') 当前账号开通状态
+                    ,if(ui.forbid_call_order = 0, '否', '是') 是否禁止下单
+                    ,'' 归属部门
+                    ,'' 归属网点
+                    ,'' 销售代表
+                    ,'' 项目经理
+                    ,if(kaol.client_id is not null , '是', '否') 是否冻结过
+                from fle_staging.user_info ui
+                left join bi_pro.ka_cod_refuse_warning_mail  kaol on kaol.client_id = ui.id and kaol.forbid_status in (1,2,6)
+            ) a4 on a4.client_id = a1.client_id
+    ) a
+where
+    a.当日COD包裹 < 300
+    and (a.拒收率 >= 0.3 or a.未购买率 >= 0.5 or a.COD包裹退件率 >= 0.2)
+    and a.揽件日期 between '2023-06-01' and '2023-09-07';
+;-- -. . -..- - / . -. - .-. -.--
+with handover as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+08:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+08:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+08:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 9 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,1000)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category=1
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+08:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 9 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    ),
+ handover2 as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+08:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+08:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+08:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 9 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,1000)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category=1
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+08:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    )
+
+
+
+
+select
+        fn.网点
+	    ,fn.大区
+	    ,fn.片区
+# 	    ,fn.负责人
+	    ,fn.员工ID
+	    ,fn.快递员姓名
+		,fn.交接量_非退件
+		,fn.交接包裹妥投量_非退件妥投
+	    ,fn.交接包裹妥投量_退件妥投
+	    ,fn.交接包裹未拨打电话数 交接包裹未妥投未拨打电话数
+		,fn.员工出勤信息
+		,fn.18点前快递员结束派件时间
+		,fn.妥投率
+		,case when fn.未按要求联系客户 is not null and fn.rk<=2 then '是' else null end as 违反A联系客户
+		,fn.是否出勤不达标 as 违反B出勤
+		,fn.是否低人效 as 违反C人效
+    from
+    (
+        select
+		    fk.*
+			,row_number() over (partition by fk.网点,fk.未按要求联系客户 order by fk.交接包裹未拨打电话占比 desc) as rk
+		    from
+		    (
+				select
+				    f1.网点
+				    ,f1.大区
+				    ,f1.片区
+# 				    ,f1.负责人
+				    ,f1.员工ID
+				    ,f1.快递员姓名
+					,f2.交接量_非退件
+					,f2.交接包裹妥投量_非退件妥投
+				    ,f2.交接包裹妥投量_退件妥投
+				    ,f1.交接包裹未拨打电话数
+				    ,case when f5.late_days>=3 and f5.late_times>=300 then '最近一周迟到至少三次且迟到时间至少5小时'
+				         when f5.absent_days>=2  then '最近一周缺勤>=2次' else null end as 员工出勤信息
+				    ,f6.finished_at as 18点前快递员结束派件时间
+				    ,concat(round(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件*100,2),'%') as 妥投率
+				    ,f1.交接包裹未拨打电话占比
+
+
+				    ,f5.absent_days as 缺勤天数
+				    ,f5.late_days as 迟到天数
+				    ,f5.late_times as 迟到时长_分钟
+					,if(f1.交接包裹未拨打电话数>10 and f1.交接包裹未拨打电话占比>0.2,'未按要求联系客户',null) as 未按要求联系客户
+					,case when f5.late_days>=3 and f5.late_times>=300 then '是' when f5.absent_days>=2  then '是' else null end as 是否出勤不达标
+					,if(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件<0.7 and f2.交接包裹妥投量_非退件妥投<100 and hour(f6.finished_at)<15,'是',null) as 是否低人效
+
+				from
+					(# 快递员交接包裹后拨打电话情况
+					    select
+						    fn.region_name as 大区
+# 						    ,case
+# 							    when fn.region_name in ('Area3', 'Area6') then '彭万松'
+# 							    when fn.region_name in ('Area4', 'Area9') then '韩钥'
+# 							    when fn.region_name in ('Area7','Area10', 'Area11','FHome','Area14') then '张可新'
+# 							    when fn.region_name in ( 'Area8') then '黄勇'
+# 							    when fn.region_name in ('Area1', 'Area2','Area5', 'Area12','Area13') then '李俊'
+# 								end 负责人
+						    ,fn.piece_name as 片区
+						    ,fn.store_name as 网点
+							,fn.store_id
+						    ,fn.staff_info_id as 员工ID
+					        ,fn.staff_name as 快递员姓名
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end) as 交接包裹未拨打电话数
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end)/count(distinct fn.pno) as 交接包裹未拨打电话占比
+					    from  handover fn
+					    group by 1,2,3,4,5,6,7
+					)f1
+				left join
+					    (
+						    select
+							    fn.staff_info_id as 员工ID
+						        ,fn.staff_name as 快递员姓名
+						        ,count(distinct if(fn.pno_type='正向件', fn.pno ,null)) as 交接量_非退件
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='正向件' ,fn.pno ,null)) 交接包裹妥投量_非退件妥投
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='退件' ,fn.pno ,null)) 交接包裹妥投量_退件妥投
+						    from  handover fn
+						    group by 1,2
+					    )f2 on f2.员工ID = f1.员工ID
+				left join
+					( -- 最近一周出勤
+					    select
+					        ad.staff_info_id
+					        ,sum(case
+						        when ad.leave_type is not null and ad.leave_time_type=1 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=2 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=3 then 1
+						        else 0  end) as leave_num
+					        ,count(distinct if(ad.attendance_time = 0, ad.stat_date, null)) absent_days
+					        ,count(distinct if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), ad.stat_date, null)) late_days
+					        ,sum(if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), timestampdiff(minute , concat(ad.stat_date, ' ', ad.shift_start), ad.attendance_started_at), 0)) late_times
+					    from bi_pro.attendance_data_v2 ad
+					    where ad.attendance_time + ad.BT+ ad.BT_Y + ad.AB >0
+					        and ad.stat_date>date_sub(current_date,interval 8 day)
+					        and ad.stat_date<=date_sub(current_date,interval 1 day)
+					    group by 1
+					) f5 on f5.staff_info_id = f1.员工ID
+				left join
+					( -- 18点前最后一个妥投包裹时间
+				        select
+				             ha.ticket_delivery_staff_info_id
+					        ,ha.finished_at
+				        from
+				        (
+				            select
+				                pi.ticket_delivery_staff_info_id
+				                ,convert_tz(pi.finished_at,'+00:00','+08:00') as finished_at
+				                ,row_number() over (partition by pi.ticket_delivery_staff_info_id order by pi.finished_at desc) as rk
+					        from fle_staging.parcel_info pi
+					        where pi.state=5
+					        and pi.finished_at>= date_sub(curdate(), interval 8 hour)
+						    and pi.finished_at< date_add(curdate(), interval 10 hour)
+				        )ha
+				        where ha.rk=1
+					) f6 on f6.ticket_delivery_staff_info_id = f1.员工ID
+		    )fk
+    )fn;
+;-- -. . -..- - / . -. - .-. -.--
+with handover as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+08:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+08:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+08:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 9 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,1000)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category=1
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+08:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 9 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    ),
+ handover2 as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+08:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+08:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+08:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 9 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,1000)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category=1
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+08:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 8 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    )
+
+
+
+
+select
+        fn.网点
+	    ,fn.大区
+	    ,fn.片区
+# 	    ,fn.负责人
+	    ,fn.员工ID
+	    ,fn.快递员姓名
+		,fn.交接量_非退件
+		,fn.交接包裹妥投量_非退件妥投
+	    ,fn.交接包裹妥投量_退件妥投
+	    ,fn.交接包裹未拨打电话数 交接包裹未妥投未拨打电话数
+		,fn.员工出勤信息
+		,fn.18点前快递员结束派件时间
+		,fn.妥投率
+		,case when fn.未按要求联系客户 is not null and fn.rk<=2 then '是' else null end as 违反A联系客户
+		,fn.是否出勤不达标 as 违反B出勤
+		,fn.是否低人效 as 违反C人效
+    from
+    (
+        select
+		    fk.*
+			,row_number() over (partition by fk.网点,fk.未按要求联系客户 order by fk.交接包裹未拨打电话占比 desc) as rk
+		    from
+		    (
+				select
+				    f1.网点
+				    ,f1.大区
+				    ,f1.片区
+# 				    ,f1.负责人
+				    ,f1.员工ID
+				    ,f1.快递员姓名
+					,f2.交接量_非退件
+					,f2.交接包裹妥投量_非退件妥投
+				    ,f2.交接包裹妥投量_退件妥投
+				    ,f1.交接包裹未拨打电话数
+				    ,case when f5.late_days>=3 and f5.late_times>=300 then '最近一周迟到至少三次且迟到时间至少5小时'
+				         when f5.absent_days>=2  then '最近一周缺勤>=2次' else null end as 员工出勤信息
+				    ,f6.finished_at as 18点前快递员结束派件时间
+				    ,concat(round(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件*100,2),'%') as 妥投率
+				    ,f1.交接包裹未拨打电话占比
+
+
+				    ,f5.absent_days as 缺勤天数
+				    ,f5.late_days as 迟到天数
+				    ,f5.late_times as 迟到时长_分钟
+					,if(f1.交接包裹未拨打电话数>10 and f1.交接包裹未拨打电话占比>0.2,'未按要求联系客户',null) as 未按要求联系客户
+					,case when f5.late_days>=3 and f5.late_times>=300 then '是' when f5.absent_days>=2  then '是' else null end as 是否出勤不达标
+					,if(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件<0.7 and f2.交接包裹妥投量_非退件妥投<100 and hour(f6.finished_at)<15,'是',null) as 是否低人效
+
+				from
+					(# 快递员交接包裹后拨打电话情况
+					    select
+						    fn.region_name as 大区
+# 						    ,case
+# 							    when fn.region_name in ('Area3', 'Area6') then '彭万松'
+# 							    when fn.region_name in ('Area4', 'Area9') then '韩钥'
+# 							    when fn.region_name in ('Area7','Area10', 'Area11','FHome','Area14') then '张可新'
+# 							    when fn.region_name in ( 'Area8') then '黄勇'
+# 							    when fn.region_name in ('Area1', 'Area2','Area5', 'Area12','Area13') then '李俊'
+# 								end 负责人
+						    ,fn.piece_name as 片区
+						    ,fn.store_name as 网点
+							,fn.store_id
+						    ,fn.staff_info_id as 员工ID
+					        ,fn.staff_name as 快递员姓名
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end) as 交接包裹未拨打电话数
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end)/count(distinct fn.pno) as 交接包裹未拨打电话占比
+					    from  handover fn
+					    group by 1,2,3,4,5,6
+					)f1
+				left join
+					    (
+						    select
+							    fn.staff_info_id as 员工ID
+						        ,fn.staff_name as 快递员姓名
+						        ,count(distinct if(fn.pno_type='正向件', fn.pno ,null)) as 交接量_非退件
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='正向件' ,fn.pno ,null)) 交接包裹妥投量_非退件妥投
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='退件' ,fn.pno ,null)) 交接包裹妥投量_退件妥投
+						    from  handover fn
+						    group by 1,2
+					    )f2 on f2.员工ID = f1.员工ID
+				left join
+					( -- 最近一周出勤
+					    select
+					        ad.staff_info_id
+					        ,sum(case
+						        when ad.leave_type is not null and ad.leave_time_type=1 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=2 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=3 then 1
+						        else 0  end) as leave_num
+					        ,count(distinct if(ad.attendance_time = 0, ad.stat_date, null)) absent_days
+					        ,count(distinct if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), ad.stat_date, null)) late_days
+					        ,sum(if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), timestampdiff(minute , concat(ad.stat_date, ' ', ad.shift_start), ad.attendance_started_at), 0)) late_times
+					    from bi_pro.attendance_data_v2 ad
+					    where ad.attendance_time + ad.BT+ ad.BT_Y + ad.AB >0
+					        and ad.stat_date>date_sub(current_date,interval 8 day)
+					        and ad.stat_date<=date_sub(current_date,interval 1 day)
+					    group by 1
+					) f5 on f5.staff_info_id = f1.员工ID
+				left join
+					( -- 18点前最后一个妥投包裹时间
+				        select
+				             ha.ticket_delivery_staff_info_id
+					        ,ha.finished_at
+				        from
+				        (
+				            select
+				                pi.ticket_delivery_staff_info_id
+				                ,convert_tz(pi.finished_at,'+00:00','+08:00') as finished_at
+				                ,row_number() over (partition by pi.ticket_delivery_staff_info_id order by pi.finished_at desc) as rk
+					        from fle_staging.parcel_info pi
+					        where pi.state=5
+					        and pi.finished_at>= date_sub(curdate(), interval 8 hour)
+						    and pi.finished_at< date_add(curdate(), interval 10 hour)
+				        )ha
+				        where ha.rk=1
+					) f6 on f6.ticket_delivery_staff_info_id = f1.员工ID
+		    )fk
+    )fn;
+;-- -. . -..- - / . -. - .-. -.--
+with handover as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category=1
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    ),
+ handover2 as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category=1
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    )
+
+
+
+
+select
+        fn.网点
+	    ,fn.大区
+	    ,fn.片区
+# 	    ,fn.负责人
+	    ,fn.员工ID
+	    ,fn.快递员姓名
+		,fn.交接量_非退件
+		,fn.交接包裹妥投量_非退件妥投
+	    ,fn.交接包裹妥投量_退件妥投
+	    ,fn.交接包裹未拨打电话数 交接包裹未妥投未拨打电话数
+		,fn.员工出勤信息
+		,fn.18点前快递员结束派件时间
+		,fn.妥投率
+		,case when fn.未按要求联系客户 is not null and fn.rk<=2 then '是' else null end as 违反A联系客户
+		,fn.是否出勤不达标 as 违反B出勤
+		,fn.是否低人效 as 违反C人效
+    from
+    (
+        select
+		    fk.*
+			,row_number() over (partition by fk.网点,fk.未按要求联系客户 order by fk.交接包裹未拨打电话占比 desc) as rk
+		    from
+		    (
+				select
+				    f1.网点
+				    ,f1.大区
+				    ,f1.片区
+# 				    ,f1.负责人
+				    ,f1.员工ID
+				    ,f1.快递员姓名
+					,f2.交接量_非退件
+					,f2.交接包裹妥投量_非退件妥投
+				    ,f2.交接包裹妥投量_退件妥投
+				    ,f1.交接包裹未拨打电话数
+				    ,case when f5.late_days>=3 and f5.late_times>=300 then '最近一周迟到至少三次且迟到时间至少5小时'
+				         when f5.absent_days>=2  then '最近一周缺勤>=2次' else null end as 员工出勤信息
+				    ,f6.finished_at as 18点前快递员结束派件时间
+				    ,concat(round(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件*100,2),'%') as 妥投率
+				    ,f1.交接包裹未拨打电话占比
+
+
+				    ,f5.absent_days as 缺勤天数
+				    ,f5.late_days as 迟到天数
+				    ,f5.late_times as 迟到时长_分钟
+					,if(f1.交接包裹未拨打电话数>10 and f1.交接包裹未拨打电话占比>0.2,'未按要求联系客户',null) as 未按要求联系客户
+					,case when f5.late_days>=3 and f5.late_times>=300 then '是' when f5.absent_days>=2  then '是' else null end as 是否出勤不达标
+					,if(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件<0.7 and f2.交接包裹妥投量_非退件妥投<100 and hour(f6.finished_at)<15,'是',null) as 是否低人效
+
+				from
+					(# 快递员交接包裹后拨打电话情况
+					    select
+						    fn.region_name as 大区
+# 						    ,case
+# 							    when fn.region_name in ('Area3', 'Area6') then '彭万松'
+# 							    when fn.region_name in ('Area4', 'Area9') then '韩钥'
+# 							    when fn.region_name in ('Area7','Area10', 'Area11','FHome','Area14') then '张可新'
+# 							    when fn.region_name in ( 'Area8') then '黄勇'
+# 							    when fn.region_name in ('Area1', 'Area2','Area5', 'Area12','Area13') then '李俊'
+# 								end 负责人
+						    ,fn.piece_name as 片区
+						    ,fn.store_name as 网点
+							,fn.store_id
+						    ,fn.staff_info_id as 员工ID
+					        ,fn.staff_name as 快递员姓名
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end) as 交接包裹未拨打电话数
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end)/count(distinct fn.pno) as 交接包裹未拨打电话占比
+					    from  handover fn
+					    group by 1,2,3,4,5,6
+					)f1
+				left join
+					    (
+						    select
+							    fn.staff_info_id as 员工ID
+						        ,fn.staff_name as 快递员姓名
+						        ,count(distinct if(fn.pno_type='正向件', fn.pno ,null)) as 交接量_非退件
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='正向件' ,fn.pno ,null)) 交接包裹妥投量_非退件妥投
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='退件' ,fn.pno ,null)) 交接包裹妥投量_退件妥投
+						    from  handover2 fn
+						    group by 1,2
+					    )f2 on f2.员工ID = f1.员工ID
+				left join
+					( -- 最近一周出勤
+					    select
+					        ad.staff_info_id
+					        ,sum(case
+						        when ad.leave_type is not null and ad.leave_time_type=1 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=2 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=3 then 1
+						        else 0  end) as leave_num
+					        ,count(distinct if(ad.attendance_time = 0, ad.stat_date, null)) absent_days
+					        ,count(distinct if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), ad.stat_date, null)) late_days
+					        ,sum(if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), timestampdiff(minute , concat(ad.stat_date, ' ', ad.shift_start), ad.attendance_started_at), 0)) late_times
+					    from bi_pro.attendance_data_v2 ad
+					    where ad.attendance_time + ad.BT+ ad.BT_Y + ad.AB >0
+					        and ad.stat_date>date_sub(current_date,interval 8 day)
+					        and ad.stat_date<=date_sub(current_date,interval 1 day)
+					    group by 1
+					) f5 on f5.staff_info_id = f1.员工ID
+				left join
+					( -- 18点前最后一个妥投包裹时间
+				        select
+				             ha.ticket_delivery_staff_info_id
+					        ,ha.finished_at
+				        from
+				        (
+				            select
+				                pi.ticket_delivery_staff_info_id
+				                ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+				                ,row_number() over (partition by pi.ticket_delivery_staff_info_id order by pi.finished_at desc) as rk
+					        from fle_staging.parcel_info pi
+					        where pi.state=5
+					        and pi.finished_at>= date_sub(curdate(), interval 8 hour)
+						    and pi.finished_at< date_add(curdate(), interval 10 hour)
+				        )ha
+				        where ha.rk=1
+					) f6 on f6.ticket_delivery_staff_info_id = f1.员工ID
+		    )fk
+    )fn;
+;-- -. . -..- - / . -. - .-. -.--
+with handover as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    ),
+ handover2 as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    )
+
+
+
+
+select
+        fn.网点
+	    ,fn.大区
+	    ,fn.片区
+# 	    ,fn.负责人
+	    ,fn.员工ID
+	    ,fn.快递员姓名
+		,fn.交接量_非退件
+		,fn.交接包裹妥投量_非退件妥投
+	    ,fn.交接包裹妥投量_退件妥投
+	    ,fn.交接包裹未拨打电话数 交接包裹未妥投未拨打电话数
+		,fn.员工出勤信息
+		,fn.18点前快递员结束派件时间
+		,fn.妥投率
+		,case when fn.未按要求联系客户 is not null and fn.rk<=2 then '是' else null end as 违反A联系客户
+		,fn.是否出勤不达标 as 违反B出勤
+		,fn.是否低人效 as 违反C人效
+    from
+    (
+        select
+		    fk.*
+			,row_number() over (partition by fk.网点,fk.未按要求联系客户 order by fk.交接包裹未拨打电话占比 desc) as rk
+		    from
+		    (
+				select
+				    f1.网点
+				    ,f1.大区
+				    ,f1.片区
+# 				    ,f1.负责人
+				    ,f1.员工ID
+				    ,f1.快递员姓名
+					,f2.交接量_非退件
+					,f2.交接包裹妥投量_非退件妥投
+				    ,f2.交接包裹妥投量_退件妥投
+				    ,f1.交接包裹未拨打电话数
+				    ,case when f5.late_days>=3 and f5.late_times>=300 then '最近一周迟到至少三次且迟到时间至少5小时'
+				         when f5.absent_days>=2  then '最近一周缺勤>=2次' else null end as 员工出勤信息
+				    ,f6.finished_at as 18点前快递员结束派件时间
+				    ,concat(round(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件*100,2),'%') as 妥投率
+				    ,f1.交接包裹未拨打电话占比
+
+
+				    ,f5.absent_days as 缺勤天数
+				    ,f5.late_days as 迟到天数
+				    ,f5.late_times as 迟到时长_分钟
+					,if(f1.交接包裹未拨打电话数>10 and f1.交接包裹未拨打电话占比>0.2,'未按要求联系客户',null) as 未按要求联系客户
+					,case when f5.late_days>=3 and f5.late_times>=300 then '是' when f5.absent_days>=2  then '是' else null end as 是否出勤不达标
+					,if(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件<0.7 and f2.交接包裹妥投量_非退件妥投<100 and hour(f6.finished_at)<15,'是',null) as 是否低人效
+
+				from
+					(# 快递员交接包裹后拨打电话情况
+					    select
+						    fn.region_name as 大区
+# 						    ,case
+# 							    when fn.region_name in ('Area3', 'Area6') then '彭万松'
+# 							    when fn.region_name in ('Area4', 'Area9') then '韩钥'
+# 							    when fn.region_name in ('Area7','Area10', 'Area11','FHome','Area14') then '张可新'
+# 							    when fn.region_name in ( 'Area8') then '黄勇'
+# 							    when fn.region_name in ('Area1', 'Area2','Area5', 'Area12','Area13') then '李俊'
+# 								end 负责人
+						    ,fn.piece_name as 片区
+						    ,fn.store_name as 网点
+							,fn.store_id
+						    ,fn.staff_info_id as 员工ID
+					        ,fn.staff_name as 快递员姓名
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end) as 交接包裹未拨打电话数
+					        ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end)/count(distinct fn.pno) as 交接包裹未拨打电话占比
+					    from  handover fn
+					    group by 1,2,3,4,5,6
+					)f1
+				left join
+					    (
+						    select
+							    fn.staff_info_id as 员工ID
+						        ,fn.staff_name as 快递员姓名
+						        ,count(distinct if(fn.pno_type='正向件', fn.pno ,null)) as 交接量_非退件
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='正向件' ,fn.pno ,null)) 交接包裹妥投量_非退件妥投
+							    ,count(distinct if(fn.pi_state = 5 and fn.pno_type='退件' ,fn.pno ,null)) 交接包裹妥投量_退件妥投
+						    from  handover2 fn
+						    group by 1,2
+					    )f2 on f2.员工ID = f1.员工ID
+				left join
+					( -- 最近一周出勤
+					    select
+					        ad.staff_info_id
+					        ,sum(case
+						        when ad.leave_type is not null and ad.leave_time_type=1 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=2 then 0.5
+						        when ad.leave_type is not null and ad.leave_time_type=3 then 1
+						        else 0  end) as leave_num
+					        ,count(distinct if(ad.attendance_time = 0, ad.stat_date, null)) absent_days
+					        ,count(distinct if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), ad.stat_date, null)) late_days
+					        ,sum(if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), timestampdiff(minute , concat(ad.stat_date, ' ', ad.shift_start), ad.attendance_started_at), 0)) late_times
+					    from bi_pro.attendance_data_v2 ad
+					    where ad.attendance_time + ad.BT+ ad.BT_Y + ad.AB >0
+					        and ad.stat_date>date_sub(current_date,interval 8 day)
+					        and ad.stat_date<=date_sub(current_date,interval 1 day)
+					    group by 1
+					) f5 on f5.staff_info_id = f1.员工ID
+				left join
+					( -- 18点前最后一个妥投包裹时间
+				        select
+				             ha.ticket_delivery_staff_info_id
+					        ,ha.finished_at
+				        from
+				        (
+				            select
+				                pi.ticket_delivery_staff_info_id
+				                ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+				                ,row_number() over (partition by pi.ticket_delivery_staff_info_id order by pi.finished_at desc) as rk
+					        from fle_staging.parcel_info pi
+					        where pi.state=5
+					        and pi.finished_at>= date_sub(curdate(), interval 8 hour)
+						    and pi.finished_at< date_add(curdate(), interval 10 hour)
+				        )ha
+				        where ha.rk=1
+					) f6 on f6.ticket_delivery_staff_info_id = f1.员工ID
+		    )fk
+    )fn;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case vrv.type
+        when 1 then '揽件任务异常取消'
+        when 2 then '虚假妥投'
+        when 3 then '收件人拒收'
+        when 4 then '标记客户改约时间'
+        when 5 then 'KA现场不揽收'
+        when 6 then '包裹未准备好'
+        when 7 then '上报错分未妥投'
+        when 8 then '多次尝试派送失败'
+    end 回访类型
+    ,case vrv.visit_result
+        when 1 then '联系不上'
+        when 2 then '取消原因属实、合理'
+        when 3 then '快递员虚假标记/违背客户意愿要求取消'
+        when 4 then '多次联系不上客户'
+        when 5 then '收件人已签收包裹'
+        when 6 then '收件人未收到包裹'
+        when 7 then '未经收件人允许投放他处/让他人代收'
+        when 8 then '快递员没有联系客户，直接标记收件人拒收'
+        when 9 then '收件人拒收情况属实'
+        when 10 then '快递员服务态度差'
+        when 11 then '因快递员未按照收件人地址送货，客户不方便去取货'
+        when 12 then '网点派送速度慢，客户不想等'
+        when 13 then '非快递员问题，个人原因拒收'
+        when 14 then '其它'
+        when 15 then '未经客户同意改约派件时间'
+        when 16 then '未按约定时间派送'
+        when 17 then '派件前未提前联系客户'
+        when 18 then '收件人拒收情况不属实'
+        when 19 then '快递员联系客户，但未经客户同意标记收件人拒收'
+        when 20 then '快递员要求/威胁客户拒收'
+        when 21 then '快递员引导客户拒收'
+        when 22 then '其他'
+        when 23 then '情况不属实，快递员虚假标记'
+        when 24 then '情况不属实，快递员诱导客户改约时间'
+        when 25 then '情况属实，客户原因改约时间'
+        when 26 then '客户退货，不想购买该商品'
+        when 27 then '客户未购买商品'
+        when 28 then '客户本人/家人对包裹不知情而拒收'
+        when 29 then '商家发错商品'
+        when 30 then '包裹物流派送慢超时效'
+        when 31 then '快递员服务态度差'
+        when 32 then '因快递员未按照收件人地址送货，客户不方便去取货'
+        when 33 then '货物验收破损'
+        when 34 then '无人在家不便签收'
+        when 35 then '客户错误拒收包裹'
+        when 36 then '快递员按照要求当场扫描揽收'
+        when 37 then '快递员未按照要求当场扫描揽收'
+        when 38 then '无所谓，客户无要求'
+        when 39 then '包裹未准备好 - 情况不属实，快递员虚假标记'
+        when 40 then '包裹未准备好 - 情况属实，客户存在未准备好的包裹'
+        when 41 then '虚假修改包裹信息'
+        when 42 then '修改包裹信息属实'
+        when 43 then '客户需要包裹，继续派送'
+        when 44 then '客户不需要包裹，操作退件'
+    end
+    ,vrv.link_id
+from nl_production.violation_return_visit vrv
+where
+    vrv.visit_state = 4
+    and vrv.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
+    and vrv.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case vrv.type
+        when 1 then '揽件任务异常取消'
+        when 2 then '虚假妥投'
+        when 3 then '收件人拒收'
+        when 4 then '标记客户改约时间'
+        when 5 then 'KA现场不揽收'
+        when 6 then '包裹未准备好'
+        when 7 then '上报错分未妥投'
+        when 8 then '多次尝试派送失败'
+    end 回访类型
+    ,case vrv.visit_result
+        when 1 then '联系不上'
+        when 2 then '取消原因属实、合理'
+        when 3 then '快递员虚假标记/违背客户意愿要求取消'
+        when 4 then '多次联系不上客户'
+        when 5 then '收件人已签收包裹'
+        when 6 then '收件人未收到包裹'
+        when 7 then '未经收件人允许投放他处/让他人代收'
+        when 8 then '快递员没有联系客户，直接标记收件人拒收'
+        when 9 then '收件人拒收情况属实'
+        when 10 then '快递员服务态度差'
+        when 11 then '因快递员未按照收件人地址送货，客户不方便去取货'
+        when 12 then '网点派送速度慢，客户不想等'
+        when 13 then '非快递员问题，个人原因拒收'
+        when 14 then '其它'
+        when 15 then '未经客户同意改约派件时间'
+        when 16 then '未按约定时间派送'
+        when 17 then '派件前未提前联系客户'
+        when 18 then '收件人拒收情况不属实'
+        when 19 then '快递员联系客户，但未经客户同意标记收件人拒收'
+        when 20 then '快递员要求/威胁客户拒收'
+        when 21 then '快递员引导客户拒收'
+        when 22 then '其他'
+        when 23 then '情况不属实，快递员虚假标记'
+        when 24 then '情况不属实，快递员诱导客户改约时间'
+        when 25 then '情况属实，客户原因改约时间'
+        when 26 then '客户退货，不想购买该商品'
+        when 27 then '客户未购买商品'
+        when 28 then '客户本人/家人对包裹不知情而拒收'
+        when 29 then '商家发错商品'
+        when 30 then '包裹物流派送慢超时效'
+        when 31 then '快递员服务态度差'
+        when 32 then '因快递员未按照收件人地址送货，客户不方便去取货'
+        when 33 then '货物验收破损'
+        when 34 then '无人在家不便签收'
+        when 35 then '客户错误拒收包裹'
+        when 36 then '快递员按照要求当场扫描揽收'
+        when 37 then '快递员未按照要求当场扫描揽收'
+        when 38 then '无所谓，客户无要求'
+        when 39 then '包裹未准备好 - 情况不属实，快递员虚假标记'
+        when 40 then '包裹未准备好 - 情况属实，客户存在未准备好的包裹'
+        when 41 then '虚假修改包裹信息'
+        when 42 then '修改包裹信息属实'
+        when 43 then '客户需要包裹，继续派送'
+        when 44 then '客户不需要包裹，操作退件'
+    end 回访结果
+    ,vrv.link_id
+from nl_production.violation_return_visit vrv
+where
+    vrv.visit_state = 4
+    and vrv.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
+    and vrv.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    case vrv.type
+        when 1 then '揽件任务异常取消'
+        when 2 then '虚假妥投'
+        when 3 then '收件人拒收'
+        when 4 then '标记客户改约时间'
+        when 5 then 'KA现场不揽收'
+        when 6 then '包裹未准备好'
+        when 7 then '上报错分未妥投'
+        when 8 then '多次尝试派送失败'
+    end 回访类型
+    ,case vrv.visit_result
+        when 1 then '联系不上'
+        when 2 then '取消原因属实、合理'
+        when 3 then '快递员虚假标记/违背客户意愿要求取消'
+        when 4 then '多次联系不上客户'
+        when 5 then '收件人已签收包裹'
+        when 6 then '收件人未收到包裹'
+        when 7 then '未经收件人允许投放他处/让他人代收'
+        when 8 then '快递员没有联系客户，直接标记收件人拒收'
+        when 9 then '收件人拒收情况属实'
+        when 10 then '快递员服务态度差'
+        when 11 then '因快递员未按照收件人地址送货，客户不方便去取货'
+        when 12 then '网点派送速度慢，客户不想等'
+        when 13 then '非快递员问题，个人原因拒收'
+        when 14 then '其它'
+        when 15 then '未经客户同意改约派件时间'
+        when 16 then '未按约定时间派送'
+        when 17 then '派件前未提前联系客户'
+        when 18 then '收件人拒收情况不属实'
+        when 19 then '快递员联系客户，但未经客户同意标记收件人拒收'
+        when 20 then '快递员要求/威胁客户拒收'
+        when 21 then '快递员引导客户拒收'
+        when 22 then '其他'
+        when 23 then '情况不属实，快递员虚假标记'
+        when 24 then '情况不属实，快递员诱导客户改约时间'
+        when 25 then '情况属实，客户原因改约时间'
+        when 26 then '客户退货，不想购买该商品'
+        when 27 then '客户未购买商品'
+        when 28 then '客户本人/家人对包裹不知情而拒收'
+        when 29 then '商家发错商品'
+        when 30 then '包裹物流派送慢超时效'
+        when 31 then '快递员服务态度差'
+        when 32 then '因快递员未按照收件人地址送货，客户不方便去取货'
+        when 33 then '货物验收破损'
+        when 34 then '无人在家不便签收'
+        when 35 then '客户错误拒收包裹'
+        when 36 then '快递员按照要求当场扫描揽收'
+        when 37 then '快递员未按照要求当场扫描揽收'
+        when 38 then '无所谓，客户无要求'
+        when 39 then '包裹未准备好 - 情况不属实，快递员虚假标记'
+        when 40 then '包裹未准备好 - 情况属实，客户存在未准备好的包裹'
+        when 41 then '虚假修改包裹信息'
+        when 42 then '修改包裹信息属实'
+        when 43 then '客户需要包裹，继续派送'
+        when 44 then '客户不需要包裹，操作退件'
+    end 回访结果
+    ,vrv.visit_result
+    ,vrv.link_id
+from nl_production.violation_return_visit vrv
+where
+    vrv.visit_state = 4
+    and vrv.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
+    and vrv.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    acca.staff_info_id
+    ,count(distinct if(acca.complaints_type = 2, acca.merge_column, null)) 揽件虚假量
+    ,count(distinct if(acca.complaints_type = 1, acca.merge_column, null)) 妥投虚假量
+    ,count(distinct if(acca.complaints_type = 1, acca.merge_column, null)) 派件标记虚假量
+from nl_production.abnormal_customer_complaint_authentic acca
+where
+    acca.callback_state = 2
+    and acca.qaqc_callback_result in (2,3)
+    and acca.qaqc_callback_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
+    and acca.qaqc_callback_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
+    and acca.type = 1
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    acca.staff_info_id
+    ,count(distinct if(acca.complaints_type = 2, acca.merge_column, null)) 揽件虚假量
+    ,count(distinct if(acca.complaints_type = 1, acca.merge_column, null)) 妥投虚假量
+    ,count(distinct if(acca.complaints_type = 3, acca.merge_column, null)) 派件标记虚假量
+from nl_production.abnormal_customer_complaint_authentic acca
+where
+    acca.callback_state = 2
+    and acca.qaqc_callback_result in (2,3)
+    and acca.qaqc_callback_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
+    and acca.qaqc_callback_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
+    and acca.type = 1
+    and acca.complaints_type in (1,2,3)
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.staff_info_id
+    ,sum(a.揽件虚假量) 虚假揽件量
+    ,sum(a.妥投虚假量) 虚假妥投量
+    ,sum(a.派件标记虚假量) 虚假派件标记量
+from
+    (
+        select
+        #     case vrv.type
+        #         when 1 then '揽件任务异常取消'
+        #         when 2 then '虚假妥投'
+        #         when 3 then '收件人拒收'
+        #         when 4 then '标记客户改约时间'
+        #         when 5 then 'KA现场不揽收'
+        #         when 6 then '包裹未准备好'
+        #         when 7 then '上报错分未妥投'
+        #         when 8 then '多次尝试派送失败'
+        #     end 回访类型
+            vrv.staff_info_id
+            ,'回访' type
+            ,count(distinct if(vrv.visit_result  in (6), vrv.link_id, null)) 妥投虚假量
+            ,count(distinct if(vrv.visit_result in (18,8,19,20,21,31,32,22,23,24), vrv.link_id, null)) 派件标记虚假量
+        #     ,count(distinct if(vrv.visit_result in (23,24), vrv.link_id, null)) 虚假改约量
+            ,count(distinct if(vrv.visit_result in (37,39,3), vrv.link_id, null)) 揽件虚假量
+        #     ,count(distinct if(vrv.visit_result in (39), vrv.link_id, null)) 虚假未准备好标记量
+        #     ,count(distinct if(vrv.visit_result in (3), vrv.link_id, null)) 虚假取消揽件任务
+        from nl_production.violation_return_visit vrv
+        where
+            vrv.visit_state = 4
+            and vrv.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
+            and vrv.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
+            and vrv.visit_staff_id not in (10000,10001) -- 非ivr回访
+            and vrv.type in (1,2,3,4,5,6)
+        group by 1
+
+        union all
+
+        select
+            acca.staff_info_id
+            ,'投诉' type
+            ,count(distinct if(acca.complaints_type = 2, acca.merge_column, null)) 揽件虚假量
+            ,count(distinct if(acca.complaints_type = 1, acca.merge_column, null)) 妥投虚假量
+            ,count(distinct if(acca.complaints_type = 3, acca.merge_column, null)) 派件标记虚假量
+        from nl_production.abnormal_customer_complaint_authentic acca
+        where
+            acca.callback_state = 2
+            and acca.qaqc_callback_result in (2,3)
+            and acca.qaqc_callback_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
+            and acca.qaqc_callback_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
+            and acca.type = 1
+            and acca.complaints_type in (1,2,3)
+        group by 1
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with handover as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    ),
+ handover2 as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    )
+
+
+        select
+                fn.网点
+                ,fn.大区
+                ,fn.片区
+        # 	    ,fn.负责人
+                ,fn.员工ID
+                ,fn.快递员姓名
+                ,fn.交接量_非退件
+                ,fn.交接包裹妥投量_非退件妥投
+                ,fn.交接包裹妥投量_退件妥投
+                ,fn.交接包裹未拨打电话数 交接包裹未妥投未拨打电话数
+                ,fn.员工出勤信息
+                ,fn.18点前快递员结束派件时间
+                ,fn.妥投率
+                ,case when fn.未按要求联系客户 is not null and fn.rk<=2 then '是' else null end as 违反A联系客户
+                ,fn.是否出勤不达标 as 违反B出勤
+                ,fn.是否低人效 as 违反C人效
+            from
+            (
+                select
+                    fk.*
+                    ,row_number() over (partition by fk.网点,fk.未按要求联系客户 order by fk.交接包裹未拨打电话占比 desc) as rk
+                    from
+                    (
+                        select
+                            f1.网点
+                            ,f1.大区
+                            ,f1.片区
+        # 				    ,f1.负责人
+                            ,f1.员工ID
+                            ,f1.快递员姓名
+                            ,f2.交接量_非退件
+                            ,f2.交接包裹妥投量_非退件妥投
+                            ,f2.交接包裹妥投量_退件妥投
+                            ,f1.交接包裹未拨打电话数
+                            ,case when f5.late_days>=3 and f5.late_times>=300 then '最近一周迟到至少三次且迟到时间至少5小时'
+                                 when f5.absent_days>=2  then '最近一周缺勤>=2次' else null end as 员工出勤信息
+                            ,f6.finished_at as 18点前快递员结束派件时间
+                            ,concat(round(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件*100,2),'%') as 妥投率
+                            ,f1.交接包裹未拨打电话占比
+
+
+                            ,f5.absent_days as 缺勤天数
+                            ,f5.late_days as 迟到天数
+                            ,f5.late_times as 迟到时长_分钟
+                            ,if(f1.交接包裹未拨打电话数>10 and f1.交接包裹未拨打电话占比>0.2,'未按要求联系客户',null) as 未按要求联系客户
+                            ,case when f5.late_days>=3 and f5.late_times>=300 then '是' when f5.absent_days>=2  then '是' else null end as 是否出勤不达标
+                            ,if(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件<0.7 and f2.交接包裹妥投量_非退件妥投<100 and ( hour(f6.finished_at)<15 or f6.finished_at is null ),'是',null) as 是否低人效
+
+                        from
+                            (# 快递员交接包裹后拨打电话情况
+                                select
+                                    fn.region_name as 大区
+        # 						    ,case
+        # 							    when fn.region_name in ('Area3', 'Area6') then '彭万松'
+        # 							    when fn.region_name in ('Area4', 'Area9') then '韩钥'
+        # 							    when fn.region_name in ('Area7','Area10', 'Area11','FHome','Area14') then '张可新'
+        # 							    when fn.region_name in ( 'Area8') then '黄勇'
+        # 							    when fn.region_name in ('Area1', 'Area2','Area5', 'Area12','Area13') then '李俊'
+        # 								end 负责人
+                                    ,fn.piece_name as 片区
+                                    ,fn.store_name as 网点
+                                    ,fn.store_id
+                                    ,fn.staff_info_id as 员工ID
+                                    ,fn.staff_name as 快递员姓名
+                                    ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end) as 交接包裹未拨打电话数
+                                    ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end)/count(distinct fn.pno) as 交接包裹未拨打电话占比
+                                from  handover fn
+                                group by 1,2,3,4,5,6
+                            )f1
+                        left join
+                                (
+                                    select
+                                        fn.staff_info_id as 员工ID
+                                        ,fn.staff_name as 快递员姓名
+                                        ,count(distinct if(fn.pno_type='正向件', fn.pno ,null)) as 交接量_非退件
+                                        ,count(distinct if(fn.pi_state = 5 and fn.pno_type='正向件' and fn.finished_at < '2023-09-15 10:00:00',fn.pno ,null)) 交接包裹妥投量_非退件妥投
+                                        ,count(distinct if(fn.pi_state = 5 and fn.pno_type='退件' and fn.finished_at < '2023-09-15 10:00:00',fn.pno ,null)) 交接包裹妥投量_退件妥投
+                                    from  handover2 fn
+                                    group by 1,2
+                                )f2 on f2.员工ID = f1.员工ID
+                        left join
+                            ( -- 最近一周出勤
+                                select
+                                    ad.staff_info_id
+                                    ,sum(case
+                                        when ad.leave_type is not null and ad.leave_time_type=1 then 0.5
+                                        when ad.leave_type is not null and ad.leave_time_type=2 then 0.5
+                                        when ad.leave_type is not null and ad.leave_time_type=3 then 1
+                                        else 0  end) as leave_num
+                                    ,count(distinct if(ad.attendance_time = 0, ad.stat_date, null)) absent_days
+                                    ,count(distinct if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), ad.stat_date, null)) late_days
+                                    ,sum(if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), timestampdiff(minute , concat(ad.stat_date, ' ', ad.shift_start), ad.attendance_started_at), 0)) late_times
+                                from bi_pro.attendance_data_v2 ad
+                                where ad.attendance_time + ad.BT+ ad.BT_Y + ad.AB >0
+                                    and ad.stat_date>date_sub(current_date,interval 8 day)
+                                    and ad.stat_date<=date_sub(current_date,interval 1 day)
+                                group by 1
+                            ) f5 on f5.staff_info_id = f1.员工ID
+                        left join
+                            ( -- 18点前最后一个妥投包裹时间
+                                select
+                                     ha.ticket_delivery_staff_info_id
+                                    ,ha.finished_at
+                                from
+                                (
+                                    select
+                                        pi.ticket_delivery_staff_info_id
+                                        ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+                                        ,row_number() over (partition by pi.ticket_delivery_staff_info_id order by pi.finished_at desc) as rk
+                                    from fle_staging.parcel_info pi
+                                    where pi.state=5
+                                    and pi.finished_at>= date_sub(curdate(), interval 8 hour)
+                                    and pi.finished_at< date_add(curdate(), interval 10 hour)
+                                )ha
+                                where ha.rk=1
+                            ) f6 on f6.ticket_delivery_staff_info_id = f1.员工ID
+                    )fk
+            )fn;
+;-- -. . -..- - / . -. - .-. -.--
+with handover as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 10 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    ),
+ handover2 as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(curdate(), interval 7 hour)
+		                            and pr.routed_at < date_add(curdate(), interval 11 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    )
+
+
+        select
+                fn.网点
+                ,fn.大区
+                ,fn.片区
+        # 	    ,fn.负责人
+                ,fn.员工ID
+                ,fn.快递员姓名
+                ,fn.交接量_非退件
+                ,fn.交接包裹妥投量_非退件妥投
+                ,fn.交接包裹妥投量_退件妥投
+                ,fn.交接包裹未拨打电话数 交接包裹未妥投未拨打电话数
+                ,fn.员工出勤信息
+                ,fn.18点前快递员结束派件时间
+                ,fn.妥投率
+                ,case when fn.未按要求联系客户 is not null and fn.rk<=2 then '是' else null end as 违反A联系客户
+                ,fn.是否出勤不达标 as 违反B出勤
+                ,fn.是否低人效 as 违反C人效
+            from
+            (
+                select
+                    fk.*
+                    ,row_number() over (partition by fk.网点,fk.未按要求联系客户 order by fk.交接包裹未拨打电话占比 desc) as rk
+                    from
+                    (
+                        select
+                            f1.网点
+                            ,f1.大区
+                            ,f1.片区
+        # 				    ,f1.负责人
+                            ,f1.员工ID
+                            ,f1.快递员姓名
+                            ,f2.交接量_非退件
+                            ,f2.交接包裹妥投量_非退件妥投
+                            ,f2.交接包裹妥投量_退件妥投
+                            ,f1.交接包裹未拨打电话数
+                            ,case when f5.late_days>=3 and f5.late_times>=300 then '最近一周迟到至少三次且迟到时间至少5小时'
+                                 when f5.absent_days>=2  then '最近一周缺勤>=2次' else null end as 员工出勤信息
+                            ,f6.finished_at as 18点前快递员结束派件时间
+                            ,concat(round(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件*100,2),'%') as 妥投率
+                            ,f1.交接包裹未拨打电话占比
+
+
+                            ,f5.absent_days as 缺勤天数
+                            ,f5.late_days as 迟到天数
+                            ,f5.late_times as 迟到时长_分钟
+                            ,if(f1.交接包裹未拨打电话数>10 and f1.交接包裹未拨打电话占比>0.2,'未按要求联系客户',null) as 未按要求联系客户
+                            ,case when f5.late_days>=3 and f5.late_times>=300 then '是' when f5.absent_days>=2  then '是' else null end as 是否出勤不达标
+                            ,if(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件<0.7 and f2.交接包裹妥投量_非退件妥投<100 and ( hour(f6.finished_at)<15 or f6.finished_at is null ),'是',null) as 是否低人效
+
+                        from
+                            (# 快递员交接包裹后拨打电话情况
+                                select
+                                    fn.region_name as 大区
+        # 						    ,case
+        # 							    when fn.region_name in ('Area3', 'Area6') then '彭万松'
+        # 							    when fn.region_name in ('Area4', 'Area9') then '韩钥'
+        # 							    when fn.region_name in ('Area7','Area10', 'Area11','FHome','Area14') then '张可新'
+        # 							    when fn.region_name in ( 'Area8') then '黄勇'
+        # 							    when fn.region_name in ('Area1', 'Area2','Area5', 'Area12','Area13') then '李俊'
+        # 								end 负责人
+                                    ,fn.piece_name as 片区
+                                    ,fn.store_name as 网点
+                                    ,fn.store_id
+                                    ,fn.staff_info_id as 员工ID
+                                    ,fn.staff_name as 快递员姓名
+                                    ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end) as 交接包裹未拨打电话数
+                                    ,count(distinct case when  fn.before_17_calltimes is null and fn.pi_state not in(5,7,8,9) then fn.pno else null end)/count(distinct fn.pno) as 交接包裹未拨打电话占比
+                                from  handover fn
+                                group by 1,2,3,4,5,6
+                            )f1
+                        left join
+                                (
+                                    select
+                                        fn.staff_info_id as 员工ID
+                                        ,fn.staff_name as 快递员姓名
+                                        ,count(distinct if(fn.pno_type='正向件', fn.pno ,null)) as 交接量_非退件
+                                        ,count(distinct if(fn.pi_state = 5 and fn.pno_type='正向件' and fn.finished_at < date_add(curdate(), interval 10 hour),fn.pno ,null)) 交接包裹妥投量_非退件妥投
+                                        ,count(distinct if(fn.pi_state = 5 and fn.pno_type='退件' and fn.finished_at < date_add(curdate(), interval 10 hour),fn.pno ,null)) 交接包裹妥投量_退件妥投
+                                    from  handover2 fn
+                                    group by 1,2
+                                )f2 on f2.员工ID = f1.员工ID
+                        left join
+                            ( -- 最近一周出勤
+                                select
+                                    ad.staff_info_id
+                                    ,sum(case
+                                        when ad.leave_type is not null and ad.leave_time_type=1 then 0.5
+                                        when ad.leave_type is not null and ad.leave_time_type=2 then 0.5
+                                        when ad.leave_type is not null and ad.leave_time_type=3 then 1
+                                        else 0  end) as leave_num
+                                    ,count(distinct if(ad.attendance_time = 0, ad.stat_date, null)) absent_days
+                                    ,count(distinct if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), ad.stat_date, null)) late_days
+                                    ,sum(if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), timestampdiff(minute , concat(ad.stat_date, ' ', ad.shift_start), ad.attendance_started_at), 0)) late_times
+                                from bi_pro.attendance_data_v2 ad
+                                where ad.attendance_time + ad.BT+ ad.BT_Y + ad.AB >0
+                                    and ad.stat_date>date_sub(current_date,interval 8 day)
+                                    and ad.stat_date<=date_sub(current_date,interval 1 day)
+                                group by 1
+                            ) f5 on f5.staff_info_id = f1.员工ID
+                        left join
+                            ( -- 18点前最后一个妥投包裹时间
+                                select
+                                     ha.ticket_delivery_staff_info_id
+                                    ,ha.finished_at
+                                from
+                                (
+                                    select
+                                        pi.ticket_delivery_staff_info_id
+                                        ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+                                        ,row_number() over (partition by pi.ticket_delivery_staff_info_id order by pi.finished_at desc) as rk
+                                    from fle_staging.parcel_info pi
+                                    where pi.state=5
+                                    and pi.finished_at>= date_sub(curdate(), interval 8 hour)
+                                    and pi.finished_at< date_add(curdate(), interval 10 hour)
+                                )ha
+                                where ha.rk=1
+                            ) f6 on f6.ticket_delivery_staff_info_id = f1.员工ID
+                    )fk
+            )fn;
+;-- -. . -..- - / . -. - .-. -.--
+with handover as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+            ,fn.pi_updated_at
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有17点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(date_sub(curdate() , interval 1 day), interval 7 hour)
+		                            and pr.routed_at < date_add(date_sub(curdate() , interval 1 day), interval 10 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 17点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(date_sub(curdate() , interval 1 day), interval 7 hour)
+		                            and pr.routed_at < date_add(date_sub(curdate() , interval 1 day), interval 10 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    ),
+ handover2 as
+    (
+        select
+            fn.pno
+            ,fn.pno_type
+            ,fn.store_id
+            ,fn.store_name
+            ,fn.piece_name
+            ,fn.region_name
+            ,fn.staff_info_id
+            ,fn.staff_name
+            ,fn.finished_at
+            ,fn.pi_state
+			,fn.before_17_calltimes
+        from
+            (
+	            select
+		            pr.pno
+		            ,pr.store_id
+		            ,dp.store_name
+		            ,dp.piece_name
+		            ,dp.region_name
+		            ,pr.staff_info_id
+		            ,pi.state pi_state
+	                ,convert_tz(pi.updated_at,'+00:00','+07:00') as pi_updated_at
+		            ,if(pi.returned=1,'退件','正向件') as pno_type
+		            ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+	                ,pr.staff_name
+		            ,pr2.before_17_calltimes
+		        from
+		            ( # 所有18点前交接包裹找到最后一次交接的人
+		                select
+		                    pr.*
+		                from
+		                    (
+		                        select
+		                            pr.pno
+		                            ,pr.staff_info_id
+		                            ,hsi.name as staff_name
+		                            ,pr.store_id
+		                            ,row_number() over(partition by pr.pno order by convert_tz(pr.routed_at,'+00:00','+07:00') desc) as rnk
+		                        from rot_pro.parcel_route pr
+		                        left join bi_pro.hr_staff_info hsi on pr.staff_info_id=hsi.staff_info_id
+		                        left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+		                        where
+		                            pr.routed_at >= date_sub(date_sub(curdate() , interval 1 day), interval 7 hour)
+		                            and pr.routed_at < date_add(date_sub(curdate() , interval 1 day), interval 11 hour)
+		                            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN')
+		                            and hsi.job_title in(13,110,452,1497)
+		                            and hsi.formal=1
+		                    ) pr
+		                    where  pr.rnk=1
+		            ) pr
+		            join dwm.dim_th_sys_store_rd dp on dp.store_id = pr.store_id and dp.stat_date = date_sub(curdate(), interval 1 day) and dp.store_category in (1,10)
+		            left join fle_staging.parcel_info pi on pr.pno = pi.pno
+		        left join # 18点前拨打电话次数
+		            (
+		                select
+		                    pr.pno
+		                    ,count(pr.call_datetime) as before_17_calltimes
+		                from
+		                    (
+		                        select
+		                                pr.pno
+		                                ,pr.staff_info_id
+		                                ,convert_tz(pr.routed_at,'+00:00','+07:00')  as call_datetime
+		                         from rot_pro.parcel_route pr
+		                         where
+		                            pr.routed_at >= date_sub(date_sub(curdate() , interval 1 day), interval 7 hour)
+		                            and pr.routed_at < date_add(date_sub(curdate() , interval 1 day), interval 11 hour)
+		                            and pr.route_action in ('PHONE')
+		                    )pr
+		                group by 1
+		            )pr2 on pr.pno = pr2.pno
+	        )fn
+    )
+
+
+        select
+                fn.网点
+                ,fn.大区
+                ,fn.片区
+        # 	    ,fn.负责人
+                ,fn.员工ID
+                ,fn.快递员姓名
+                ,fn.交接量_非退件
+                ,fn.交接包裹妥投量_非退件妥投
+                ,fn.交接包裹妥投量_退件妥投
+                ,fn.交接包裹未拨打电话数 交接包裹未妥投未拨打电话数
+                ,fn.员工出勤信息
+                ,fn.18点前快递员结束派件时间
+                ,fn.妥投率
+                ,case when fn.未按要求联系客户 is not null and fn.rk<=2 then '是' else null end as 违反A联系客户
+                ,fn.是否出勤不达标 as 违反B出勤
+                ,fn.是否低人效 as 违反C人效
+            from
+            (
+                select
+                    fk.*
+                    ,row_number() over (partition by fk.网点,fk.未按要求联系客户 order by fk.交接包裹未拨打电话占比 desc) as rk
+                    from
+                    (
+                        select
+                            f1.网点
+                            ,f1.大区
+                            ,f1.片区
+        # 				    ,f1.负责人
+                            ,f1.员工ID
+                            ,f1.快递员姓名
+                            ,f2.交接量_非退件
+                            ,f2.交接包裹妥投量_非退件妥投
+                            ,f2.交接包裹妥投量_退件妥投
+                            ,f1.交接包裹未拨打电话数
+                            ,case when f5.late_days>=3 and f5.late_times>=300 then '最近一周迟到至少三次且迟到时间至少5小时'
+                                 when f5.absent_days>=2  then '最近一周缺勤>=2次' else null end as 员工出勤信息
+                            ,f6.finished_at as 18点前快递员结束派件时间
+                            ,concat(round(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件*100,2),'%') as 妥投率
+                            ,f1.交接包裹未拨打电话占比
+
+
+                            ,f5.absent_days as 缺勤天数
+                            ,f5.late_days as 迟到天数
+                            ,f5.late_times as 迟到时长_分钟
+                            ,if(f1.交接包裹未拨打电话数>10 and f1.交接包裹未拨打电话占比>0.2,'未按要求联系客户',null) as 未按要求联系客户
+                            ,case when f5.late_days>=3 and f5.late_times>=300 then '是' when f5.absent_days>=2  then '是' else null end as 是否出勤不达标
+                            ,if(f2.交接包裹妥投量_非退件妥投/f2.交接量_非退件<0.7 and f2.交接包裹妥投量_非退件妥投<100 and ( hour(f6.finished_at)<15 or f6.finished_at is null ),'是',null) as 是否低人效
+
+                        from
+                            (# 快递员交接包裹后拨打电话情况
+                                select
+                                    fn.region_name as 大区
+        # 						    ,case
+        # 							    when fn.region_name in ('Area3', 'Area6') then '彭万松'
+        # 							    when fn.region_name in ('Area4', 'Area9') then '韩钥'
+        # 							    when fn.region_name in ('Area7','Area10', 'Area11','FHome','Area14') then '张可新'
+        # 							    when fn.region_name in ( 'Area8') then '黄勇'
+        # 							    when fn.region_name in ('Area1', 'Area2','Area5', 'Area12','Area13') then '李俊'
+        # 								end 负责人
+                                    ,fn.piece_name as 片区
+                                    ,fn.store_name as 网点
+                                    ,fn.store_id
+                                    ,fn.staff_info_id as 员工ID
+                                    ,fn.staff_name as 快递员姓名
+                                    ,count(distinct case when  fn.before_17_calltimes is null and (fn.pi_state not in(5,7,8,9) or (fn.pi_state in (5,7,8,9) and fn.pi_updated_at > '2023-09-16 18:00:00') ) then fn.pno else null end) as 交接包裹未拨打电话数
+                                    ,count(distinct case when  fn.before_17_calltimes is null and (fn.pi_state not in(5,7,8,9) or (fn.pi_state in (5,7,8,9) and fn.pi_updated_at > '2023-09-16 18:00:00') ) then fn.pno else null end) /count(distinct fn.pno) as 交接包裹未拨打电话占比
+                                from  handover fn
+                                group by 1,2,3,4,5,6
+                            )f1
+                        left join
+                                (
+                                    select
+                                        fn.staff_info_id as 员工ID
+                                        ,fn.staff_name as 快递员姓名
+                                        ,count(distinct if(fn.pno_type='正向件', fn.pno ,null)) as 交接量_非退件
+                                        ,count(distinct if(fn.pi_state = 5 and fn.pno_type='正向件' and fn.finished_at < '2023-09-16 18:00:00',fn.pno ,null)) 交接包裹妥投量_非退件妥投
+                                        ,count(distinct if(fn.pi_state = 5 and fn.pno_type='退件' and fn.finished_at < '2023-09-16 18:00:00',fn.pno ,null)) 交接包裹妥投量_退件妥投
+                                    from  handover2 fn
+                                    group by 1,2
+                                )f2 on f2.员工ID = f1.员工ID
+                        left join
+                            ( -- 最近一周出勤
+                                select
+                                    ad.staff_info_id
+                                    ,sum(case
+                                        when ad.leave_type is not null and ad.leave_time_type=1 then 0.5
+                                        when ad.leave_type is not null and ad.leave_time_type=2 then 0.5
+                                        when ad.leave_type is not null and ad.leave_time_type=3 then 1
+                                        else 0  end) as leave_num
+                                    ,count(distinct if(ad.attendance_time = 0, ad.stat_date, null)) absent_days
+                                    ,count(distinct if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), ad.stat_date, null)) late_days
+                                    ,sum(if(ad.attendance_started_at > date_add(concat(ad.stat_date, ' ', ad.shift_start), interval 1 minute), timestampdiff(minute , concat(ad.stat_date, ' ', ad.shift_start), ad.attendance_started_at), 0)) late_times
+                                from bi_pro.attendance_data_v2 ad
+                                where ad.attendance_time + ad.BT+ ad.BT_Y + ad.AB >0
+                                    and ad.stat_date>date_sub(current_date,interval 9 day)
+                                    and ad.stat_date<=date_sub(current_date,interval 2 day)
+                                group by 1
+                            ) f5 on f5.staff_info_id = f1.员工ID
+                        left join
+                            ( -- 18点前最后一个妥投包裹时间
+                                select
+                                     ha.ticket_delivery_staff_info_id
+                                    ,ha.finished_at
+                                from
+                                (
+                                    select
+                                        pi.ticket_delivery_staff_info_id
+                                        ,convert_tz(pi.finished_at,'+00:00','+07:00') as finished_at
+                                        ,row_number() over (partition by pi.ticket_delivery_staff_info_id order by pi.finished_at desc) as rk
+                                    from fle_staging.parcel_info pi
+                                    where pi.state=5
+                                    and pi.finished_at>= date_sub(date_sub(curdate() , interval 1 day), interval 7 hour)
+                                    and pi.finished_at< date_add(date_sub(curdate() , interval 1 day), interval 11 hour)
+                                )ha
+                                where ha.rk=1
+                            ) f6 on f6.ticket_delivery_staff_info_id = f1.员工ID
+                    )fk
+            )fn;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.staff_info_id
+    ,sum(a.揽件虚假量) 虚假揽件量
+    ,sum(a.妥投虚假量) 虚假妥投量
+    ,sum(a.派件标记虚假量) 虚假派件标记量
+from
+    (
+        select
+        #     case vrv.type
+        #         when 1 then '揽件任务异常取消'
+        #         when 2 then '虚假妥投'
+        #         when 3 then '收件人拒收'
+        #         when 4 then '标记客户改约时间'
+        #         when 5 then 'KA现场不揽收'
+        #         when 6 then '包裹未准备好'
+        #         when 7 then '上报错分未妥投'
+        #         when 8 then '多次尝试派送失败'
+        #     end 回访类型
+            vrv.staff_info_id
+            ,'回访' type
+            ,count(distinct if(vrv.visit_result  in (6), vrv.link_id, null)) 妥投虚假量
+            ,count(distinct if(vrv.visit_result in (18,8,19,20,21,31,32,22,23,24), vrv.link_id, null)) 派件标记虚假量
+        #     ,count(distinct if(vrv.visit_result in (23,24), vrv.link_id, null)) 虚假改约量
+            ,count(distinct if(vrv.visit_result in (37,39,3), vrv.link_id, null)) 揽件虚假量
+        #     ,count(distinct if(vrv.visit_result in (39), vrv.link_id, null)) 虚假未准备好标记量
+        #     ,count(distinct if(vrv.visit_result in (3), vrv.link_id, null)) 虚假取消揽件任务
+        from nl_production.violation_return_visit vrv
+        where
+            vrv.visit_state = 4
+            and vrv.updated_at >= date_sub(date_sub(curdate(), interval 2 day), interval 7 hour)
+            and vrv.updated_at < date_add(date_sub(curdate(), interval 2 day), interval 17 hour) -- 昨天
+            and vrv.visit_staff_id not in (10000,10001) -- 非ivr回访
+            and vrv.type in (1,2,3,4,5,6)
+        group by 1
+
+        union all
+
+        select
+            acca.staff_info_id
+            ,'投诉' type
+            ,count(distinct if(acca.complaints_type = 2, acca.merge_column, null)) 揽件虚假量
+            ,count(distinct if(acca.complaints_type = 1, acca.merge_column, null)) 妥投虚假量
+            ,count(distinct if(acca.complaints_type = 3, acca.merge_column, null)) 派件标记虚假量
+        from nl_production.abnormal_customer_complaint_authentic acca
+        where
+            acca.callback_state = 2
+            and acca.qaqc_callback_result in (2,3)
+            and acca.qaqc_callback_at >= date_sub(date_sub(curdate(), interval 2 day), interval 7 hour)
+            and acca.qaqc_callback_at < date_add(date_sub(curdate(), interval 2 day), interval 17 hour) -- 昨天
+            and acca.type = 1
+            and acca.complaints_type in (1,2,3)
+        group by 1
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    s.pno
+    ,pi.ticket_delivery_staff_info_id
+    ,convert_tz(pi.finished_at, '+00:00', '+08:00') 妥投时间
+    ,hsi.is_sub_staff
+from dwm.dwd_th_dc_should_be_delivery s
+left join fle_staging.parcel_info pi on pi.pno = s.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+where
+    s.dst_store_id = 'TH02030214';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    s.pno
+    ,pi.ticket_delivery_staff_info_id
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+08:00'), null) 妥投时间
+    ,hsi.is_sub_staff
+from dwm.dwd_th_dc_should_be_delivery s
+left join fle_staging.parcel_info pi on pi.pno = s.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+where
+    s.dst_store_id = 'TH02030214';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    s.pno
+    ,pi.ticket_delivery_staff_info_id
+    ,if(pi.state = 5, convert_tz(pi.finished_at, '+00:00', '+08:00'), null) 妥投时间
+    ,if(hsi.sys_store_id = s.dst_store_id, '是', '否') 是否是本网点员工
+    ,hsi.is_sub_staff
+from dwm.dwd_th_dc_should_be_delivery s
+left join fle_staging.parcel_info pi on pi.pno = s.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+where
+    s.dst_store_id = 'TH02030214';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-16'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-16')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-16'
+        and pi.finished_at >= date_sub('2023-09-16', interval 8 hour )
+        and pi.finished_at < date_add('2023-09-16', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH02030214';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-16'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-16')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-16'
+        and pi.finished_at >= date_sub('2023-09-16', interval 8 hour )
+        and pi.finished_at < date_add('2023-09-16', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH02030214'
+)
+select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-16'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-16')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-16'
+        and pi.finished_at >= date_sub('2023-09-16', interval 8 hour )
+        and pi.finished_at < date_add('2023-09-16', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+#         and ds.dst_store_id = 'TH16020303'
+)
+select
+    dp.store_id 网点ID
+    ,dp.store_name 网点
+    ,coalesce(dp.opening_at, '未记录') 开业时间
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,coalesce(cour.staf_num, 0) 本网点所属快递员数
+    ,coalesce(ds.sd_num, 0) 应派件量
+    ,coalesce(del.pno_num, 0) '妥投量(快递员+仓管+主管)'
+    ,coalesce(del_cou.self_staff_num, 0) 参与妥投快递员_自有
+    ,coalesce(del_cou.other_staff_num, 0) 参与妥投快递员_外协支援
+    ,coalesce(del_cou.dco_dcs_num, 0) 参与妥投_仓管主管
+    ,coalesce(del_cou.self_effect, 0) 当日人效_自有
+    ,coalesce(del_cou.other_effect, 0) 当日人效_外协支援
+
+    ,coalesce(del_cou.other_staff_apply_num, 0) 参与妥投快递员_外协支援_申请
+    ,coalesce(del_cou.other_staff_apply_effect, 0) 当日人效_外协支援_申请
+    ,coalesce(del_cou.other_staff_noapply_num, 0) 参与妥投快递员_外协支援_未申请
+    ,coalesce(del_cou.other_staff_noapply_effect, 0) 当日人效_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_effect, 0) 仓管主管人效
+    ,coalesce(del_hour.avg_del_hour, 0) 派件小时数
+from
+    (
+        select
+            dp.store_id
+            ,dp.store_name
+            ,dp.opening_at
+            ,dp.piece_name
+            ,dp.region_name
+        from dwm.dim_th_sys_store_rd dp
+        left join fle_staging.sys_store ss on ss.id = dp.store_id
+        where
+            dp.state_desc = '激活'
+            and dp.stat_date = date_sub(curdate(), interval 1 day)
+            and ss.category in (1,10)
+    ) dp
+left join
+    (
+        select
+            hr.sys_store_id sys_store_id
+            ,count(distinct hr.staff_info_id) staf_num
+        from  bi_pro.hr_staff_info hr
+        where
+            hr.formal = 1
+            and hr.state = 1
+            and hr.job_title in (13,110,452,1497)
+#             and hr.stat_date = '${date}'
+        group by 1
+    ) cour on cour.sys_store_id = dp.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) sd_num
+        from dwm.dwd_th_dc_should_be_delivery ds
+        where
+             ds.should_delevry_type != '非当日应派'
+            and ds.p_date = '2023-09-16'
+        group by 1
+    ) ds on ds.dst_store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct t1.pno) pno_num
+        from t t1
+        group by 1
+    ) del on del.store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1
+    ) del_cou on del_cou.store_id = dp.store_id
+left join
+    (
+        select
+            a.store_id
+            ,a.name
+            ,sum(diff_hour)/count(distinct a.ticket_delivery_staff_info_id) avg_del_hour
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.name
+                    ,t1.ticket_delivery_staff_info_id
+                    ,t1.finished_time
+                    ,t2.finished_time finished_at_2
+                    ,timestampdiff(second, t1.finished_time, t2.finished_time)/3600 diff_hour
+                from
+                    (
+                        select * from t t1 where t1.rk1 = 1
+                    ) t1
+                join
+                    (
+                        select * from t t2 where t2.rk2 = 2
+                    ) t2 on t2.store_id = t1.store_id and t2.ticket_delivery_staff_info_id = t1.ticket_delivery_staff_info_id
+            ) a
+        group by 1,2
+    ) del_hour on del_hour.store_id = dp.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+07:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-16'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-16')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-16'
+        and pi.finished_at >= date_sub('2023-09-16', interval 7 hour )
+        and pi.finished_at < date_add('2023-09-16', interval 17 hour)
+        and ds.should_delevry_type != '非当日应派'
+#         and ds.dst_store_id = 'TH16020303'
+)
+
+
+
+
+
+select
+    dp.store_id 网点ID
+    ,dp.store_name 网点
+	,if(ss_f.store_id is not null,'有服务区','无服务区') '网点有无服务区'
+	,substring_index(dp.store_name,'-',1) short_name
+	,case dp.store_category
+		when 1 then 'SP'
+		when 2 then 'DC'
+		when 4 then 'SHOP'
+		when 5 then 'SHOP'
+		when 6 then 'FH'
+		when 7 then 'SHOP'
+		when 8 then 'Hub'
+		when 9 then 'Onsite'
+		when 10 then 'BDC'
+		when 11 then 'fulfillment'
+		when 12 then 'B-HUB'
+		when 13 then 'CDC'
+		when 14 then 'PDC'
+	end 网点类型
+	,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+    ,coalesce(dp.opening_at, '未记录') 开业时间
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,coalesce(cour.staf_num, 0) 本网点所属快递员数
+    ,coalesce(ds.sd_num, 0) 应派件量
+    ,coalesce(del.pno_num, 0) '妥投量(快递员+仓管+主管)'
+    ,coalesce(del_cou.self_staff_num, 0) 参与妥投快递员_自有
+    ,coalesce(del_cou.other_staff_num, 0) 参与妥投快递员_外协支援
+	,coalesce(del_cou.other_staff_apply_num, 0) 参与妥投快递员_外协支援_申请
+	,coalesce(del_cou.other_staff_noapply_num, 0) 参与妥投快递员_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_num, 0) 参与妥投_仓管主管
+    ,coalesce(del_cou.self_effect, 0) 当日人效_自有
+
+    ,coalesce(del_cou.other_effect, 0) 当日人效_外协支援
+    ,coalesce(del_cou.other_staff_apply_effect, 0) 当日人效_外协支援_申请
+    ,coalesce(del_cou.other_staff_noapply_effect, 0) 当日人效_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_effect, 0) 仓管主管人效
+    ,coalesce(del_hour.avg_del_hour, 0) 派件小时数
+
+	,dd.in_house_count 在仓包裹数
+	,dd.big_in_house_count 在仓大件包裹数
+	,dd.big_client_count 在仓平台包裹数
+	,dd.small_client_count 在仓非平台包裹数
+	,dd.`3_within_backlog_bigclient` '在仓3天内平台包裹数（<=3）'
+	,dd.`3_5_backlog_bigclient` '在仓3-5天平台包裹数（>3,<=5）'
+	,dd.`5_more_backlog_bigclient` '在仓5天以上平台包裹数（>5）'
+	,dd.tt_overtime_count 'tt超时包裹数'
+
+from
+    (
+        select
+            dp.store_id
+            ,dp.store_name
+            ,dp.opening_at
+            ,dp.piece_name
+            ,dp.region_name
+			,dp.store_category
+        from dwm.dim_th_sys_store_rd dp
+        left join fle_staging.sys_store ss on ss.id = dp.store_id
+        where
+            dp.state_desc = '激活'
+            and dp.stat_date = date_sub('2023-09-16', interval 1 day)
+            and ss.category in (1,10)
+    ) dp
+	left join fle_staging.sys_store_bdc_bsp bsp on dp.store_id=bsp.bdc_id and bsp.deleted=0
+left join
+    (
+        select
+            hr.sys_store_id sys_store_id
+            ,count(distinct hr.staff_info_id) staf_num
+        from  bi_pro.hr_staff_info hr
+        where
+            hr.formal = 1
+            and hr.state = 1
+            and hr.job_title in (13,110,452,1497)
+#             and hr.stat_date = CURRENT_DATE
+        group by 1
+    ) cour on cour.sys_store_id = dp.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) sd_num
+        from dwm.dwd_th_dc_should_be_delivery ds
+        where
+             ds.should_delevry_type != '非当日应派'
+            and ds.p_date = '2023-09-16'
+        group by 1
+    ) ds on ds.dst_store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct t1.pno) pno_num
+        from t t1
+        group by 1
+    ) del on del.store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1
+    ) del_cou on del_cou.store_id = dp.store_id
+left join
+    (
+        select
+            a.store_id
+            ,a.name
+            ,sum(diff_hour)/count(distinct a.ticket_delivery_staff_info_id) avg_del_hour
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.name
+                    ,t1.ticket_delivery_staff_info_id
+                    ,t1.finished_time
+                    ,t2.finished_time finished_at_2
+                    ,timestampdiff(second, t1.finished_time, t2.finished_time)/3600 diff_hour
+                from
+                    (
+                        select * from t t1 where t1.rk1 = 1
+                    ) t1
+                join
+                    (
+                        select * from t t2 where t2.rk2 = 2
+                    ) t2 on t2.store_id = t1.store_id and t2.ticket_delivery_staff_info_id = t1.ticket_delivery_staff_info_id
+            ) a
+        group by 1,2
+    ) del_hour on del_hour.store_id = dp.store_id
+
+
+left join
+(
+	select
+	ds.dst_store_id
+	,count(distinct ds.pno) in_house_count
+	,count(distinct if(pi.exhibition_weight>5000 or pi.exhibition_length+pi.exhibition_width+pi.exhibition_height>80,ds.pno,null)) big_in_house_count
+	,count(distinct if(bc.client_id is not null,ds.pno,null)) big_client_count
+	,count(distinct if(bc.client_id is null,ds.pno,null)) small_client_count
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)<=3 and bc.client_id is not null,ds.pno,null)) `3_within_backlog_bigclient`
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)>3 and datediff(now(),ds.first_valid_routed_at)<=5 and bc.client_id is not null,ds.pno,null)) `3_5_backlog_bigclient`
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)>5 and bc.client_id is not null,ds.pno,null)) `5_more_backlog_bigclient`
+	,count(distinct if(tsd.end_date<curdate(),ds.pno,null)) tt_overtime_count
+
+	from dwm.dwd_th_dc_should_be_delivery ds
+
+	join fle_staging.parcel_info pi
+	on pi.pno=ds.pno and pi.state not in (5,7,8,9)
+
+	left join dwm.tmp_ex_big_clients_id_detail bc
+	on bc.client_id=pi.client_id
+
+	left join dwm.dwd_ex_th_tiktok_sla_detail tsd
+	on tsd.pno=ds.pno
+
+	group by 1
+) dd
+on dd.dst_store_id=dp.store_id
+
+left join
+(
+
+select
+    sdg.geo_store_id store_id
+from fle_staging.sys_district_geo_store sdg
+where
+    sdg.deleted = 0
+
+union
+
+select
+    sd.store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.geo_tag = 0
+
+union
+
+select
+    sd.separation_store_id store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.geo_tag = 0
+) ss_f
+on ss_f.store_id=dp.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-17'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-17')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-17'
+        and pi.finished_at >= date_sub('2023-09-17', interval 7 hour )
+        and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+        and ds.should_delevry_type != '非当日应派'
+#         and ds.dst_store_id = 'TH16020303'
+)
+select
+    dp.store_id 网点ID
+    ,dp.store_name 网点
+    ,coalesce(dp.opening_at, '未记录') 开业时间
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,coalesce(cour.staf_num, 0) 本网点所属快递员数
+    ,coalesce(ds.sd_num, 0) 应派件量
+    ,coalesce(del.pno_num, 0) '妥投量(快递员+仓管+主管)'
+    ,coalesce(del_cou.self_staff_num, 0) 参与妥投快递员_自有
+    ,coalesce(del_cou.other_staff_num, 0) 参与妥投快递员_外协支援
+    ,coalesce(del_cou.dco_dcs_num, 0) 参与妥投_仓管主管
+    ,coalesce(del_cou.self_effect, 0) 当日人效_自有
+    ,coalesce(del_cou.other_effect, 0) 当日人效_外协支援
+
+    ,coalesce(del_cou.other_staff_apply_num, 0) 参与妥投快递员_外协支援_申请
+    ,coalesce(del_cou.other_staff_apply_effect, 0) 当日人效_外协支援_申请
+    ,coalesce(del_cou.other_staff_noapply_num, 0) 参与妥投快递员_外协支援_未申请
+    ,coalesce(del_cou.other_staff_noapply_effect, 0) 当日人效_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_effect, 0) 仓管主管人效
+    ,coalesce(del_hour.avg_del_hour, 0) 派件小时数
+from
+    (
+        select
+            dp.store_id
+            ,dp.store_name
+            ,dp.opening_at
+            ,dp.piece_name
+            ,dp.region_name
+        from dwm.dim_th_sys_store_rd dp
+        left join fle_staging.sys_store ss on ss.id = dp.store_id
+        where
+            dp.state_desc = '激活'
+            and dp.stat_date = date_sub(curdate(), interval 1 day)
+            and ss.category in (1,10)
+    ) dp
+left join
+    (
+        select
+            hr.sys_store_id sys_store_id
+            ,count(distinct hr.staff_info_id) staf_num
+        from  bi_pro.hr_staff_info hr
+        where
+            hr.formal = 1
+            and hr.state = 1
+            and hr.job_title in (13,110,452,1497)
+#             and hr.stat_date = '${date}'
+        group by 1
+    ) cour on cour.sys_store_id = dp.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) sd_num
+        from dwm.dwd_th_dc_should_be_delivery ds
+        where
+             ds.should_delevry_type != '非当日应派'
+            and ds.p_date = '2023-09-17'
+        group by 1
+    ) ds on ds.dst_store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct t1.pno) pno_num
+        from t t1
+        group by 1
+    ) del on del.store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1
+    ) del_cou on del_cou.store_id = dp.store_id
+left join
+    (
+        select
+            a.store_id
+            ,a.name
+            ,sum(diff_hour)/count(distinct a.ticket_delivery_staff_info_id) avg_del_hour
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.name
+                    ,t1.ticket_delivery_staff_info_id
+                    ,t1.finished_time
+                    ,t2.finished_time finished_at_2
+                    ,timestampdiff(second, t1.finished_time, t2.finished_time)/3600 diff_hour
+                from
+                    (
+                        select * from t t1 where t1.rk1 = 1
+                    ) t1
+                join
+                    (
+                        select * from t t2 where t2.rk2 = 2
+                    ) t2 on t2.store_id = t1.store_id and t2.ticket_delivery_staff_info_id = t1.ticket_delivery_staff_info_id
+            ) a
+        group by 1,2
+    ) del_hour on del_hour.store_id = dp.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-17'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-17')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-17'
+        and pi.finished_at >= date_sub('2023-09-17', interval 8 hour )
+        and pi.finished_at < date_add('2023-09-17', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH02030214'
+)
+select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-17'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-17')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-17'
+        and pi.finished_at >= date_sub('2023-09-17', interval 8 hour )
+        and pi.finished_at < date_add('2023-09-17', interval 16 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH02030214';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+07:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = CURRENT_DATE
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= CURRENT_DATE)
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = CURRENT_DATE
+        and pi.finished_at >= date_sub(CURRENT_DATE, interval 7 hour )
+        and pi.finished_at < date_add(CURRENT_DATE, interval 17 hour)
+        and ds.should_delevry_type != '非当日应派'
+#         and ds.dst_store_id = 'TH16020303'
+)
+
+
+
+
+
+select
+    dp.store_id 网点ID
+    ,dp.store_name 网点
+	,if(ss_f.store_id is not null,'有服务区','无服务区') '网点有无服务区'
+	,substring_index(dp.store_name,'-',1) short_name
+	,case dp.store_category
+		when 1 then 'SP'
+		when 2 then 'DC'
+		when 4 then 'SHOP'
+		when 5 then 'SHOP'
+		when 6 then 'FH'
+		when 7 then 'SHOP'
+		when 8 then 'Hub'
+		when 9 then 'Onsite'
+		when 10 then 'BDC'
+		when 11 then 'fulfillment'
+		when 12 then 'B-HUB'
+		when 13 then 'CDC'
+		when 14 then 'PDC'
+	end 网点类型
+	,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+    ,coalesce(dp.opening_at, '未记录') 开业时间
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,coalesce(cour.staf_num, 0) 本网点所属快递员数
+    ,coalesce(ds.sd_num, 0) 应派件量
+    ,coalesce(del.pno_num, 0) '妥投量(快递员+仓管+主管)'
+    ,coalesce(del_cou.self_staff_num, 0) 参与妥投快递员_自有
+    ,coalesce(del_cou.other_staff_num, 0) 参与妥投快递员_外协支援
+	,coalesce(del_cou.other_staff_apply_num, 0) 参与妥投快递员_外协支援_申请
+	,coalesce(del_cou.other_staff_noapply_num, 0) 参与妥投快递员_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_num, 0) 参与妥投_仓管主管
+    ,coalesce(del_cou.self_effect, 0) 当日人效_自有
+
+    ,coalesce(del_cou.other_effect, 0) 当日人效_外协支援
+    ,coalesce(del_cou.other_staff_apply_effect, 0) 当日人效_外协支援_申请
+    ,coalesce(del_cou.other_staff_noapply_effect, 0) 当日人效_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_effect, 0) 仓管主管人效
+    ,coalesce(del_hour.avg_del_hour, 0) 派件小时数
+
+	,dd.in_house_count 在仓包裹数
+	,dd.big_in_house_count 在仓大件包裹数
+	,dd.big_client_count 在仓平台包裹数
+	,dd.small_client_count 在仓非平台包裹数
+	,dd.`3_within_backlog_bigclient` '在仓3天内平台包裹数（<=3）'
+	,dd.`3_5_backlog_bigclient` '在仓3-5天平台包裹数（>3,<=5）'
+	,dd.`5_more_backlog_bigclient` '在仓5天以上平台包裹数（>5）'
+	,dd.tt_overtime_count 'tt超时包裹数'
+
+from
+    (
+        select
+            dp.store_id
+            ,dp.store_name
+            ,dp.opening_at
+            ,dp.piece_name
+            ,dp.region_name
+			,dp.store_category
+        from dwm.dim_th_sys_store_rd dp
+        left join fle_staging.sys_store ss on ss.id = dp.store_id
+        where
+            dp.state_desc = '激活'
+            and dp.stat_date = date_sub(CURRENT_DATE, interval 1 day)
+            and ss.category in (1,10)
+    ) dp
+	left join fle_staging.sys_store_bdc_bsp bsp on dp.store_id=bsp.bdc_id and bsp.deleted=0
+left join
+    (
+        select
+            hr.sys_store_id sys_store_id
+            ,count(distinct hr.staff_info_id) staf_num
+        from  bi_pro.hr_staff_info hr
+        where
+            hr.formal = 1
+            and hr.state = 1
+            and hr.job_title in (13,110,452,1497)
+#             and hr.stat_date = CURRENT_DATE
+        group by 1
+    ) cour on cour.sys_store_id = dp.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) sd_num
+        from dwm.dwd_th_dc_should_be_delivery ds
+        where
+             ds.should_delevry_type != '非当日应派'
+            and ds.p_date = CURRENT_DATE
+        group by 1
+    ) ds on ds.dst_store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct t1.pno) pno_num
+        from t t1
+        group by 1
+    ) del on del.store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1
+    ) del_cou on del_cou.store_id = dp.store_id
+left join
+    (
+        select
+            a.store_id
+            ,a.name
+            ,sum(diff_hour)/count(distinct a.ticket_delivery_staff_info_id) avg_del_hour
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.name
+                    ,t1.ticket_delivery_staff_info_id
+                    ,t1.finished_time
+                    ,t2.finished_time finished_at_2
+                    ,timestampdiff(second, t1.finished_time, t2.finished_time)/3600 diff_hour
+                from
+                    (
+                        select * from t t1 where t1.rk1 = 1
+                    ) t1
+                join
+                    (
+                        select * from t t2 where t2.rk2 = 2
+                    ) t2 on t2.store_id = t1.store_id and t2.ticket_delivery_staff_info_id = t1.ticket_delivery_staff_info_id
+            ) a
+        group by 1,2
+    ) del_hour on del_hour.store_id = dp.store_id
+
+
+left join
+(
+	select
+	ds.dst_store_id
+	,count(distinct ds.pno) in_house_count
+	,count(distinct if(pi.exhibition_weight>5000 or pi.exhibition_length+pi.exhibition_width+pi.exhibition_height>80,ds.pno,null)) big_in_house_count
+	,count(distinct if(bc.client_id is not null,ds.pno,null)) big_client_count
+	,count(distinct if(bc.client_id is null,ds.pno,null)) small_client_count
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)<=3 and bc.client_id is not null,ds.pno,null)) `3_within_backlog_bigclient`
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)>3 and datediff(now(),ds.first_valid_routed_at)<=5 and bc.client_id is not null,ds.pno,null)) `3_5_backlog_bigclient`
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)>5 and bc.client_id is not null,ds.pno,null)) `5_more_backlog_bigclient`
+	,count(distinct if(tsd.end_date<curdate(),ds.pno,null)) tt_overtime_count
+
+	from dwm.dwd_th_dc_should_be_delivery ds
+
+	join fle_staging.parcel_info pi
+	on pi.pno=ds.pno and pi.state not in (5,7,8,9)
+
+	left join dwm.tmp_ex_big_clients_id_detail bc
+	on bc.client_id=pi.client_id
+
+	left join dwm.dwd_ex_th_tiktok_sla_detail tsd
+	on tsd.pno=ds.pno
+
+	group by 1
+) dd
+on dd.dst_store_id=dp.store_id
+
+left join
+(
+
+select
+    sdg.geo_store_id store_id
+from fle_staging.sys_district_geo_store sdg
+where
+    sdg.deleted = 0
+
+union
+
+select
+    sd.store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.geo_tag = 0
+
+union
+
+select
+    sd.separation_store_id store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.geo_tag = 0
+) ss_f
+on ss_f.store_id=dp.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+07:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-17'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-17')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-17'
+        and pi.finished_at >= date_sub('2023-09-17', interval 7 hour )
+        and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+        and ds.should_delevry_type != '非当日应派'
+#         and ds.dst_store_id = 'TH16020303'
+)
+
+
+
+
+
+select
+    dp.store_id 网点ID
+    ,dp.store_name 网点
+	,if(ss_f.store_id is not null,'有服务区','无服务区') '网点有无服务区'
+	,substring_index(dp.store_name,'-',1) short_name
+	,case dp.store_category
+		when 1 then 'SP'
+		when 2 then 'DC'
+		when 4 then 'SHOP'
+		when 5 then 'SHOP'
+		when 6 then 'FH'
+		when 7 then 'SHOP'
+		when 8 then 'Hub'
+		when 9 then 'Onsite'
+		when 10 then 'BDC'
+		when 11 then 'fulfillment'
+		when 12 then 'B-HUB'
+		when 13 then 'CDC'
+		when 14 then 'PDC'
+	end 网点类型
+	,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+    ,coalesce(dp.opening_at, '未记录') 开业时间
+    ,dp.piece_name 片区
+    ,dp.region_name 大区
+    ,coalesce(cour.staf_num, 0) 本网点所属快递员数
+    ,coalesce(ds.sd_num, 0) 应派件量
+    ,coalesce(del.pno_num, 0) '妥投量(快递员+仓管+主管)'
+    ,coalesce(del_cou.self_staff_num, 0) 参与妥投快递员_自有
+    ,coalesce(del_cou.other_staff_num, 0) 参与妥投快递员_外协支援
+	,coalesce(del_cou.other_staff_apply_num, 0) 参与妥投快递员_外协支援_申请
+	,coalesce(del_cou.other_staff_noapply_num, 0) 参与妥投快递员_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_num, 0) 参与妥投_仓管主管
+    ,coalesce(del_cou.self_effect, 0) 当日人效_自有
+
+    ,coalesce(del_cou.other_effect, 0) 当日人效_外协支援
+    ,coalesce(del_cou.other_staff_apply_effect, 0) 当日人效_外协支援_申请
+    ,coalesce(del_cou.other_staff_noapply_effect, 0) 当日人效_外协支援_未申请
+
+    ,coalesce(del_cou.dco_dcs_effect, 0) 仓管主管人效
+    ,coalesce(del_hour.avg_del_hour, 0) 派件小时数
+
+	,dd.in_house_count 在仓包裹数
+	,dd.big_in_house_count 在仓大件包裹数
+	,dd.big_client_count 在仓平台包裹数
+	,dd.small_client_count 在仓非平台包裹数
+	,dd.`3_within_backlog_bigclient` '在仓3天内平台包裹数（<=3）'
+	,dd.`3_5_backlog_bigclient` '在仓3-5天平台包裹数（>3,<=5）'
+	,dd.`5_more_backlog_bigclient` '在仓5天以上平台包裹数（>5）'
+	,dd.tt_overtime_count 'tt超时包裹数'
+
+from
+    (
+        select
+            dp.store_id
+            ,dp.store_name
+            ,dp.opening_at
+            ,dp.piece_name
+            ,dp.region_name
+			,dp.store_category
+        from dwm.dim_th_sys_store_rd dp
+        left join fle_staging.sys_store ss on ss.id = dp.store_id
+        where
+            dp.state_desc = '激活'
+            and dp.stat_date = date_sub('2023-09-17', interval 1 day)
+            and ss.category in (1,10)
+    ) dp
+	left join fle_staging.sys_store_bdc_bsp bsp on dp.store_id=bsp.bdc_id and bsp.deleted=0
+left join
+    (
+        select
+            hr.sys_store_id sys_store_id
+            ,count(distinct hr.staff_info_id) staf_num
+        from  bi_pro.hr_staff_info hr
+        where
+            hr.formal = 1
+            and hr.state = 1
+            and hr.job_title in (13,110,452,1497)
+#             and hr.stat_date = CURRENT_DATE
+        group by 1
+    ) cour on cour.sys_store_id = dp.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) sd_num
+        from dwm.dwd_th_dc_should_be_delivery ds
+        where
+             ds.should_delevry_type != '非当日应派'
+            and ds.p_date = '2023-09-17'
+        group by 1
+    ) ds on ds.dst_store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct t1.pno) pno_num
+        from t t1
+        group by 1
+    ) del on del.store_id = dp.store_id
+left join
+    (
+        select
+            t1.store_id
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_staff_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (13,110,452,1497) and t1.formal = 1 and t1.is_sub_staff = 0, t1.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 or t1.is_sub_staff = 1) and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_effect
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_num
+            ,count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if(t1.id is not null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null )) other_staff_apply_effect
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_num
+            ,count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.pno, null))/count(distinct if((t1.hr_store_id != t1.store_id or t1.formal != 1 ) and t1.id is null and t1.job_title in (13,110,452,1497), t1.ticket_delivery_staff_info_id, null)) other_staff_noapply_effect
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_num
+            ,count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.pno, null))/count(distinct if(t1.hr_store_id = t1.store_id and t1.job_title in (16,37,451), t1.ticket_delivery_staff_info_id, null)) dco_dcs_effect
+        from t t1
+        group by 1
+    ) del_cou on del_cou.store_id = dp.store_id
+left join
+    (
+        select
+            a.store_id
+            ,a.name
+            ,sum(diff_hour)/count(distinct a.ticket_delivery_staff_info_id) avg_del_hour
+        from
+            (
+                select
+                    t1.store_id
+                    ,t1.name
+                    ,t1.ticket_delivery_staff_info_id
+                    ,t1.finished_time
+                    ,t2.finished_time finished_at_2
+                    ,timestampdiff(second, t1.finished_time, t2.finished_time)/3600 diff_hour
+                from
+                    (
+                        select * from t t1 where t1.rk1 = 1
+                    ) t1
+                join
+                    (
+                        select * from t t2 where t2.rk2 = 2
+                    ) t2 on t2.store_id = t1.store_id and t2.ticket_delivery_staff_info_id = t1.ticket_delivery_staff_info_id
+            ) a
+        group by 1,2
+    ) del_hour on del_hour.store_id = dp.store_id
+
+
+left join
+(
+	select
+	ds.dst_store_id
+	,count(distinct ds.pno) in_house_count
+	,count(distinct if(pi.exhibition_weight>5000 or pi.exhibition_length+pi.exhibition_width+pi.exhibition_height>80,ds.pno,null)) big_in_house_count
+	,count(distinct if(bc.client_id is not null,ds.pno,null)) big_client_count
+	,count(distinct if(bc.client_id is null,ds.pno,null)) small_client_count
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)<=3 and bc.client_id is not null,ds.pno,null)) `3_within_backlog_bigclient`
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)>3 and datediff(now(),ds.first_valid_routed_at)<=5 and bc.client_id is not null,ds.pno,null)) `3_5_backlog_bigclient`
+	,count(distinct if(datediff(now(),ds.first_valid_routed_at)>5 and bc.client_id is not null,ds.pno,null)) `5_more_backlog_bigclient`
+	,count(distinct if(tsd.end_date<curdate(),ds.pno,null)) tt_overtime_count
+
+	from dwm.dwd_th_dc_should_be_delivery ds
+
+	join fle_staging.parcel_info pi
+	on pi.pno=ds.pno and pi.state not in (5,7,8,9)
+
+	left join dwm.tmp_ex_big_clients_id_detail bc
+	on bc.client_id=pi.client_id
+
+	left join dwm.dwd_ex_th_tiktok_sla_detail tsd
+	on tsd.pno=ds.pno
+
+	group by 1
+) dd
+on dd.dst_store_id=dp.store_id
+
+left join
+(
+
+select
+    sdg.geo_store_id store_id
+from fle_staging.sys_district_geo_store sdg
+where
+    sdg.deleted = 0
+
+union
+
+select
+    sd.store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.geo_tag = 0
+
+union
+
+select
+    sd.separation_store_id store_id
+from fle_staging.sys_district sd
+where
+    sd.deleted = 0
+    and sd.geo_tag = 0
+) ss_f
+on ss_f.store_id=dp.store_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+07:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-17'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-17')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-17'
+        and pi.finished_at >= date_sub('2023-09-17', interval 7 hour )
+        and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+        and ds.should_delevry_type != ';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+07:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-17'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-17')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-17'
+        and pi.finished_at >= date_sub('2023-09-17', interval 7 hour )
+        and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH68040601';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        ds.dst_store_id store_id
+        ,ss.name
+        ,ds.pno
+        ,convert_tz(pi.finished_at, '+00:00', '+07:00') finished_time
+        ,pi.ticket_delivery_staff_info_id
+        ,pi.state
+        ,hs.is_sub_staff
+        ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
+        ,coalesce(hsi.job_title, hs.job_title) job_title
+        ,coalesce(hsi.formal, hs.formal) formal
+        ,hsa.id
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
+        ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+    from dwm.dwd_th_dc_should_be_delivery ds
+    join fle_staging.parcel_info pi on pi.pno = ds.pno
+    left join fle_staging.sys_store ss on ss.id = ds.dst_store_id
+    left join bi_pro.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '2023-09-17'
+    left join bi_pro.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '2023-09-17')
+    left join backyard_pro.hr_staff_apply_support_store hsa on hsa.sub_staff_info_id = pi.ticket_delivery_staff_info_id and hsa.store_id = ds.dst_store_id
+#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    where
+        pi.state = 5
+#         and pi.finished_at >= '2023-08-01 16:00:00'
+#         and pi.finished_at < '2023-08-02 16:00:00'
+        and ds.p_date = '2023-09-17'
+        and pi.finished_at >= date_sub('2023-09-17', interval 7 hour )
+        and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+        and ds.should_delevry_type != '非当日应派'
+        and ds.dst_store_id = 'TH63031400';
+;-- -. . -..- - / . -. - .-. -.--
+select
+     case
+        when a.del_rate < 0.4 then '<40%'
+        when a.del_rate >= 0.4 and a.del_rate < 0.5 then '40%-50%'
+        when a.del_rate >= 0.5 and a.del_rate < 0.6 then '50%-60%'
+        when a.del_rate >= 0.6 and a.del_rate < 0.7 then '60%-70%'
+        when a.del_rate >= 0.7 and a.del_rate < 0.8 then '70%-80%'
+        when a.del_rate >= 0.8 and a.del_rate <= 1 then '80%-100%'
+    end 妥投率
+    ,count(distinct a.网点ID) 总数
+    ,count(distinct if(a.一派有效分拣评级 = 'A', a.网点ID, null))/count(distinct a.网点ID) 评级A
+    ,count(distinct if(a.一派有效分拣评级 = 'B', a.网点ID, null))/count(distinct a.网点ID) 评级B
+    ,count(distinct if(a.一派有效分拣评级 = 'C', a.网点ID, null))/count(distinct a.网点ID) 评级C
+    ,count(distinct if(a.一派有效分拣评级 = 'D', a.网点ID, null))/count(distinct a.网点ID) 评级D
+    ,count(distinct if(a.一派有效分拣评级 = 'E', a.网点ID, null))/count(distinct a.网点ID) 评级E
+    ,count(distinct if(a.一派有效分拣评级 = 'A', a.网点ID, null)) 评级A数量
+    ,count(distinct if(a.一派有效分拣评级 = 'B', a.网点ID, null)) 评级B数量
+    ,count(distinct if(a.一派有效分拣评级 = 'C', a.网点ID, null)) 评级C数量
+    ,count(distinct if(a.一派有效分拣评级 = 'D', a.网点ID, null)) 评级D数量
+    ,count(distinct if(a.一派有效分拣评级 = 'E', a.网点ID, null)) 评级E数量
+from
+    (
+                select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     case
+        when a.一派9点半前扫描占比 < 0.4 then '<40%'
+        when a.一派9点半前扫描占比 >= 0.4 and a.一派9点半前扫描占比 < 0.5 then '40%-50%'
+        when a.一派9点半前扫描占比 >= 0.5 and a.一派9点半前扫描占比 < 0.6 then '50%-60%'
+        when a.一派9点半前扫描占比 >= 0.6 and a.一派9点半前扫描占比 < 0.7 then '60%-70%'
+        when a.一派9点半前扫描占比 >= 0.7 and a.一派9点半前扫描占比 < 0.8 then '70%-80%'
+        when a.一派9点半前扫描占比 >= 0.8 and a.一派9点半前扫描占比 < 0.9 then '80%-90%'
+        when a.一派9点半前扫描占比 >= 0.9 and a.一派9点半前扫描占比 <= 1 then '90%-100%'
+#         else a.一派9点半前扫描占比
+    end 0930前分拣扫描占比
+    ,count(distinct a.网点ID) 总数
+    ,sum(a.del_pno_num)/sum(a.pno_num) 妥投率
+from
+    (
+                select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10);
+;-- -. . -..- - / . -. - .-. -.--
+select
+     case
+        when a.一派9点半前扫描占比 < 0.4 then '<40%'
+        when a.一派9点半前扫描占比 >= 0.4 and a.一派9点半前扫描占比 < 0.5 then '40%-50%'
+        when a.一派9点半前扫描占比 >= 0.5 and a.一派9点半前扫描占比 < 0.6 then '50%-60%'
+        when a.一派9点半前扫描占比 >= 0.6 and a.一派9点半前扫描占比 < 0.7 then '60%-70%'
+        when a.一派9点半前扫描占比 >= 0.7 and a.一派9点半前扫描占比 < 0.8 then '70%-80%'
+        when a.一派9点半前扫描占比 >= 0.8 and a.一派9点半前扫描占比 < 0.9 then '80%-90%'
+        when a.一派9点半前扫描占比 >= 0.9 and a.一派9点半前扫描占比 <= 1 then '90%-100%'
+#         else a.一派9点半前扫描占比
+    end 0930前分拣扫描占比
+    ,count(distinct a.网点ID) 总数
+    ,sum(a.del_pno_num)/sum(a.pno_num) 妥投率
+from
+    (
+        select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,4)*100,'%'),0)*1 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     case
+        when a.一派9点半前扫描占比 < 0.4 then '<40%'
+        when a.一派9点半前扫描占比 >= 0.4 and a.一派9点半前扫描占比 < 0.5 then '40%-50%'
+        when a.一派9点半前扫描占比 >= 0.5 and a.一派9点半前扫描占比 < 0.6 then '50%-60%'
+        when a.一派9点半前扫描占比 >= 0.6 and a.一派9点半前扫描占比 < 0.7 then '60%-70%'
+        when a.一派9点半前扫描占比 >= 0.7 and a.一派9点半前扫描占比 < 0.8 then '70%-80%'
+        when a.一派9点半前扫描占比 >= 0.8 and a.一派9点半前扫描占比 < 0.9 then '80%-90%'
+        when a.一派9点半前扫描占比 >= 0.9 and a.一派9点半前扫描占比 <= 1 then '90%-100%'
+#         else a.一派9点半前扫描占比
+    end 0930前分拣扫描占比
+    ,count(distinct a.网点ID) 总数
+    ,sum(a.del_pno_num)/sum(a.pno_num) 妥投率
+from
+    (
+        select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,0)*1 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     a.大区
+    ,count(distinct a.网点ID) 总网点数
+    ,count(distinct if(a.一派9点半前扫描占比 < 0.8, a.网点ID, null)) 问题网点数
+    ,count(distinct if(a.一派9点半前扫描占比 < 0.8, a.网点ID, null))/count(distinct a.网点ID)  问题比例
+from
+    (
+        select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,0)*1 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     a.大区
+    ,count(distinct a.网点ID) 总网点数
+    ,count(distinct if(a.一派有效分拣评级 = 'E', a.网点ID, null)) 问题网点数
+    ,count(distinct if(a.一派有效分拣评级 = 'E', a.网点ID, null))/count(distinct a.网点ID)  问题比例
+from
+    (
+        select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,0)*1 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     a.大区
+    ,count(distinct a.网点ID) 总网点数
+    ,count(distinct if(a.一派分拣评级 = 'E', a.网点ID, null)) 问题网点数
+    ,count(distinct if(a.一派分拣评级 = 'E', a.网点ID, null))/count(distinct a.网点ID)  问题比例
+from
+    (
+        select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,0)*1 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+     case
+        when a.del_rate < 0.4 then '<40%'
+        when a.del_rate >= 0.4 and a.del_rate < 0.5 then '40%-50%'
+        when a.del_rate >= 0.5 and a.del_rate < 0.6 then '50%-60%'
+        when a.del_rate >= 0.6 and a.del_rate < 0.7 then '60%-70%'
+        when a.del_rate >= 0.7 and a.del_rate < 0.8 then '70%-80%'
+        when a.del_rate >= 0.8 and a.del_rate <= 1 then '80%-100%'
+    end 妥投率
+    ,count(distinct a.网点ID) 总数
+    ,count(distinct if(a.一派分拣评级 = 'A', a.网点ID, null))/count(distinct a.网点ID) 评级A
+    ,count(distinct if(a.一派分拣评级 = 'B', a.网点ID, null))/count(distinct a.网点ID) 评级B
+    ,count(distinct if(a.一派分拣评级 = 'C', a.网点ID, null))/count(distinct a.网点ID) 评级C
+    ,count(distinct if(a.一派分拣评级 = 'D', a.网点ID, null))/count(distinct a.网点ID) 评级D
+    ,count(distinct if(a.一派分拣评级 = 'E', a.网点ID, null))/count(distinct a.网点ID) 评级E
+    ,count(distinct if(a.一派分拣评级 = 'A', a.网点ID, null)) 评级A数量
+    ,count(distinct if(a.一派分拣评级 = 'B', a.网点ID, null)) 评级B数量
+    ,count(distinct if(a.一派分拣评级 = 'C', a.网点ID, null)) 评级C数量
+    ,count(distinct if(a.一派分拣评级 = 'D', a.网点ID, null)) 评级D数量
+    ,count(distinct if(a.一派分拣评级 = 'E', a.网点ID, null)) 评级E数量
+from
+    (
+                select -- 基于当日应派取扫描率
+            tt.store_id 网点ID
+            ,tt.store_name 网点名称
+            ,tt.store_type 网点分类
+            ,case tt.category
+             when 1 then 'SP'
+             when 2 then 'DC'
+             when 4 then 'SHOP'
+             when 5 then 'SHOP'
+             when 6 then 'FH'
+             when 7 then 'SHOP'
+             when 8 then 'Hub'
+             when 9 then 'Onsite'
+             when 10 then 'BDC'
+             when 11 then 'fulfillment'
+             when 12 then 'B-HUB'
+             when 13 then 'CDC'
+             when 14 then 'PDC'
+            end 网点类型
+            ,if(bsp.bdc_id is not null,'是','否') as 是否bsp
+            ,tt.piece_name 片区
+            ,tt.region_name 大区
+            ,tt.shoud_counts 应派数
+            -- ,tt.times 连续次数
+            -- ,tt.last_time 连续最后一个班次时间
+            ,tt.scan_fished_counts 分拣扫描数
+            ,ifnull(concat(round(tt.scan_fished_counts/shoud_counts,4)*100,'%'),0) 分拣扫描率
+
+            ,tt.youxiao_counts 有效分拣扫描数
+            ,ifnull(concat(round(tt.youxiao_counts/tt.shoud_counts,4)*100,'%'),0) 有效分拣扫描率
+
+            ,tt.1pai_counts 一派应派数
+            ,tt.1pai_scan_fished_counts 一派分拣扫描数
+            ,ifnull(concat(round(tt.1pai_scan_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派分拣扫描率
+
+            ,tt.1pai_youxiao_counts 一派有效分拣扫描数
+            ,ifnull(concat(round(tt.1pai_youxiao_counts/tt.1pai_counts,4)*100,'%'),0) 一派有效分拣扫描率
+
+            ,case
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.90 then 'B'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.85 then 'C'
+             when tt.1pai_youxiao_counts/tt.1pai_counts>=0.80 then 'D'
+             else 'E'
+            end 一派有效分拣评级 -- 一派有效分拣
+
+            ,case
+             when tt.1pai_hour_8_fished_counts/tt.1pai_counts>=0.95 then 'A'
+             when tt.1pai_hour_8ban_fished_counts/tt.1pai_counts>=0.95 then 'B'
+             when tt.1pai_hour_9_fished_counts/tt.1pai_counts>=0.95 then 'C'
+             when tt.1pai_hour_9ban_fished_counts/tt.1pai_counts>=0.95 then 'D'
+             else 'E'
+            end 一派分拣评级
+
+            ,ifnull(concat(round(tt.1pai_hour_8_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_8ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派8点半前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点前扫描占比
+            ,ifnull(concat(round(tt.1pai_hour_9ban_fished_counts/tt.1pai_counts,4)*100,'%'),0) 一派9点半前扫描占比
+
+            ,if(tt2.late_proof_counts>0,'是','否') 一派常规车线实际比计划时间晚20分钟车辆数
+            ,date_format(tt2.max_real_arrive_time_normal,"%m-%d %H:%i") 一派前常规车最晚实际到达时间
+            -- ,tt2.max_real_arrive_proof_id 一派前常规车最晚实际到达车线
+            -- ,tt2.max_real_arrive_vol 一派前常规车最晚实际到达车线包裹量
+            ,date_format(tt2.line_1_latest_plan_arrive_time,"%m-%d %H:%i") 一派前常规车最晚规划到达时间
+            ,date_format(tt2.max_real_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚实际到达时间
+            -- ,tt2.max_real_arrive_innormal_proof_id 一派前加班车最晚实际到达车线
+            -- ,tt2.max_real_arrive_innormal_vol 一派前加班车最晚实际到达车线包裹量
+            ,date_format(tt2.max_actual_plan_arrive_time_innormal,"%m-%d %H:%i") 一派前加班车最晚规划到达时间
+            ,del.del_rate
+            ,del.del_pno_num
+            ,del.pno_num
+        from
+            (
+                select
+                base.store_id
+                ,base.store_name
+                ,base.store_type
+                ,base.piece_name
+                ,base.region_name
+                ,base.category
+                ,base.times
+                ,base.last_time
+                ,count(distinct base.pno) shoud_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null then base.pno else null end ) scan_fished_counts
+                ,count(distinct case when base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) youxiao_counts
+
+                ,count(distinct case when base.type='一派' then  base.pno else null end) 1pai_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null then  base.pno else null end) 1pai_scan_fished_counts
+                ,count(distinct case when base.type='一派' and base.min_fenjian_scan_time is not null and base.min_fenjian_scan_time<tiaozheng_scan_deadline_time then base.pno else null end) 1pai_youxiao_counts
+
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:00:00' then base.pno else null end) 1pai_hour_8_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='08:30:00' then base.pno else null end) 1pai_hour_8ban_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:00:00' then base.pno else null end) 1pai_hour_9_fished_counts
+                ,count(distinct case when base.type='一派' and date_format(base.min_fenjian_scan_time,'%H:%i:%s')<='09:30:00' then base.pno else null end) 1pai_hour_9ban_fished_counts
+
+                from
+                (
+                    select
+                    t.*,
+                    ss.category,
+                    case when t.should_delevry_type='1派应派包裹' then '一派' else null end 'type'
+                    from test.dwd_th_dc_should_be_delivery_sort_scan t
+                    join fle_staging.sys_store ss
+                    on t.store_id =ss.id
+                ) base
+                group by base.store_id,base.store_name,base.store_type,base.piece_name,base.region_name,base.category
+            ) tt
+
+        left join
+            (
+                select
+                bl.store_id
+                ,bl.max_real_arrive_time_normal
+                ,bl.max_real_arrive_proof_id
+                ,bl.max_real_arrive_vol
+                ,bl.line_1_latest_plan_arrive_time
+                ,bl.max_actual_plan_arrive_time_innormal
+                ,bl.max_actual_plan_arrive_innormal_proof_id
+                ,bl.max_actual_plan_arrive_innormal_vol
+                ,bl.max_real_arrive_time_innormal
+                ,bl.max_real_arrive_innormal_proof_id
+                ,bl.max_real_arrive_innormal_vol
+                ,late_proof_counts
+                from test.fleet_real_detail_today bl
+                group by 1,2,3,4,5,6,7,8,9,10,11
+            ) tt2 on tt.store_id=tt2.store_id
+        left join fle_staging.sys_store_bdc_bsp bsp on tt.store_id=bsp.bdc_id and bsp.deleted=0
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null)) del_pno_num
+                    ,count(if(pi.pno is not null, ds.pno, null))/count(distinct ds.pno) del_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on pi.pno = ds.pno and pi.state = 5 and pi.finished_at >= date_sub('2023-09-17', interval 7 hour ) and pi.finished_at < date_add('2023-09-17', interval 17 hour)
+                where
+                    ds.p_date = '2023-09-17'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1
+            ) del on del.dst_store_id = tt.store_id
+        where
+            tt.category in (1,10)
+    ) a
+group by 1;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+)
+select
+    dt.region_name
+    ,dt.piece_name
+    ,dt.store_name
+    ,a1.today_should_del
+    ,a1.today_already_del
+    ,a1.no_del_big_count
+    ,a2.courier_count
+    ,a3.sup_courier_count
+    ,a2.dco_count
+    ,a3.sup_dco_count
+    ,a4.sort_rate
+    ,a5.self_effect
+    ,a5.other_effect
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 8 hour) and pi.finished_at < date_add('2023-09-18', interval  16 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1,2
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1,2
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+        group by 1,2
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+)
+select
+    dt.region_name
+    ,dt.piece_name
+    ,dt.store_name
+    ,a1.today_should_del
+    ,a1.today_already_del
+    ,a1.no_del_big_count
+    ,a2.courier_count
+    ,a3.sup_courier_count
+    ,a2.dco_count
+    ,a3.sup_dco_count
+    ,a4.sort_rate
+    ,a5.self_effect
+    ,a5.other_effect
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 8 hour) and pi.finished_at < date_add('2023-09-18', interval  16 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1,2
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+)
+select
+    dt.region_name
+    ,dt.piece_name
+    ,dt.store_name
+    ,a1.today_should_del
+    ,a1.today_already_del
+    ,a1.no_del_big_count
+    ,a2.courier_count
+    ,a3.sup_courier_count
+    ,a2.dco_count
+    ,a3.sup_dco_count
+    ,a4.sort_rate
+    ,a5.self_effect
+    ,a5.other_effect
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 8 hour) and pi.finished_at < date_add('2023-09-18', interval  16 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.store_name = 'MKA_SP-มาบข่า';
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+        and hsa.store_name = 'MKA_SP-มาบข่า'
+        and hsa.status = 2
+)
+select
+    dt.region_name
+    ,dt.piece_name
+    ,dt.store_name
+    ,a1.today_should_del
+    ,a1.today_already_del
+    ,a1.no_del_big_count
+    ,a2.courier_count
+    ,a3.sup_courier_count
+    ,a2.dco_count
+    ,a3.sup_dco_count
+    ,a4.sort_rate
+    ,a5.self_effect
+    ,a5.other_effect
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 8 hour) and pi.finished_at < date_add('2023-09-18', interval  16 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'MKA_SP-มาบข่า'
+        and hsa.status = 2
+)
+select
+    dt.region_name
+    ,dt.piece_name
+    ,dt.store_name
+    ,a1.today_should_del
+    ,a1.today_already_del
+    ,a1.no_del_big_count
+    ,a2.courier_count
+    ,a3.sup_courier_count
+    ,a2.dco_count
+    ,a3.sup_dco_count
+    ,a4.sort_rate
+    ,a5.self_effect
+    ,a5.other_effect
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 8 hour) and pi.finished_at < date_add('2023-09-18', interval  16 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'MKA_SP-มาบข่า'
+        and hsa.status = 2
+        and swa.id is not null
+)
+select
+    dt.region_name
+    ,dt.piece_name
+    ,dt.store_name
+    ,a1.today_should_del
+    ,a1.today_already_del
+    ,a1.no_del_big_count
+    ,a2.courier_count
+    ,a3.sup_courier_count
+    ,a2.dco_count
+    ,a3.sup_dco_count
+    ,a4.sort_rate
+    ,a5.self_effect
+    ,a5.other_effect
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 8 hour) and pi.finished_at < date_add('2023-09-18', interval  16 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+        and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 网点
+    ,s1.staff_info_id 主账号
+    ,s1.sub_staff_info_id 子账号
+    ,hjt.job_name  'van/bike'
+    ,swa.started_at 上班时间
+    ,swa.end_at 下班时间
+    ,s2.scan_count 交接量
+    ,s2.del_count 妥投量
+    ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+    ,code.scan_code_count 交接三段码数量
+    ,code.del_code_num 妥投三段码数量
+    ,pho.0_count 未妥投中打电话次数为0的数量
+    ,pho.1_count 未妥投中打电话次数为1的数量
+from sup s1
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = s1.store_id
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.pno) scan_count
+            ,count(if(t1.state = 5, t1.pno, null)) del_count
+        from total t1
+        group by 1
+    ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+left join
+    ( -- 第一次妥投时间
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+left join
+    (
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.sorting_code) scan_code_count
+            ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+        from total t1
+        where
+            t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+        group by 1
+    ) code on code.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            a.staff_info_id
+            ,count(if(a.call_times = 0, a.pno, null)) 0_count
+            ,count(if(a.call_times = 1, a.pno, null)) 1_count
+        from
+            (
+                select
+                    t.staff_info_id
+                    ,t.pno
+                    ,count(pr.pno) call_times
+                from total t
+                left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE'
+                where
+                    t.state != 5
+                group by 1,2
+            ) a
+        group by 1
+    ) pho on pho.staff_info_id = s1.sub_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 网点
+    ,a1.today_should_del 当日应派
+    ,a1.today_already_del 当日妥投
+    ,a1.no_del_big_count 未妥投大件数量
+    ,a2.courier_count 自有快递员人数（出勤）
+    ,a3.sup_courier_count 支援快递员人数（出勤）
+    ,a2.dco_count 自有仓管
+    ,a3.sup_dco_count 支援仓管
+    ,a4.sort_rate 分拣扫描率
+    ,a5.self_effect 自有人效
+    ,a5.other_effect 支援人效
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 8 hour) and pi.finished_at < date_add('2023-09-18', interval  16 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+            and pi.returned = 0
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 来源网点
+    ,dt2.store_name 支援网点
+    ,s1.staff_info_id 主账号
+    ,s1.sub_staff_info_id 子账号
+    ,hjt.job_name  'van/bike'
+    ,swa.started_at 上班时间
+    ,swa.end_at 下班时间
+    ,s2.scan_count 交接量
+    ,s2.del_count 妥投量
+    ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+    ,code.scan_code_count 交接三段码数量
+    ,code.del_code_num 妥投三段码数量
+    ,pho.0_count 未妥投中打电话次数为0的数量
+    ,pho.1_count 未妥投中打电话次数为1的数量
+from sup s1
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = s1.store_id
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.pno) scan_count
+            ,count(if(t1.state = 5, t1.pno, null)) del_count
+        from total t1
+        group by 1
+    ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+left join
+    ( -- 第一次妥投时间
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+left join
+    (
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.sorting_code) scan_code_count
+            ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+        from total t1
+        where
+            t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+        group by 1
+    ) code on code.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            a.staff_info_id
+            ,count(if(a.call_times = 0, a.pno, null)) 0_count
+            ,count(if(a.call_times = 1, a.pno, null)) 1_count
+        from
+            (
+                select
+                    t.staff_info_id
+                    ,t.pno
+                    ,count(pr.pno) call_times
+                from total t
+                left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE'
+                where
+                    t.state != 5
+                group by 1,2
+            ) a
+        group by 1
+    ) pho on pho.staff_info_id = s1.sub_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 来源网点
+    ,dt2.store_name 支援网点
+    ,s1.staff_info_id 主账号
+    ,s1.sub_staff_info_id 子账号
+    ,hjt.job_name  'van/bike'
+    ,swa.started_at 上班时间
+    ,swa.end_at 下班时间
+    ,s2.scan_count 交接量
+    ,s2.del_count 妥投量
+    ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+    ,code.scan_code_count 交接三段码数量
+    ,code.del_code_num 妥投三段码数量
+    ,pho.0_count 未妥投中打电话次数为0的数量
+    ,pho.1_count 未妥投中打电话次数为1的数量
+from sup s1
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = s1.store_id
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.pno) scan_count
+            ,count(if(t1.state = 5, t1.pno, null)) del_count
+        from total t1
+        group by 1
+    ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+left join
+    ( -- 第一次妥投时间
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+left join
+    (
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.sorting_code) scan_code_count
+            ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+        from total t1
+        where
+            t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+        group by 1
+    ) code on code.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            a.staff_info_id
+            ,count(if(a.call_times = 0, a.pno, null)) 0_count
+            ,count(if(a.call_times = 1, a.pno, null)) 1_count
+        from
+            (
+                select
+                    t.staff_info_id
+                    ,t.pno
+                    ,count(pr.pno) call_times
+                from total t
+                left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+                where
+                    t.state != 5
+                group by 1,2
+            ) a
+        group by 1
+    ) pho on pho.staff_info_id = s1.sub_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 网点
+    ,a1.today_should_del 当日应派
+    ,a1.today_already_del 当日妥投
+    ,a1.no_del_big_count 未妥投大件数量
+    ,a2.courier_count 自有快递员人数（出勤）
+    ,a3.sup_courier_count 支援快递员人数（出勤）
+    ,a2.dco_count 自有仓管
+    ,a3.sup_dco_count 支援仓管
+    ,a4.sort_rate 分拣扫描率
+    ,a5.self_effect 自有人效
+    ,a5.other_effect 支援人效
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-18', interval 7 hour) and pi.finished_at < date_add('2023-09-18', interval  17 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-18'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-18' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-18', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-18', interval 17 hour)
+            and pi.returned = 0
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+        and a.staff_info_id = '624526';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery_d ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                            where
+                                ds.p_date = '2023-09-18'
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+        and a.staff_info_id = '624526';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery_d ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                            where
+                                ds.p_date = '2023-09-18'
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+        and a.dst_store_id = 'TH28110101';
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+        and a.staff_info_id = '624526'
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 来源网点
+    ,dt2.store_name 支援网点
+    ,s1.staff_info_id 主账号
+    ,s1.sub_staff_info_id 子账号
+    ,hjt.job_name  'van/bike'
+    ,swa.started_at 上班时间
+    ,swa.end_at 下班时间
+    ,s2.scan_count 交接量
+    ,s2.del_count 妥投量
+    ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+    ,code.scan_code_count 交接三段码数量
+    ,code.del_code_num 妥投三段码数量
+    ,pho.0_count 未妥投中打电话次数为0的数量
+    ,pho.1_count 未妥投中打电话次数为1的数量
+from sup s1
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = s1.store_id
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.pno) scan_count
+            ,count(if(t1.state = 5, t1.pno, null)) del_count
+        from total t1
+        group by 1
+    ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+left join
+    ( -- 第一次妥投时间
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+left join
+    (
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.sorting_code) scan_code_count
+            ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+        from total t1
+        where
+            t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+        group by 1
+    ) code on code.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            a.staff_info_id
+            ,count(if(a.call_times = 0, a.pno, null)) 0_count
+            ,count(if(a.call_times = 1, a.pno, null)) 1_count
+        from
+            (
+                select
+                    t.staff_info_id
+                    ,t.pno
+                    ,count(pr.pno) call_times
+                from total t
+                left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+                where
+                    t.state != 5
+                group by 1,2
+            ) a
+        group by 1
+    ) pho on pho.staff_info_id = s1.sub_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+#         and a.staff_info_id = '624526'
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 来源网点
+    ,dt2.store_name 支援网点
+    ,s1.staff_info_id 主账号
+    ,s1.sub_staff_info_id 子账号
+    ,hjt.job_name  'van/bike'
+    ,swa.started_at 上班时间
+    ,swa.end_at 下班时间
+    ,s2.scan_count 交接量
+    ,s2.del_count 妥投量
+    ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+    ,code.scan_code_count 交接三段码数量
+    ,code.del_code_num 妥投三段码数量
+    ,pho.0_count 未妥投中打电话次数为0的数量
+    ,pho.1_count 未妥投中打电话次数为1的数量
+from sup s1
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = s1.store_id
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.pno) scan_count
+            ,count(if(t1.state = 5, t1.pno, null)) del_count
+        from total t1
+        group by 1
+    ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+left join
+    ( -- 第一次妥投时间
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+left join
+    (
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.sorting_code) scan_code_count
+            ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+        from total t1
+        where
+            t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+        group by 1
+    ) code on code.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            a.staff_info_id
+            ,count(if(a.call_times = 0, a.pno, null)) 0_count
+            ,count(if(a.call_times = 1, a.pno, null)) 1_count
+        from
+            (
+                select
+                    t.staff_info_id
+                    ,t.pno
+                    ,count(pr.pno) call_times
+                from total t
+                left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+                where
+                    t.state != 5
+                group by 1,2
+            ) a
+        group by 1
+    ) pho on pho.staff_info_id = s1.sub_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+        and a.dst_store_id = 'TH28110101';
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+        and a.staff_info_id = '3800529';
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-18'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-18'
+        and hsa.employment_begin_date <= '2023-09-18'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-18'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.third_sorting_code sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-18', interval 7 hour) and td.created_at < date_add('2023-09-18', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+#         and a.staff_info_id = '624526'
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 来源网点
+    ,dt2.store_name 支援网点
+    ,s1.staff_info_id 主账号
+    ,s1.sub_staff_info_id 子账号
+    ,hjt.job_name  'van/bike'
+    ,swa.started_at 上班时间
+    ,swa.end_at 下班时间
+    ,s2.scan_count 交接量
+    ,s2.del_count 妥投量
+    ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+    ,code.scan_code_count 交接三段码数量
+    ,code.del_code_num 妥投三段码数量
+    ,pho.0_count 未妥投中打电话次数为0的数量
+    ,pho.1_count 未妥投中打电话次数为1的数量
+from sup s1
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-18' and swa.organization_id = s1.store_id
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.pno) scan_count
+            ,count(if(t1.state = 5, t1.pno, null)) del_count
+        from total t1
+        group by 1
+    ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+left join
+    ( -- 第一次妥投时间
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+left join
+    (
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.sorting_code) scan_code_count
+            ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+        from total t1
+        where
+            t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+        group by 1
+    ) code on code.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            a.staff_info_id
+            ,count(if(a.call_times = 0, a.pno, null)) 0_count
+            ,count(if(a.call_times = 1, a.pno, null)) 1_count
+        from
+            (
+                select
+                    t.staff_info_id
+                    ,t.pno
+                    ,count(pr.pno) call_times
+                from total t
+                left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-18', interval 7 hour) and pr.routed_at < date_add('2023-09-18', interval 17 hour)
+                where
+                    t.state != 5
+                group by 1,2
+            ) a
+        group by 1
+    ) pho on pho.staff_info_id = s1.sub_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+    select
+        pi.pno
+        ,pssn.store_id
+        ,pssn.store_name
+        ,pssn.next_store_id
+        ,pi.dst_store_id
+        ,pssn.shipped_at
+    from fle_staging.parcel_info pi
+    left join dw_dmd.parcel_store_stage_new pssn on pssn.pno = pi.pno
+    where
+        pssn.shipped_at >= date_sub(curdate(), interval 1 day)
+        and pssn.shipped_at < curdate()
+        and pssn.store_category in (1,10)
+        and pssn.next_store_category in (8,12)
+        and pssn.store_id != pi.ticket_pickup_store_id
+        and pi.state not in (5,7,8,9)
+)
+# select
+#     a.pno
+#     ,a.网点 多次到达的网点
+#     ,a.目的地网点 包裹目的地网点
+#     ,a.van_arrived_at 网点第一次到港时间
+#     ,a.first_valid_routed_at 网点第一次有效路由时间
+# from
+#     (
+        select
+            pssn.pno
+            ,t1.store_name 网点
+            ,pssn.store_name 途径分拨
+            ,ss.name  目的地网点
+            ,t1.shipped_at 发件出仓时间
+            ,pssn.shipped_at 分拨历史发件出仓时间
+#             ,row_number() over (partition by pssn.pno order by pssn.created_at desc ) rk1
+        from dw_dmd.parcel_store_stage_new pssn
+        join t t1 on t1.pno = pssn.pno and t1.store_id = pssn.next_store_id and t1.next_store_id = pssn.store_id
+        left join fle_staging.sys_store ss on ss.id = t1.dst_store_id
+        where
+            pssn.valid_store_order is not null
+            and pssn.shipped_at < t1.shipped_at;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.staff_info_id
+    ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+    end as 警告类型
+    ,case
+        when 1 then '迟到早退'
+        when 2 then '连续旷工'
+        when 3 then '贪污'
+        when 4 then '工作时间或工作地点饮酒'
+        when 5 then '持有或吸食毒品'
+        when 6 then '违反公司的命令/通知/规则/纪律/规定'
+        when 7 then '通过社会媒体污蔑公司'
+        when 8 then '公司设备私人使用 / 利用公司设备去做其他事情'
+        when 9 then '腐败/滥用职权'
+        when 10 then '玩忽职守'
+        when 11 then '吵架、打架/伤害同事、外部人员、上级或其他'
+        when 12 then '未告知上级或无故旷工'
+        when 13 then '上级没有同意请假、没有通过系统请假'
+        when 14 then '没有通过系统请假'
+        when 15 then '未按时上下班'
+        when 16 then '不配合公司的吸毒检查'
+        when 17 then '伪造证件'
+        when 18 then '粗心大意造成公司重大损失（造成钱丢失）'
+        when 19 then '未按照网点规定的时间回款'
+        when 20 then '谎报里程'
+        when 21 then '煽动/挑衅/损害公司利益'
+        when 22 then '失职'
+        when 23 then '损害公司名誉'
+        when 24 then '不接受或不配合公司的调查'
+        when 25 then 'Fake  Status'
+        when 26 then 'Fake  POD '
+        when 27 then '工作效率未达到公司的标准(KPI)'
+        when 28 then '贪污钱 '
+        when 29 then '贪污包裹'
+        when 30 then '偷盗公司财物'
+        when 31 then '无故连续旷工1天'
+        when 32 then '无故连续旷工2天'
+        when 33 then '迟到/早退 <= 10 分钟超过1次'
+        when 34 then '性骚扰'
+        when 35 then '提供虚假或未更新的个人信息'
+        when 36 then 'Fake scan face - 违法者'
+        when 37 then 'Fake scan face - 帮手'
+        when 111 then 'PH-迟到/经常性迟到'
+        when 112 then 'PH-连续旷工 1-2日'
+        when 113 then 'PH-虚假考勤/假装生病'
+        when 114 then 'PH-休息时间过长/不遵守时间表'
+        when 115 then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+        when 116 then 'PH-不服从上级'
+        when 117 then 'PH-盗窃公司财物'
+        when 118 then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+        when 119 then 'PH-低效/不满足工作标准'
+        when 120 then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+        when 121 then 'PH-不尊重/粗鲁无礼'
+        when 122 then 'PH-粗心大意造成公司重大损失'
+        when 123 then 'PH-酒精中毒/使用毒品或非法物品'
+        when 124 then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+        when 125 then 'PH-出勤时睡觉'
+        when 126 then 'PH-未按照网点规定时间回款'
+        when 127 then 'PH-工作时间内赌博/在工作区域内赌博'
+        when 128 then 'PH-在工作区域内抽烟（包含电子烟）'
+        when 129 then 'PH-向客户收取额外费用'
+        when 130 then 'PH-替换包裹内物品'
+        when 131 then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+        when 132 then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+        when 133 then 'PH-兼职行为 '
+        when 101 then '一月内虚假妥投大于等于4次 '
+        when 102 then '包裹被网点KIT扫描后遗失（2件及以上） '
+        when 103 then '虚假扫描 '
+        when 104 then '偷盗包裹 '
+        when 105 then '仓库内吸烟 '
+        when 106 then '辱骂客户 '
+        when 107 then '乱扔包裹 '
+        when 108 then '一个月内两次及以上虚假取消揽收 '
+        when 109 then '未经客户同意私自擅闯客户家 '
+        when 110 then '恶意争抢客户 '
+    end warn_reason
+    ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+from backyard_pro.message_warning mw
+where
+    mw.is_delete = 0
+    and mw.send_status = 1
+    and mw.warning_type in (2,3)
+    and mw.date_ats > date_sub(curdate(), interval 1 year );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.staff_info_id
+    ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+    end as 警告类型
+    ,case
+        when 'type_01' then '迟到早退'
+        when 'type_02' then '连续旷工'
+        when 'type_03' then '贪污'
+        when 'type_04' then '工作时间或工作地点饮酒'
+        when 'type_05' then '持有或吸食毒品'
+        when 'type_06' then '违反公司的命令/通知/规则/纪律/规定'
+        when 'type_07' then '通过社会媒体污蔑公司'
+        when 'type_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+        when 'type_09' then '腐败/滥用职权'
+        when 'type_10' then '玩忽职守'
+        when 'type_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+        when 'type_12' then '未告知上级或无故旷工'
+        when 'type_13' then '上级没有同意请假、没有通过系统请假'
+        when 'type_14' then '没有通过系统请假'
+        when 'type_15' then '未按时上下班'
+        when 'type_16' then '不配合公司的吸毒检查'
+        when 'type_17' then '伪造证件'
+        when 'type_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+        when 'type_19' then '未按照网点规定的时间回款'
+        when 'type_20' then '谎报里程'
+        when 'type_21' then '煽动/挑衅/损害公司利益'
+        when 'type_22' then '失职'
+        when 'type_23' then '损害公司名誉'
+        when 'type_24' then '不接受或不配合公司的调查'
+        when 'type_25' then 'Fake  Status'
+        when 'type_26' then 'Fake  POD '
+        when 'type_27' then '工作效率未达到公司的标准(KPI)'
+        when 'type_28' then '贪污钱 '
+        when 'type_29' then '贪污包裹'
+        when 'type_30' then '偷盗公司财物'
+        when 'type_31' then '无故连续旷工1天'
+        when 'type_32' then '无故连续旷工2天'
+        when 'type_33' then '迟到/早退 <= 10 分钟超过1次'
+        when 'type_34' then '性骚扰'
+        when 'type_35' then '提供虚假或未更新的个人信息'
+        when 'type_36' then 'Fake scan face - 违法者'
+        when 'type_37' then 'Fake scan face - 帮手'
+        when 'type_111' then 'PH-迟到/经常性迟到'
+        when 'type_112' then 'PH-连续旷工 1-2日'
+        when 'type_113' then 'PH-虚假考勤/假装生病'
+        when 'type_114' then 'PH-休息时间过长/不遵守时间表'
+        when 'type_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+        when 'type_116' then 'PH-不服从上级'
+        when 'type_117' then 'PH-盗窃公司财物'
+        when 'type_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+        when 'type_119' then 'PH-低效/不满足工作标准'
+        when 'type_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+        when 'type_121' then 'PH-不尊重/粗鲁无礼'
+        when 'type_122' then 'PH-粗心大意造成公司重大损失'
+        when 'type_123' then 'PH-酒精中毒/使用毒品或非法物品'
+        when 'type_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+        when 'type_125' then 'PH-出勤时睡觉'
+        when 'type_126' then 'PH-未按照网点规定时间回款'
+        when 'type_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+        when 'type_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+        when 'type_129' then 'PH-向客户收取额外费用'
+        when 'type_130' then 'PH-替换包裹内物品'
+        when 'type_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+        when 'type_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+        when 'type_133' then 'PH-兼职行为'
+        when 'type_101' then '一月内虚假妥投大于等于4次'
+        when 'type_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+        when 'type_103' then '虚假扫描'
+        when 'type_104' then '偷盗包裹'
+        when 'type_105' then '仓库内吸烟'
+        when 'type_106' then '辱骂客户'
+        when 'type_107' then '乱扔包裹'
+        when 'type_108' then '一个月内两次及以上虚假取消揽收'
+        when 'type_109' then '未经客户同意私自擅闯客户家'
+        when 'type_110' then '恶意争抢客户'
+        else mw.type_code
+    end warn_reason
+    ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+from backyard_pro.message_warning mw
+where
+    mw.is_delete = 0
+    and mw.send_status = 1
+    and mw.warning_type in (2,3)
+    and mw.date_ats > date_sub(curdate(), interval 1 year );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.staff_info_id
+    ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+    end as 警告类型
+    ,case mw.type_code
+        when 'type_01' then '迟到早退'
+        when 'type_02' then '连续旷工'
+        when 'type_03' then '贪污'
+        when 'type_04' then '工作时间或工作地点饮酒'
+        when 'type_05' then '持有或吸食毒品'
+        when 'type_06' then '违反公司的命令/通知/规则/纪律/规定'
+        when 'type_07' then '通过社会媒体污蔑公司'
+        when 'type_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+        when 'type_09' then '腐败/滥用职权'
+        when 'type_10' then '玩忽职守'
+        when 'type_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+        when 'type_12' then '未告知上级或无故旷工'
+        when 'type_13' then '上级没有同意请假、没有通过系统请假'
+        when 'type_14' then '没有通过系统请假'
+        when 'type_15' then '未按时上下班'
+        when 'type_16' then '不配合公司的吸毒检查'
+        when 'type_17' then '伪造证件'
+        when 'type_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+        when 'type_19' then '未按照网点规定的时间回款'
+        when 'type_20' then '谎报里程'
+        when 'type_21' then '煽动/挑衅/损害公司利益'
+        when 'type_22' then '失职'
+        when 'type_23' then '损害公司名誉'
+        when 'type_24' then '不接受或不配合公司的调查'
+        when 'type_25' then 'Fake  Status'
+        when 'type_26' then 'Fake  POD '
+        when 'type_27' then '工作效率未达到公司的标准(KPI)'
+        when 'type_28' then '贪污钱 '
+        when 'type_29' then '贪污包裹'
+        when 'type_30' then '偷盗公司财物'
+        when 'type_31' then '无故连续旷工1天'
+        when 'type_32' then '无故连续旷工2天'
+        when 'type_33' then '迟到/早退 <= 10 分钟超过1次'
+        when 'type_34' then '性骚扰'
+        when 'type_35' then '提供虚假或未更新的个人信息'
+        when 'type_36' then 'Fake scan face - 违法者'
+        when 'type_37' then 'Fake scan face - 帮手'
+        when 'type_111' then 'PH-迟到/经常性迟到'
+        when 'type_112' then 'PH-连续旷工 1-2日'
+        when 'type_113' then 'PH-虚假考勤/假装生病'
+        when 'type_114' then 'PH-休息时间过长/不遵守时间表'
+        when 'type_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+        when 'type_116' then 'PH-不服从上级'
+        when 'type_117' then 'PH-盗窃公司财物'
+        when 'type_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+        when 'type_119' then 'PH-低效/不满足工作标准'
+        when 'type_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+        when 'type_121' then 'PH-不尊重/粗鲁无礼'
+        when 'type_122' then 'PH-粗心大意造成公司重大损失'
+        when 'type_123' then 'PH-酒精中毒/使用毒品或非法物品'
+        when 'type_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+        when 'type_125' then 'PH-出勤时睡觉'
+        when 'type_126' then 'PH-未按照网点规定时间回款'
+        when 'type_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+        when 'type_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+        when 'type_129' then 'PH-向客户收取额外费用'
+        when 'type_130' then 'PH-替换包裹内物品'
+        when 'type_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+        when 'type_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+        when 'type_133' then 'PH-兼职行为'
+        when 'type_101' then '一月内虚假妥投大于等于4次'
+        when 'type_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+        when 'type_103' then '虚假扫描'
+        when 'type_104' then '偷盗包裹'
+        when 'type_105' then '仓库内吸烟'
+        when 'type_106' then '辱骂客户'
+        when 'type_107' then '乱扔包裹'
+        when 'type_108' then '一个月内两次及以上虚假取消揽收'
+        when 'type_109' then '未经客户同意私自擅闯客户家'
+        when 'type_110' then '恶意争抢客户'
+        else mw.type_code
+    end warn_reason
+    ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+from backyard_pro.message_warning mw
+where
+    mw.is_delete = 0
+    and mw.send_status = 1
+    and mw.warning_type in (2,3)
+    and mw.date_ats > date_sub(curdate(), interval 1 year );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.staff_info_id
+    ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+    end as 警告类型
+    ,case mw.type_code
+        when 'warning_01' then '迟到早退'
+        when 'warning_02' then '连续旷工'
+        when 'warning_03' then '贪污'
+        when 'warning_04' then '工作时间或工作地点饮酒'
+        when 'warning_05' then '持有或吸食毒品'
+        when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+        when 'warning_07' then '通过社会媒体污蔑公司'
+        when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+        when 'warning_09' then '腐败/滥用职权'
+        when 'warning_10' then '玩忽职守'
+        when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+        when 'warning_12' then '未告知上级或无故旷工'
+        when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+        when 'warning_14' then '没有通过系统请假'
+        when 'warning_15' then '未按时上下班'
+        when 'warning_16' then '不配合公司的吸毒检查'
+        when 'warning_17' then '伪造证件'
+        when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+        when 'warning_19' then '未按照网点规定的时间回款'
+        when 'warning_20' then '谎报里程'
+        when 'warning_21' then '煽动/挑衅/损害公司利益'
+        when 'warning_22' then '失职'
+        when 'warning_23' then '损害公司名誉'
+        when 'warning_24' then '不接受或不配合公司的调查'
+        when 'warning_25' then 'Fake  Status'
+        when 'warning_26' then 'Fake  POD '
+        when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+        when 'warning_28' then '贪污钱 '
+        when 'warning_29' then '贪污包裹'
+        when 'warning_30' then '偷盗公司财物'
+        when 'warning_31' then '无故连续旷工1天'
+        when 'warning_32' then '无故连续旷工2天'
+        when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+        when 'warning_34' then '性骚扰'
+        when 'warning_35' then '提供虚假或未更新的个人信息'
+        when 'warning_36' then 'Fake scan face - 违法者'
+        when 'warning_37' then 'Fake scan face - 帮手'
+        when 'warning_111' then 'PH-迟到/经常性迟到'
+        when 'warning_112' then 'PH-连续旷工 1-2日'
+        when 'warning_113' then 'PH-虚假考勤/假装生病'
+        when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+        when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+        when 'warning_116' then 'PH-不服从上级'
+        when 'warning_117' then 'PH-盗窃公司财物'
+        when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+        when 'warning_119' then 'PH-低效/不满足工作标准'
+        when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+        when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+        when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+        when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+        when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+        when 'warning_125' then 'PH-出勤时睡觉'
+        when 'warning_126' then 'PH-未按照网点规定时间回款'
+        when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+        when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+        when 'warning_129' then 'PH-向客户收取额外费用'
+        when 'warning_130' then 'PH-替换包裹内物品'
+        when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+        when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+        when 'warning_133' then 'PH-兼职行为'
+        when 'warning_101' then '一月内虚假妥投大于等于4次'
+        when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+        when 'warning_103' then '虚假扫描'
+        when 'warning_104' then '偷盗包裹'
+        when 'warning_105' then '仓库内吸烟'
+        when 'warning_106' then '辱骂客户'
+        when 'warning_107' then '乱扔包裹'
+        when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+        when 'warning_109' then '未经客户同意私自擅闯客户家'
+        when 'warning_110' then '恶意争抢客户'
+        else mw.type_code
+    end warn_reason
+    ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+from backyard_pro.message_warning mw
+where
+    mw.is_delete = 0
+    and mw.send_status = 1
+    and mw.warning_type in (2,3)
+    and mw.date_ats > date_sub(curdate(), interval 1 year );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.staff_info_id
+    ,case mw.`warning_type`
+        when 1 then '口述警告'
+        when 2 then '书面警告'
+        when 3 then '末次书面警告'
+    end as 警告类型
+    ,mw.type_code
+    ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+from backyard_pro.message_warning mw
+join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+where
+    mw.is_delete = 0
+    and mw.send_status = 1
+    and mw.warning_type in (2,3)
+    and mw.date_ats > date_sub(curdate(), interval 1 year );
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.警告类型
+    ,a.staff_info_id
+    ,a.type_code
+    ,a.type_count
+from
+    (
+        select
+            mw.staff_info_id
+            ,case mw.`warning_type`
+                when 1 then '口述警告'
+                when 2 then '书面警告'
+                when 3 then '末次书面警告'
+            end as 警告类型
+            ,mw.type_code
+            ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+        from backyard_pro.message_warning mw
+        join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+        where
+            mw.is_delete = 0
+            and mw.send_status = 1
+            and mw.warning_type in (2,3)
+            and mw.date_ats > date_sub(curdate(), interval 1 year )
+    ) a
+where
+    a.type_count > 1
+group by 1,2,3,4;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    a.staff_info_id
+    ,a.type_code
+    ,a.type_count
+from
+    (
+        select
+            mw.staff_info_id
+            ,case mw.`warning_type`
+                when 1 then '口述警告'
+                when 2 then '书面警告'
+                when 3 then '末次书面警告'
+            end as 警告类型
+            ,mw.type_code
+            ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+        from backyard_pro.message_warning mw
+        join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+        where
+            mw.is_delete = 0
+            and mw.send_status = 1
+            and mw.warning_type in (2,3)
+            and mw.date_ats > date_sub(curdate(), interval 1 year )
+    ) a
+where
+    a.type_count > 1
+group by 1,2,3;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+
+    select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2
+)
+select
+    hsi2.staff_info_id
+    ,hsi2.hire_date 入职时间
+    ,datediff(curdate(), hsi2.hire_date) 入职天数
+    ,if(a2.员工 is not null, '是', '否') '是否同一警告原因书面+某次书面2次及以上'
+    ,a2.`书面+末次书面警告2次及以上-原因1`
+    ,a2.`书面+末次书面警告2次及以上次数-原因1`
+    ,a2.`书面+末次书面警告2次及以上-原因2`
+    ,a2.`书面+末次书面警告2次及以上次数-原因2`
+from bi_pro.hr_staff_info hsi2
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
+left join
+    (
+                select
+            t1.staff_info_id 员工
+        #     ,t1.type_code
+            ,case t1.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t1.type_code
+            end '书面+末次书面警告2次及以上-原因1'
+            ,t1.type_count '书面+末次书面警告2次及以上次数-原因1'
+            ,case t2.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t2.type_code
+            end '书面+末次书面警告2次及以上-原因2'
+            ,t2.type_count '书面+末次书面警告2次及以上次数-原因2'
+        from t t1
+        left join t t2 on t2.staff_info_id = t1.staff_info_id and  t2.rk = 1
+        where
+            t1.rk = 1
+    ) a2 on a2.员工 = hsi2.staff_info_id
+where
+    hsi2.state = 1
+    and hsi2.formal = 1
+    and hsi2.is_sub_staff = 0;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+
+    select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2
+)
+select
+    hsi2.staff_info_id
+    ,hjt.job_name 职位
+    ,hsi2.hire_date 入职时间
+    ,datediff(curdate(), hsi2.hire_date) 入职天数
+    ,if(a2.员工 is not null, '是', '否') '是否同一警告原因书面+某次书面2次及以上'
+    ,a2.`书面+末次书面警告2次及以上-原因1`
+    ,a2.`书面+末次书面警告2次及以上次数-原因1`
+    ,a2.`书面+末次书面警告2次及以上-原因2`
+    ,a2.`书面+末次书面警告2次及以上次数-原因2`
+from bi_pro.hr_staff_info hsi2
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
+left join
+    (
+                select
+            t1.staff_info_id 员工
+        #     ,t1.type_code
+            ,case t1.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t1.type_code
+            end '书面+末次书面警告2次及以上-原因1'
+            ,t1.type_count '书面+末次书面警告2次及以上次数-原因1'
+            ,case t2.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t2.type_code
+            end '书面+末次书面警告2次及以上-原因2'
+            ,t2.type_count '书面+末次书面警告2次及以上次数-原因2'
+        from t t1
+        left join t t2 on t2.staff_info_id = t1.staff_info_id and  t2.rk = 1
+        where
+            t1.rk = 1
+    ) a2 on a2.员工 = hsi2.staff_info_id
+where
+    hsi2.state = 1
+    and hsi2.formal = 1
+    and hsi2.is_sub_staff = 0;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+
+    select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2
+)
+select
+    hsi2.staff_info_id
+    ,hjt.job_name 职位
+    ,hsi2.hire_date 入职时间
+    ,datediff(curdate(), hsi2.hire_date) 入职天数
+    ,if(a2.员工 is not null, '是', '否') '是否同一警告原因书面+某次书面2次及以上'
+    ,a2.`书面+末次书面警告2次及以上-原因1`
+    ,a2.`书面+末次书面警告2次及以上次数-原因1`
+    ,a2.`书面+末次书面警告2次及以上-原因2`
+    ,a2.`书面+末次书面警告2次及以上次数-原因2`
+from bi_pro.hr_staff_info hsi2
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
+left join
+    (
+                select
+            t1.staff_info_id 员工
+        #     ,t1.type_code
+            ,case t1.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t1.type_code
+            end '书面+末次书面警告2次及以上-原因1'
+            ,t1.type_count '书面+末次书面警告2次及以上次数-原因1'
+            ,case t2.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t2.type_code
+            end '书面+末次书面警告2次及以上-原因2'
+            ,t2.type_count '书面+末次书面警告2次及以上次数-原因2'
+        from t t1
+        left join t t2 on t2.staff_info_id = t1.staff_info_id and  t2.rk = 2
+        where
+            t1.rk = 1
+    ) a2 on a2.员工 = hsi2.staff_info_id
+where
+    hsi2.state = 1
+    and hsi2.formal = 1
+    and hsi2.is_sub_staff = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+
+    select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2
+)
+select
+    hsi2.staff_info_id
+    ,hjt.job_name 职位
+    ,hsi2.hire_date 入职时间
+    ,datediff(curdate(), hsi2.hire_date) 入职天数
+    ,if(a2.员工 is not null, '是', '否') '是否同一警告原因书面+某次书面2次及以上'
+    ,a2.`书面+末次书面警告2次及以上-原因1`
+    ,a2.`书面+末次书面警告2次及以上次数-原因1`
+    ,a2.`书面+末次书面警告2次及以上-原因2`
+    ,a2.`书面+末次书面警告2次及以上次数-原因2`
+from bi_pro.hr_staff_info hsi2
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
+left join
+    (
+                select
+            t1.staff_info_id 员工
+        #     ,t1.type_code
+            ,case t1.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t1.type_code
+            end '书面+末次书面警告2次及以上-原因1'
+            ,t1.type_count '书面+末次书面警告2次及以上次数-原因1'
+            ,case t2.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t2.type_code
+            end '书面+末次书面警告2次及以上-原因2'
+            ,t2.type_count '书面+末次书面警告2次及以上次数-原因2'
+        from t t1
+        left join t t2 on t2.staff_info_id = t1.staff_info_id and  t2.rk = 2
+        where
+            t1.rk = 1
+    ) a2 on a2.员工 = hsi2.staff_info_id
+where
+    hsi2.state = 1
+    and hsi2.formal = 1
+    and hsi2.is_sub_staff = 0
+    and hsi2.staff_info_id = '641675';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+
+    select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2
+)
+select
+    hsi2.staff_info_id
+    ,hjt.job_name 职位
+    ,hsi2.hire_date 入职时间
+    ,datediff(curdate(), hsi2.hire_date) 入职天数
+    ,if(a2.员工 is not null, '是', '否') '是否同一警告原因书面+某次书面2次及以上'
+    ,a2.`书面+末次书面警告2次及以上-原因1`
+    ,a2.`书面+末次书面警告2次及以上次数-原因1`
+    ,a2.`书面+末次书面警告2次及以上-原因2`
+    ,a2.`书面+末次书面警告2次及以上次数-原因2`
+from bi_pro.hr_staff_info hsi2
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
+left join
+    (
+                select
+            t1.staff_info_id 员工
+        #     ,t1.type_code
+            ,case t1.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t1.type_code
+            end '书面+末次书面警告2次及以上-原因1'
+            ,t1.type_count '书面+末次书面警告2次及以上次数-原因1'
+            ,case t2.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t2.type_code
+            end '书面+末次书面警告2次及以上-原因2'
+            ,t2.type_count '书面+末次书面警告2次及以上次数-原因2'
+        from (select * from t t1 where t1.rk = 1) t1
+        left join t t2 on t2.staff_info_id = t1.staff_info_id and  t2.rk = 2
+        where
+            t1.rk = 1
+    ) a2 on a2.员工 = hsi2.staff_info_id
+where
+    hsi2.state = 1
+    and hsi2.formal = 1
+    and hsi2.is_sub_staff = 0
+    and hsi2.staff_info_id = '641675';
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+
+    select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2
+)
+select
+    hsi2.staff_info_id
+    ,hjt.job_name 职位
+    ,hsi2.hire_date 入职时间
+    ,datediff(curdate(), hsi2.hire_date) 入职天数
+    ,if(a2.员工 is not null, '是', '否') '是否同一警告原因书面+某次书面2次及以上'
+    ,a2.`书面+末次书面警告2次及以上-原因1`
+    ,a2.`书面+末次书面警告2次及以上次数-原因1`
+    ,a2.`书面+末次书面警告2次及以上-原因2`
+    ,a2.`书面+末次书面警告2次及以上次数-原因2`
+from bi_pro.hr_staff_info hsi2
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
+left join
+    (
+                select
+            t1.staff_info_id 员工
+        #     ,t1.type_code
+            ,case t1.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t1.type_code
+            end '书面+末次书面警告2次及以上-原因1'
+            ,t1.type_count '书面+末次书面警告2次及以上次数-原因1'
+            ,case t2.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t2.type_code
+            end '书面+末次书面警告2次及以上-原因2'
+            ,t2.type_count '书面+末次书面警告2次及以上次数-原因2'
+        from (select * from t t1 where t1.rk = 1) t1
+        left join t t2 on t2.staff_info_id = t1.staff_info_id and  t2.rk = 2
+        where
+            t1.rk = 1
+    ) a2 on a2.员工 = hsi2.staff_info_id
+where
+    hsi2.state = 1
+    and hsi2.formal = 1
+    and hsi2.is_sub_staff = 0;
+;-- -. . -..- - / . -. - .-. -.--
+with t as
+(
+
+    select
+        a2.staff_info_id
+        ,a2.type_code
+        ,a2.type_count
+        ,row_number() over (partition by a2.staff_info_id order by a2.type_count) rk
+    from
+        (
+            select
+                a.staff_info_id
+                ,a.type_code
+                ,a.type_count
+            from
+                (
+                    select
+                        mw.staff_info_id
+                        ,case mw.`warning_type`
+                            when 1 then '口述警告'
+                            when 2 then '书面警告'
+                            when 3 then '末次书面警告'
+                        end as 警告类型
+                        ,mw.type_code
+                        ,count(mw.id) over (partition by mw.staff_info_id, mw.type_code) type_count
+                    from backyard_pro.message_warning mw
+                    join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id and hsi.state = 1
+                    where
+                        mw.is_delete = 0
+                        and mw.send_status = 1
+                        and mw.warning_type in (2,3)
+                        and mw.date_ats > date_sub(curdate(), interval 1 year )
+                ) a
+            where
+                a.type_count > 1
+            group by 1,2,3
+        ) a2
+)
+select
+    hsi2.staff_info_id
+    ,hjt.job_name 职位
+    ,hsi2.hire_date 入职时间
+    ,datediff(curdate(), hsi2.hire_date) 入职天数
+    ,if(a2.员工 is not null, '是', '否') '是否同一警告原因书面+某次书面2次及以上'
+    ,a2.`书面+末次书面警告2次及以上-原因1`
+    ,a2.`书面+末次书面警告2次及以上次数-原因1`
+    ,a2.`书面+末次书面警告2次及以上-原因2`
+    ,a2.`书面+末次书面警告2次及以上次数-原因2`
+from bi_pro.hr_staff_info hsi2
+left join bi_pro.hr_job_title hjt on hjt.id = hsi2.job_title
+left join
+    (
+                select
+            t1.staff_info_id 员工
+        #     ,t1.type_code
+            ,case t1.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t1.type_code
+            end '书面+末次书面警告2次及以上-原因1'
+            ,t1.type_count '书面+末次书面警告2次及以上次数-原因1'
+            ,case t2.type_code
+                when 'warning_01' then '迟到早退'
+                when 'warning_02' then '连续旷工'
+                when 'warning_03' then '贪污'
+                when 'warning_04' then '工作时间或工作地点饮酒'
+                when 'warning_05' then '持有或吸食毒品'
+                when 'warning_06' then '违反公司的命令/通知/规则/纪律/规定'
+                when 'warning_07' then '通过社会媒体污蔑公司'
+                when 'warning_08' then '公司设备私人使用 / 利用公司设备去做其他事情'
+                when 'warning_09' then '腐败/滥用职权'
+                when 'warning_10' then '玩忽职守'
+                when 'warning_11' then '吵架、打架/伤害同事、外部人员、上级或其他'
+                when 'warning_12' then '未告知上级或无故旷工'
+                when 'warning_13' then '上级没有同意请假、没有通过系统请假'
+                when 'warning_14' then '没有通过系统请假'
+                when 'warning_15' then '未按时上下班'
+                when 'warning_16' then '不配合公司的吸毒检查'
+                when 'warning_17' then '伪造证件'
+                when 'warning_18' then '粗心大意造成公司重大损失（造成钱丢失）'
+                when 'warning_19' then '未按照网点规定的时间回款'
+                when 'warning_20' then '谎报里程'
+                when 'warning_21' then '煽动/挑衅/损害公司利益'
+                when 'warning_22' then '失职'
+                when 'warning_23' then '损害公司名誉'
+                when 'warning_24' then '不接受或不配合公司的调查'
+                when 'warning_25' then 'Fake  Status'
+                when 'warning_26' then 'Fake  POD '
+                when 'warning_27' then '工作效率未达到公司的标准(KPI)'
+                when 'warning_28' then '贪污钱 '
+                when 'warning_29' then '贪污包裹'
+                when 'warning_30' then '偷盗公司财物'
+                when 'warning_31' then '无故连续旷工1天'
+                when 'warning_32' then '无故连续旷工2天'
+                when 'warning_33' then '迟到/早退 <= 10 分钟超过1次'
+                when 'warning_34' then '性骚扰'
+                when 'warning_35' then '提供虚假或未更新的个人信息'
+                when 'warning_36' then 'Fake scan face - 违法者'
+                when 'warning_37' then 'Fake scan face - 帮手'
+                when 'warning_111' then 'PH-迟到/经常性迟到'
+                when 'warning_112' then 'PH-连续旷工 1-2日'
+                when 'warning_113' then 'PH-虚假考勤/假装生病'
+                when 'warning_114' then 'PH-休息时间过长/不遵守时间表'
+                when 'warning_115' then 'PH-虚假标记/RTS/POD/送达/取消/改期配送以及修改包裹重量'
+                when 'warning_116' then 'PH-不服从上级'
+                when 'warning_117' then 'PH-盗窃公司财物'
+                when 'warning_118' then 'PH-公司设备私人使用/ 利用公司设备去做其他事情'
+                when 'warning_119' then 'PH-低效/不满足工作标准'
+                when 'warning_120' then 'PH-吵架、打架/ 伤害同事、外部人员、上级或其他人'
+                when 'warning_121' then 'PH-不尊重/粗鲁无礼'
+                when 'warning_122' then 'PH-粗心大意造成公司重大损失'
+                when 'warning_123' then 'PH-酒精中毒/使用毒品或非法物品'
+                when 'warning_124' then 'PH-没有穿正确的制服/穿短裤/拖鞋/凉鞋/没有穿衬衫/衣服'
+                when 'warning_125' then 'PH-出勤时睡觉'
+                when 'warning_126' then 'PH-未按照网点规定时间回款'
+                when 'warning_127' then 'PH-工作时间内赌博/在工作区域内赌博'
+                when 'warning_128' then 'PH-在工作区域内抽烟（包含电子烟）'
+                when 'warning_129' then 'PH-向客户收取额外费用'
+                when 'warning_130' then 'PH-替换包裹内物品'
+                when 'warning_131' then 'PH-未能按照工作标准行事或执行工作，或未能遵循服务标准'
+                when 'warning_132' then 'PH-未经授权使用公司物资、材料、设施、工具或设备'
+                when 'warning_133' then 'PH-兼职行为'
+                when 'warning_101' then '一月内虚假妥投大于等于4次'
+                when 'warning_102' then '包裹被网点KIT扫描后遗失（2件及以上）'
+                when 'warning_103' then '虚假扫描'
+                when 'warning_104' then '偷盗包裹'
+                when 'warning_105' then '仓库内吸烟'
+                when 'warning_106' then '辱骂客户'
+                when 'warning_107' then '乱扔包裹'
+                when 'warning_108' then '一个月内两次及以上虚假取消揽收'
+                when 'warning_109' then '未经客户同意私自擅闯客户家'
+                when 'warning_110' then '恶意争抢客户'
+                else t2.type_code
+            end '书面+末次书面警告2次及以上-原因2'
+            ,t2.type_count '书面+末次书面警告2次及以上次数-原因2'
+        from (select * from t t1 where t1.rk = 1) t1
+        left join t t2 on t2.staff_info_id = t1.staff_info_id and  t2.rk = 2
+        where
+            t1.rk = 1
+    ) a2 on a2.员工 = hsi2.staff_info_id
+where
+    hsi2.state = 1
+    and hsi2.formal = 1
+    and hsi2.is_sub_staff = 0
+    and hsi2.sys_store_id != '-1';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    substring(mw.operator_id,2)
+from backyard_pro.message_warning mw
+where
+    mw.id = '33746';
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-20' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-20'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-20'
+        and hsa.employment_begin_date <= '2023-09-20'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-20'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.third_sorting_code sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-20', interval 7 hour) and td.created_at < date_add('2023-09-20', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+#         and a.staff_info_id = '624526'
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 来源网点
+    ,dt2.store_name 支援网点
+    ,s1.staff_info_id 主账号
+    ,s1.sub_staff_info_id 子账号
+    ,hjt.job_name  'van/bike'
+    ,convert_tz(swa.started_at, '+00:00', '+07:00') 上班时间
+    ,convert_tz(swa.end_at, '+00:00', '+07:00') 下班时间
+    ,s3.pick_num 揽收量
+    ,s2.scan_count 交接量
+    ,s2.del_count 妥投量
+    ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+    ,code.scan_code_count 交接三段码数量
+    ,code.del_code_num 妥投三段码数量
+    ,pho.0_count 未妥投中打电话次数为0的数量
+    ,pho.1_count 未妥投中打电话次数为1的数量
+from sup s1
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-20' and swa.organization_id = s1.store_id
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.pno) scan_count
+            ,count(if(t1.state = 5, t1.pno, null)) del_count
+        from total t1
+        group by 1
+    ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            s1.sub_staff_info_id
+            ,count(distinct pi.pno) pick_num
+        from fle_staging.parcel_info pi
+        join sup s1 on s1.sub_staff_info_id = pi.ticket_pickup_staff_info_id
+        where
+            pi.created_at >= date_sub('2023-09-20', interval 7 hour)
+            and pi.created_at < date_add('2023-09-20', interval 17 hour)
+        group by 1
+    ) s3 on s3.sub_staff_info_id = s1.sub_staff_info_id
+left join
+    ( -- 第一次妥投时间
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+left join
+    (
+        select
+            t1.*
+            ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+        from total t1
+        where
+            t1.state = 5
+    ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+left join
+    (
+        select
+            t1.staff_info_id
+            ,count(distinct t1.sorting_code) scan_code_count
+            ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+        from total t1
+        where
+            t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+        group by 1
+    ) code on code.staff_info_id = s1.sub_staff_info_id
+left join
+    (
+        select
+            a.staff_info_id
+            ,count(if(a.call_times = 0, a.pno, null)) 0_count
+            ,count(if(a.call_times = 1, a.pno, null)) 1_count
+        from
+            (
+                select
+                    t.staff_info_id
+                    ,t.pno
+                    ,count(pr.pno) call_times
+                from total t
+                left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-20', interval 7 hour) and pr.routed_at < date_add('2023-09-20', interval 17 hour)
+                where
+                    t.state != 5
+                group by 1,2
+            ) a
+        group by 1
+    ) pho on pho.staff_info_id = s1.sub_staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-20' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-20'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-20'
+        and hsa.employment_begin_date <= '2023-09-20'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-20'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+)
+select
+    dt.region_name 大区
+    ,dt.piece_name 片区
+    ,dt.store_name 网点
+    ,a1.today_should_del 当日应派
+    ,a1.today_already_del 当日妥投
+    ,a1.no_del_big_count 未妥投大件数量
+    ,a2.courier_count 自有快递员人数（出勤）
+    ,a3.sup_courier_count 支援快递员人数（出勤）
+    ,a2.dco_count 自有仓管
+    ,a3.sup_dco_count 支援仓管
+    ,a4.sort_rate 分拣扫描率
+    ,a5.self_effect 自有人效
+    ,a5.other_effect 支援人效
+from
+    ( -- 应派妥投
+        select
+            ss.store_name
+            ,ss.store_id
+            ,count(distinct ds.pno) today_should_del
+            ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-20', interval 7 hour) and pi.finished_at < date_add('2023-09-20', interval  17 hour), ds.pno, null)) today_already_del
+            ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join fle_staging.parcel_info pi on ds.pno = pi.pno
+        join
+            (
+                select
+                    sup.store_id
+                    ,sup.store_name
+                from sup
+                group by 1,2
+            ) ss on ss.store_id = ds.dst_store_id
+        where
+            ds.p_date = '2023-09-20'
+            and ds.should_delevry_type != '非当日应派'
+        group by 1,2
+    ) a1
+left join
+    (
+        select
+            hsi.sys_store_id
+            ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+            ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+        from bi_pro.hr_staff_info hsi
+        join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-20' and ( swa.started_at is not null or swa.end_at is not null)
+        left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+        group by 1
+    ) a2 on a2.sys_store_id = a1.store_id
+left join
+    (
+        select
+            s1.store_id
+            ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+            ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+        from sup s1
+        group by 1
+    ) a3 on a3.store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct ds.pno) ds_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+            ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+        from dwm.dwd_th_dc_should_be_delivery ds
+        left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-20', interval 7 hour) and pr.routed_at < date_add('2023-09-20', interval 17 hour)
+        group by 1
+    ) a4 on a4.dst_store_id = a1.store_id
+left join
+    (
+        select
+            ds.dst_store_id
+            ,count(distinct if(hsi.staff_info_id is not null, ds.pno, null))/count(distinct if(hsi.staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) self_effect
+            ,count(distinct if(s1.sub_staff_info_id is not null, ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null, pi.ticket_delivery_staff_info_id, null)) other_effect
+        from dwm.dwd_th_dc_should_be_delivery ds
+        join fle_staging.parcel_info pi on pi.pno = ds.pno
+        left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+        left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+        where
+            pi.state = 5
+            and pi.finished_at >= date_sub('2023-09-20', interval 7 hour)
+            and pi.finished_at < date_add('2023-09-20', interval 17 hour)
+            and pi.returned = 0
+        group by 1
+    ) a5 on a5.dst_store_id = a1.store_id
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day);
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-21' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-21'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-21'
+        and hsa.employment_begin_date <= '2023-09-21'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-21'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451)
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.third_sorting_code sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-21', interval 7 hour) and td.created_at < date_add('2023-09-21', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+#         and a.staff_info_id = '624526'
+)
+select
+    t1.大区, t1.片区, t1.网点, t1.当日应派, t1.当日妥投, t1.未妥投大件数量, t1.自有快递员人数（出勤）, t1.支援快递员人数（出勤）, t1.自有仓管, t1.支援仓管, t1.分拣扫描率, t1.自有人效, t1.支援人效
+    ,t2.大区, t2.片区, t2.来源网点, t2.主账号, t2.子账号, t2.`van/bike`, t2.上班时间, t2.下班时间, t2.揽收量, t2.交接量, t2.妥投量, t2.派送时长, t2.交接三段码数量, t2.妥投三段码数量, t2.未妥投中打电话次数为0的数量, t2.未妥投中打电话次数为1的数量
+from
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 网点
+            ,a1.today_should_del 当日应派
+            ,a1.today_already_del 当日妥投
+            ,a1.no_del_big_count 未妥投大件数量
+            ,a2.courier_count 自有快递员人数（出勤）
+            ,a3.sup_courier_count 支援快递员人数（出勤）
+            ,a2.dco_count 自有仓管
+            ,a3.sup_dco_count 支援仓管
+            ,a4.sort_rate 分拣扫描率
+            ,a5.self_effect 自有人效
+            ,a5.other_effect 支援人效
+        from
+            ( -- 应派妥投
+                select
+                    ss.store_name
+                    ,ss.store_id
+                    ,count(distinct ds.pno) today_should_del
+                    ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-21', interval 7 hour) and pi.finished_at < date_add('2023-09-21', interval  17 hour), ds.pno, null)) today_already_del
+                    ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on ds.pno = pi.pno
+                join
+                    (
+                        select
+                            sup.store_id
+                            ,sup.store_name
+                        from sup
+                        group by 1,2
+                    ) ss on ss.store_id = ds.dst_store_id
+                where
+                    ds.p_date = '2023-09-21'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1,2
+            ) a1
+        left join
+            (
+                select
+                    hsi.sys_store_id
+                    ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+                    ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+                from bi_pro.hr_staff_info hsi
+                join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-21' and ( swa.started_at is not null or swa.end_at is not null)
+                left join sup sup1 on sup1.staff_info_id = hsi.staff_info_id
+                group by 1
+            ) a2 on a2.sys_store_id = a1.store_id
+        left join
+            (
+                select
+                    s1.store_id
+                    ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+                    ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+                from sup s1
+                group by 1
+            ) a3 on a3.store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) ds_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-21', interval 7 hour) and pr.routed_at < date_add('2023-09-21', interval 17 hour)
+                group by 1
+            ) a4 on a4.dst_store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), ds.pno, null))/count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) self_effect
+                    ,count(distinct if(s1.sub_staff_info_id is not null and hsi.job_title in (13,110,452,1497), ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null and hsi.job_title in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) other_effect
+                from dwm.dwd_th_dc_should_be_delivery ds
+                join fle_staging.parcel_info pi on pi.pno = ds.pno
+                left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+                left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+                where
+                    pi.state = 5
+                    and pi.finished_at >= date_sub('2023-09-21', interval 7 hour)
+                    and pi.finished_at < date_add('2023-09-21', interval 17 hour)
+                    and pi.returned = 0
+                group by 1
+            ) a5 on a5.dst_store_id = a1.store_id
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+    ) t1
+left join
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 来源网点
+            ,dt2.store_name 支援网点
+            ,s1.staff_info_id 主账号
+            ,s1.sub_staff_info_id 子账号
+            ,hjt.job_name  'van/bike'
+            ,convert_tz(swa.started_at, '+00:00', '+07:00') 上班时间
+            ,convert_tz(swa.end_at, '+00:00', '+07:00') 下班时间
+            ,s3.pick_num 揽收量
+            ,s2.scan_count 交接量
+            ,s2.del_count 妥投量
+            ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+            ,code.scan_code_count 交接三段码数量
+            ,code.del_code_num 妥投三段码数量
+            ,pho.0_count 未妥投中打电话次数为0的数量
+            ,pho.1_count 未妥投中打电话次数为1的数量
+        from sup s1
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+        left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+        left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+        left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-21' and swa.organization_id = s1.store_id
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.pno) scan_count
+                    ,count(if(t1.state = 5, t1.pno, null)) del_count
+                from total t1
+                group by 1
+            ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    s1.sub_staff_info_id
+                    ,count(distinct pi.pno) pick_num
+                from fle_staging.parcel_info pi
+                join sup s1 on s1.sub_staff_info_id = pi.ticket_pickup_staff_info_id
+                where
+                    pi.created_at >= date_sub('2023-09-21', interval 7 hour)
+                    and pi.created_at < date_add('2023-09-21', interval 17 hour)
+                group by 1
+            ) s3 on s3.sub_staff_info_id = s1.sub_staff_info_id
+        left join
+            ( -- 第一次妥投时间
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+        left join
+            (
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.sorting_code) scan_code_count
+                    ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+                from total t1
+                where
+                    t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+                group by 1
+            ) code on code.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    a.staff_info_id
+                    ,count(if(a.call_times = 0, a.pno, null)) 0_count
+                    ,count(if(a.call_times = 1, a.pno, null)) 1_count
+                from
+                    (
+                        select
+                            t.staff_info_id
+                            ,t.pno
+                            ,count(pr.pno) call_times
+                        from total t
+                        left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-21', interval 7 hour) and pr.routed_at < date_add('2023-09-21', interval 17 hour)
+                        where
+                            t.state != 5
+                        group by 1,2
+                    ) a
+                group by 1
+            ) pho on pho.staff_info_id = s1.sub_staff_info_id
+    ) t2 on t2.支援网点 = t1.网点;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-21' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-21'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-21'
+        and hsa.employment_begin_date <= '2023-09-21'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-21'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451)
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.third_sorting_code sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-21', interval 7 hour) and td.created_at < date_add('2023-09-21', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+#         and a.staff_info_id = '624526'
+)
+select
+    t1.大区, t1.片区, t1.网点, t1.当日应派, t1.当日妥投, t1.未妥投大件数量, t1.自有快递员人数（出勤）, t1.支援快递员人数（出勤）, t1.自有仓管, t1.支援仓管, t1.分拣扫描率, t1.自有人效, t1.支援人效
+    ,t2.大区, t2.片区, t2.来源网点, t2.主账号, t2.子账号, t2.`van/bike`, t2.上班时间, t2.下班时间, t2.揽收量, t2.交接量, t2.妥投量, t2.派送时长, t2.交接三段码数量, t2.妥投三段码数量, t2.未妥投中打电话次数为0的数量, t2.未妥投中打电话次数为1的数量
+from
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 网点
+            ,a1.today_should_del 当日应派
+            ,a1.today_already_del 当日妥投
+            ,a1.no_del_big_count 未妥投大件数量
+            ,a2.courier_count 自有快递员人数（出勤）
+            ,a3.sup_courier_count 支援快递员人数（出勤）
+            ,a2.dco_count 自有仓管
+            ,a3.sup_dco_count 支援仓管
+            ,a4.sort_rate 分拣扫描率
+            ,a5.self_effect 自有人效
+            ,a5.other_effect 支援人效
+        from
+            ( -- 应派妥投
+                select
+                    ss.store_name
+                    ,ss.store_id
+                    ,count(distinct ds.pno) today_should_del
+                    ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-21', interval 7 hour) and pi.finished_at < date_add('2023-09-21', interval  17 hour), ds.pno, null)) today_already_del
+                    ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on ds.pno = pi.pno
+                join
+                    (
+                        select
+                            sup.store_id
+                            ,sup.store_name
+                        from sup
+                        group by 1,2
+                    ) ss on ss.store_id = ds.dst_store_id
+                where
+                    ds.p_date = '2023-09-21'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1,2
+            ) a1
+        left join
+            (
+                select
+                    hsi.sys_store_id
+                    ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+                    ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+                from bi_pro.hr_staff_info hsi
+                join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-21' and ( swa.started_at is not null or swa.end_at is not null)
+                left join sup sup1 on sup1.sub_staff_info_id = hsi.staff_info_id
+                where
+                    hsi.state = 1
+                group by 1
+            ) a2 on a2.sys_store_id = a1.store_id
+        left join
+            (
+                select
+                    s1.store_id
+                    ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+                    ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+                from sup s1
+                group by 1
+            ) a3 on a3.store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) ds_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-21', interval 7 hour) and pr.routed_at < date_add('2023-09-21', interval 17 hour)
+                group by 1
+            ) a4 on a4.dst_store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), ds.pno, null))/count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) self_effect
+                    ,count(distinct if(s1.sub_staff_info_id is not null and s1.job_title_id in (13,110,452,1497), ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null and s1.job_title_id in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) other_effect
+                from dwm.dwd_th_dc_should_be_delivery ds
+                join fle_staging.parcel_info pi on pi.pno = ds.pno
+                left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+                left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+                where
+                    pi.state = 5
+                    and pi.finished_at >= date_sub('2023-09-21', interval 7 hour)
+                    and pi.finished_at < date_add('2023-09-21', interval 17 hour)
+                    and pi.returned = 0
+                group by 1
+            ) a5 on a5.dst_store_id = a1.store_id
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+    ) t1
+left join
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 来源网点
+            ,dt2.store_name 支援网点
+            ,s1.staff_info_id 主账号
+            ,s1.sub_staff_info_id 子账号
+            ,hjt.job_name  'van/bike'
+            ,convert_tz(swa.started_at, '+00:00', '+07:00') 上班时间
+            ,convert_tz(swa.end_at, '+00:00', '+07:00') 下班时间
+            ,s3.pick_num 揽收量
+            ,s2.scan_count 交接量
+            ,s2.del_count 妥投量
+            ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+            ,code.scan_code_count 交接三段码数量
+            ,code.del_code_num 妥投三段码数量
+            ,pho.0_count 未妥投中打电话次数为0的数量
+            ,pho.1_count 未妥投中打电话次数为1的数量
+        from sup s1
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+        left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+        left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+        left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-21' and swa.organization_id = s1.store_id
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.pno) scan_count
+                    ,count(if(t1.state = 5, t1.pno, null)) del_count
+                from total t1
+                group by 1
+            ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    s1.sub_staff_info_id
+                    ,count(distinct pi.pno) pick_num
+                from fle_staging.parcel_info pi
+                join sup s1 on s1.sub_staff_info_id = pi.ticket_pickup_staff_info_id
+                where
+                    pi.created_at >= date_sub('2023-09-21', interval 7 hour)
+                    and pi.created_at < date_add('2023-09-21', interval 17 hour)
+                group by 1
+            ) s3 on s3.sub_staff_info_id = s1.sub_staff_info_id
+        left join
+            ( -- 第一次妥投时间
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+        left join
+            (
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.sorting_code) scan_code_count
+                    ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+                from total t1
+                where
+                    t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+                group by 1
+            ) code on code.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    a.staff_info_id
+                    ,count(if(a.call_times = 0, a.pno, null)) 0_count
+                    ,count(if(a.call_times = 1, a.pno, null)) 1_count
+                from
+                    (
+                        select
+                            t.staff_info_id
+                            ,t.pno
+                            ,count(pr.pno) call_times
+                        from total t
+                        left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-21', interval 7 hour) and pr.routed_at < date_add('2023-09-21', interval 17 hour)
+                        where
+                            t.state != 5
+                        group by 1,2
+                    ) a
+                group by 1
+            ) pho on pho.staff_info_id = s1.sub_staff_info_id
+    ) t2 on t2.支援网点 = t1.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-21' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+        hsa.actual_begin_date <= '2023-09-21'
+        and coalesce(hsa.actual_end_date, curdate()) >= '2023-09-21'
+        and hsa.employment_begin_date <= '2023-09-21'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-21'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451)
+        and hsa.store_id = 'TH47010301';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+    ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+    ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+    ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+    ,cdt.client_id 客户ID
+    ,di.order_info_id  订单号
+    ,oi.remark 订单备注
+    ,di.pno 运单号
+    ,ddd.CN_element 疑难原因
+    ,ddd2.CN_element 二级类型
+    ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+    ,case pi.insured
+        when 1 then '保价'
+        when 0 then '不保价'
+    end 保价情况
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+    ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+    ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+    ,case cdt.state
+        when 0 then '未处理'
+        when 1 then '已处理'
+        when 2 then '沟通中'
+        when 3 then '支付驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end 处理状态
+    ,case fdt.state
+        when 0 then '未支付'
+        when 1 then '已支付'
+        when 2 then '驳回'
+        when 3 then '取消'
+        when 4 then '支付中'
+        when 5 then '无需支付'
+    end 财务支付状态
+    ,cdt.remark 备注
+    ,t.ProjectTeam
+    ,t.Sub_ProjectTeam
+    ,datediff(curdate(), convert_tz(di.created_at, '+00:00', '+07:00')) 处理天数
+from fle_staging.customer_diff_ticket cdt
+join tmpale.tmp_th_client_id_cn_th t on cdt.client_id = t.client_id
+join fle_staging.diff_info di on di.id = cdt.diff_info_id
+left join fle_staging.parcel_info pi on pi.pno = di.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+left join fle_staging.order_info oi on oi.pno = di.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'rejection_category'
+left join fle_staging.sys_store ss on ss.id = di.store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+where
+    cdt.created_at >= date_sub(date_sub(curdate(), interval 31 day ), interval 8 hour)
+    and t.projectteam not in ('LZD', 'SPX', 'TikTok')
+    and cdt.organization_type = 2
+    and cdt.vip_enable = 1
+    and cdt.state not in (1);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+    ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+    ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+    ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+    ,cdt.client_id 客户ID
+    ,di.order_info_id  订单号
+    ,oi.remark 订单备注
+    ,di.pno 运单号
+    ,ddd.CN_element 疑难原因
+    ,ddd2.CN_element 二级类型
+    , di.rejection_category 
+    ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+    ,case pi.insured
+        when 1 then '保价'
+        when 0 then '不保价'
+    end 保价情况
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+    ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+    ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+    ,case cdt.state
+        when 0 then '未处理'
+        when 1 then '已处理'
+        when 2 then '沟通中'
+        when 3 then '支付驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end 处理状态
+    ,case fdt.state
+        when 0 then '未支付'
+        when 1 then '已支付'
+        when 2 then '驳回'
+        when 3 then '取消'
+        when 4 then '支付中'
+        when 5 then '无需支付'
+    end 财务支付状态
+    ,cdt.remark 备注
+    ,t.ProjectTeam
+    ,t.Sub_ProjectTeam
+    ,datediff(curdate(), convert_tz(di.created_at, '+00:00', '+07:00')) 处理天数
+from fle_staging.customer_diff_ticket cdt
+join tmpale.tmp_th_client_id_cn_th t on cdt.client_id = t.client_id
+join fle_staging.diff_info di on di.id = cdt.diff_info_id
+left join fle_staging.parcel_info pi on pi.pno = di.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+left join fle_staging.order_info oi on oi.pno = di.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'rejection_category'
+left join fle_staging.sys_store ss on ss.id = di.store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+where
+    cdt.created_at >= date_sub(date_sub(curdate(), interval 31 day ), interval 8 hour)
+    and t.projectteam not in ('LZD', 'SPX', 'TikTok')
+    and cdt.organization_type = 2
+    and cdt.vip_enable = 1
+    and cdt.state not in (1);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    convert_tz(di.created_at, '+00:00', '+07:00') 疑难件提交时间
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收完成时间
+    ,if(cdt.first_operated_at is not null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00')), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,convert_tz(cdt.first_operated_at, '+00:00', '+08:00'))%60, 'm' ), null ) '从提交到第一次处理时长'
+    ,if(cdt.first_operated_at is null, concat(timestampdiff(day ,convert_tz(di.created_at, '+00:00', '+08:00') ,now()), 'd', timestampdiff(hour ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%24, 'h',timestampdiff(minute ,convert_tz(di.created_at, '+00:00', '+08:00') ,now())%60, 'm' ), null ) 至今未处理时长
+    ,concat('(', di.staff_info_id, ')', hsi.name) 提交人
+    ,cdt.client_id 客户ID
+    ,di.order_info_id  订单号
+    ,oi.remark 订单备注
+    ,di.pno 运单号
+    ,ddd.CN_element 疑难原因
+    ,ddd2.CN_element 二级类型
+    , di.rejection_category
+    ,concat('(', ss.id, ')', ss.name) 提交疑难件网点
+    ,case pi.insured
+        when 1 then '保价'
+        when 0 then '不保价'
+    end 保价情况
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 首次处理时间
+    ,concat('(', cdt.first_operator_id, ')', hsi2.name) 首次处理人
+    ,convert_tz(cdt.first_operated_at, '+00:00', '+07:00') 最后处理时间
+    ,concat('(', cdt.operator_id, ')', hsi4.name) 最后处理人
+    ,case cdt.state
+        when 0 then '未处理'
+        when 1 then '已处理'
+        when 2 then '沟通中'
+        when 3 then '支付驳回'
+        when 4 then '客户未处理'
+        when 5 then '转交闪速系统'
+        when 6 then '转交QAQC'
+    end 处理状态
+    ,case fdt.state
+        when 0 then '未支付'
+        when 1 then '已支付'
+        when 2 then '驳回'
+        when 3 then '取消'
+        when 4 then '支付中'
+        when 5 then '无需支付'
+    end 财务支付状态
+    ,cdt.remark 备注
+    ,t.ProjectTeam
+    ,t.Sub_ProjectTeam
+    ,datediff(curdate(), convert_tz(di.created_at, '+00:00', '+07:00')) 处理天数
+from fle_staging.customer_diff_ticket cdt
+join tmpale.tmp_th_client_id_cn_th t on cdt.client_id = t.client_id
+join fle_staging.diff_info di on di.id = cdt.diff_info_id
+left join fle_staging.parcel_info pi on pi.pno = di.pno
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = di.staff_info_id
+left join fle_staging.order_info oi on oi.pno = di.pno
+left join dwm.dwd_dim_dict ddd on ddd.element = di.diff_marker_category and ddd.db = 'fle_staging' and ddd.tablename = 'diff_info' and ddd.fieldname = 'diff_marker_category'
+left join dwm.dwd_dim_dict ddd2 on ddd2.element = di.rejection_category and ddd.db = 'fle_staging' and ddd2.tablename = 'diff_info' and ddd2.fieldname = 'rejection_category'
+left join fle_staging.sys_store ss on ss.id = di.store_id
+left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = cdt.first_operator_id
+left join bi_pro.hr_staff_info hsi4 on hsi4.staff_info_id = cdt.operator_id
+left join fle_staging.finance_diff_ticket fdt on fdt.diff_info_id = cdt.diff_info_id
+where
+    cdt.created_at >= date_sub(date_sub(curdate(), interval 31 day ), interval 8 hour)
+    and t.projectteam not in ('LZD', 'SPX', 'TikTok')
+    and cdt.organization_type = 2
+    and cdt.vip_enable = 1
+    and cdt.state not in (1);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hst.staff_info_id
+    ,hjt.job_name
+from bi_pro.hr_staff_transfer hst
+left join bi_pro.hr_job_title hjt on hjt.id = hst.job_title
+where
+    hst.staff_info_id in ('665844','637807','80821','636355','54861','657297','652354','51928','646041','76091','619050','67589','643277','641676','646060','631341','645714','641987','638195','635593','640287','645263','31670','653376','44648','627381','60003','632335','665674','666413','659692','651982','646211','651678','665774','665751','637087','642582','643111','638605','640288','56158','664371','653891','664843','605662','655593','647701','652843','32311','656348','650865','656225','23135','652780','36406','66850','652378','638404','628706','666293','661287','33810','43051','658830','666448','664902','640534','32399','82689','28824','86359','629670','607822','80719','66482','63387','659698','653877','663774','666407','666184','662646','657276','652043','652779','87002','656558','75540','655694','664755','641874','639550','640317','662427','635175','641512','635193','640405','646193','606185','625244','665405','651655','654191','622041','653500','658707','660611','642401','635895','65173','644558','666255','642097','29346','666346','631344','635486','662163','665654','52658','652613','659519','651510','642834','661006','630232','639105','638589','645073','36795','20330','630482','647930','633621','25309','85374','666503','646093','651744','650659','50808','664695','660595','34081','53823','637914','643150','664995','664803','31255','71994','86966','629167','32400','644067','656433','649851','31154','41162','32985','661928','648080','56536','666170','616133','653932','638960','37621','51296','37910','58421','74948','620191','620357','639198','60307','53512','40411','661007','654533','41931','626254','71387','54116','54021','657753','55508','60525','43107','21612','29378','649953','639744','67934','51846','71108','42030','48206','25454','634591','36478','27152','24577','48958','24938','663309','659187','644245','664009','641869','658209','649461','643574','634904','664097','661166','616581','58736','630956','19082','38535','637250','658357','650530','654495','56759','69381','665709','652283','615700','666487','665738','640732','665470','617109','633920','638978','60719','649194','660731','621761','654944','55001','666126','639148','613639','666472','54850','24751','666230','666536','638287','70521','665678','664745','41474','661818','665979','665321','606881','635347','636182','666475','663660','664988','55503','663107','612388','62120','17670','74086','28650','74984','656515','659432','26216','636102','658861','639130','637843','638900','656293','657795','638129','637539','657961','663688','659382','646492','646930','635872','622558','653014','638354','629033','666193','55316','47670','643169','651160','42843','635657','660572','653602','638108','653377','640041','657481','57911','660315','60179','27684','665490','665896','654956','656654','31719','661164','37077','640599','54774','666543','666403','623058','645842','84920','665865','660720','656218','35913','642736','643537','645903','77769','651593','659870','43929','17149','60604','641141','605943','60407','20437','22106','664697','605103','665273','621425','651337','633944','652859','657097','656506','666378','666370','614516','666271','624385','636659','644144','656322','641487','637926','654507','650727','663883','647715','665760','620137','666361','654491','646146','660959','652357','652141','79180','48896','656110','663988','665888','654342','648394','649939','22588','640474','635943','652808','613013','646778','628506','643229','647627','73611','637735','640769','659998','57634','641658','637945','665666','663829','657914','616667','26780','637047','616424','28505','608877','625878','664023','46826','55585','657140','24739','629068','625512','623587','654006','665736','61062','20391','666392','650802','663126','641734','617502','648225','651968','623386','665639','657938','650636','644421','635089','658635','31261','27647','35393','643266','641865','650094','660902','639859','656523','636296','641803','639632','658729','638574','647547','639222','641456','636850','605442','43984','660045','661041','75206','665978','662598','666405','655439','662842','665600','666189','639371','629393','637971','645413','660662','657353','652947','660732','657347','637137','665280','649337','659607','638421','662597','666350','86016','46030','49102','612668','641725','634593','643602','663634','666044','665651','607545','645788','640030','645474','640787','637111','656764','656766','664738','664765','665310','659847','611311','666547','621070','626111','636969','632772','638004','638869','649178','641671','656670','648830','666174','666265','660934','652037','69519','642200','651697','55879','651973','639059','638352','643052','651495','646965','638163','636655','65270','654525','665250','666504','86028','666568','65981','635813','665901','655902','655767','656336','663573','656790','644451','665477','637626','659967','654697','652353','645799','644869','650910','660596','644861')
+    and hst.stat_date = '2023-09-24';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(hsi.staff_info_id)
+from bi_pro.hr_staff_info hsi
+left join backyard_pro.hr_staff_apply_support_store hsa on hsa.staff_info_id = hsi.staff_info_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    hsi.state = 1
+    and ss.category = 13
+    and hsi.is_sub_staff = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(hsi.staff_info_id)
+from bi_pro.hr_staff_info hsi
+# left join backyard_pro.hr_staff_apply_support_store hsa on hsa.staff_info_id = hsi.staff_info_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    hsi.state = 1
+    and ss.category = 13
+    and hsi.is_sub_staff = 0;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    count(hsi.staff_info_id)
+from bi_pro.hr_staff_info hsi
+# left join backyard_pro.hr_staff_apply_support_store hsa on hsa.staff_info_id = hsi.staff_info_id
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    hsi.state = 1
+    and ss.category = 13
+    and hsi.is_sub_staff = 0
+    and hsi.job_title in (13,110,452,1497);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hsi.state
+    ,hsi.is_sub_staff
+from bi_pro.hr_staff_info hsi
+join tmpale.tmp_ph_staff_0925 t on t.staff = hsi.staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hsi.state
+    ,hsi.is_sub_staff
+from bi_pro.hr_staff_info hsi
+join tmpale.tmp_th_staff_0925 t on t.staff = hsi.staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hsi.state
+    ,hsi.is_sub_staff
+from bi_pro.hr_staff_info hsi
+join tmpale.tmp_th_staff_0921 t on t.staff = hsi.staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    hsi.staff_info_id
+    ,hsi.state
+    ,hsi.is_sub_staff
+    ,hsi.hire_date
+from bi_pro.hr_staff_info hsi
+join tmpale.tmp_th_staff_0925 t on t.staff = hsi.staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    swm.staff_info_id 员工ID
+    ,hjt.job_name 职位
+    ,swm.date_at 违规日期
+    ,swm.created_at 导入时间
+    ,case hsi.state
+        when 1 then '在职'
+        when 2 then '离职'
+        when 3 then '停职'
+    end as 员工当前状态
+    ,case swm.hr_fix_status
+        when 0 then '未处理'
+        when 1 then '员工申诉，建议采纳'
+        when 2 then '员工申诉，理由不充分'
+        when 3 then '员工未申诉，或态度不好'
+        when 4 then '态度恶劣，直接开除'
+    end QC处理意见
+    ,swf2.created_at QC处理时间
+    ,swf2.operator_id QC处理人
+    ,case swm.data_fix_status
+        when 0 then '未处理'
+        when 1 then '数据有误，不做后续'
+        when 2 then '数据准确，放过'
+        when 3 then '数据准确，警告书'
+    end 复核结果
+    ,swf.created_at 复核操作人
+    ,swf.created_at 复核时间
+    ,ss.name 员工所属网点
+    ,smp.name 员工所属片区
+    ,smr.name 员工所属大区
+    ,mw.ct 员工当前警告信次数
+from  backyard_pro.staff_warning_message swm
+left join
+    (
+      select
+        mw.staff_info_id
+        ,count(mw.id) ct
+      from backyard_pro.message_warning mw
+      where mw.is_delete=0
+      group by 1
+    )mw on swm.staff_info_id=mw.staff_info_id
+left join backyard_pro.`staff_warning_fix_info`  swf on swf.staff_warning_id=swm.id and swf.type=2
+left join backyard_pro.`staff_warning_fix_info`  swf2 on swf2.staff_warning_id=swm.id and swf2.type=1
+left join backyard_pro.hr_staff_info hsi on hsi.staff_info_id=swm.staff_info_id
+left join fle_staging.sys_store ss on ss.id=hsi.sys_store_id
+left join fle_staging.`sys_manage_piece`  smp on smp.id=ss.manage_piece
+left join fle_staging.`sys_manage_region`  smr on smr.id=ss.manage_region
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    swm.created_at >= '2023-09-21'
+    and swm.`operator_id` ='87189';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    swm.staff_info_id 员工ID
+    ,hjt.job_name 职位
+    ,swm.date_at 违规日期
+    ,swm.created_at 导入时间
+    ,case hsi.state
+        when 1 then '在职'
+        when 2 then '离职'
+        when 3 then '停职'
+    end as 员工当前状态
+    ,case swm.hr_fix_status
+        when 0 then '未处理'
+        when 1 then '员工申诉，建议采纳'
+        when 2 then '员工申诉，理由不充分'
+        when 3 then '员工未申诉，或态度不好'
+        when 4 then '态度恶劣，直接开除'
+    end QC处理意见
+    ,swf2.created_at QC处理时间
+    ,swf2.operator_id QC处理人
+    ,case swm.data_fix_status
+        when 0 then '未处理'
+        when 1 then '数据有误，不做后续'
+        when 2 then '数据准确，放过'
+        when 3 then '数据准确，警告书'
+    end 复核结果
+    ,swf.created_at 复核操作人
+    ,swf.created_at 复核时间
+    ,ss.name 员工所属网点
+    ,smp.name 员工所属片区
+    ,smr.name 员工所属大区
+    ,mw.ct 员工当前警告信次数
+from  backyard_pro.staff_warning_message swm
+left join
+    (
+      select
+        mw.staff_info_id
+        ,count(mw.id) ct
+      from backyard_pro.message_warning mw
+      where mw.is_delete=0
+      group by 1
+    )mw on swm.staff_info_id=mw.staff_info_id
+left join backyard_pro.`staff_warning_fix_info`  swf on swf.staff_warning_id=swm.id and swf.type=2
+left join backyard_pro.`staff_warning_fix_info`  swf2 on swf2.staff_warning_id=swm.id and swf2.type=1
+left join backyard_pro.hr_staff_info hsi on hsi.staff_info_id=swm.staff_info_id
+left join fle_staging.sys_store ss on ss.id=hsi.sys_store_id
+left join fle_staging.`sys_manage_piece`  smp on smp.id=ss.manage_piece
+left join fle_staging.`sys_manage_region`  smr on smr.id=ss.manage_region
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    swm.created_at >= '2023-09-21'
+    and swm.`operator_id` in ('87189', '607213');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    swm.staff_info_id 员工ID
+    ,hjt.job_name 职位
+    ,swm.date_at 违规日期
+    ,swm.created_at 导入时间
+    ,case hsi.state
+        when 1 then '在职'
+        when 2 then '离职'
+        when 3 then '停职'
+    end as 员工当前状态
+    ,case swm.hr_fix_status
+        when 0 then '未处理'
+        when 1 then '员工申诉，建议采纳'
+        when 2 then '员工申诉，理由不充分'
+        when 3 then '员工未申诉，或态度不好'
+        when 4 then '态度恶劣，直接开除'
+    end QC处理意见
+    ,swf2.created_at QC处理时间
+    ,swf2.operator_id QC处理人
+    ,case swm.data_fix_status
+        when 0 then '未处理'
+        when 1 then '数据有误，不做后续'
+        when 2 then '数据准确，放过'
+        when 3 then '数据准确，警告书'
+    end 复核结果
+    ,swf.created_at 复核操作人
+    ,swf.created_at 复核时间
+    ,ss.name 员工所属网点
+    ,smp.name 员工所属片区
+    ,smr.name 员工所属大区
+    ,mw.ct 员工当前警告信次数
+from  backyard_pro.staff_warning_message swm
+left join
+    (
+      select
+        mw.staff_info_id
+        ,count(mw.id) ct
+      from backyard_pro.message_warning mw
+      where mw.is_delete=0
+      group by 1
+    )mw on swm.staff_info_id=mw.staff_info_id
+left join backyard_pro.`staff_warning_fix_info`  swf on swf.staff_warning_id=swm.id and swf.type=2
+left join backyard_pro.`staff_warning_fix_info`  swf2 on swf2.staff_warning_id=swm.id and swf2.type=1
+left join backyard_pro.hr_staff_info hsi on hsi.staff_info_id=swm.staff_info_id
+left join fle_staging.sys_store ss on ss.id=hsi.sys_store_id
+left join fle_staging.`sys_manage_piece`  smp on smp.id=ss.manage_piece
+left join fle_staging.`sys_manage_region`  smr on smr.id=ss.manage_region
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    swm.created_at >= '2023-09-19'
+    and swm.`operator_id` in ('87189', '607213');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    swm.staff_info_id 员工ID
+    ,hjt.job_name 职位
+    ,swm.date_at 违规日期
+    ,swm.created_at 导入时间
+    ,case hsi.state
+        when 1 then '在职'
+        when 2 then '离职'
+        when 3 then '停职'
+    end as 员工当前状态
+    ,case swm.hr_fix_status
+        when 0 then '未处理'
+        when 1 then '员工申诉，建议采纳'
+        when 2 then '员工申诉，理由不充分'
+        when 3 then '员工未申诉，或态度不好'
+        when 4 then '态度恶劣，直接开除'
+    end QC处理意见
+    ,swf2.created_at QC处理时间
+    ,swf2.operator_id QC处理人
+    ,case swm.data_fix_status
+        when 0 then '未处理'
+        when 1 then '数据有误，不做后续'
+        when 2 then '数据准确，放过'
+        when 3 then '数据准确，警告书'
+    end 复核结果
+    ,swf.operator_id 复核操作人
+    ,swf.created_at 复核时间
+    ,ss.name 员工所属网点
+    ,smp.name 员工所属片区
+    ,smr.name 员工所属大区
+    ,mw.ct 员工当前警告信次数
+from  backyard_pro.staff_warning_message swm
+left join
+    (
+      select
+        mw.staff_info_id
+        ,count(mw.id) ct
+      from backyard_pro.message_warning mw
+      where mw.is_delete=0
+      group by 1
+    )mw on swm.staff_info_id=mw.staff_info_id
+left join backyard_pro.`staff_warning_fix_info`  swf on swf.staff_warning_id=swm.id and swf.type=2
+left join backyard_pro.`staff_warning_fix_info`  swf2 on swf2.staff_warning_id=swm.id and swf2.type=1
+left join backyard_pro.hr_staff_info hsi on hsi.staff_info_id=swm.staff_info_id
+left join fle_staging.sys_store ss on ss.id=hsi.sys_store_id
+left join fle_staging.`sys_manage_piece`  smp on smp.id=ss.manage_piece
+left join fle_staging.`sys_manage_region`  smr on smr.id=ss.manage_region
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+where
+    swm.created_at >= '2023-09-19'
+    and swm.`operator_id` in ('87189', '607213');
+;-- -. . -..- - / . -. - .-. -.--
+select
+    t.staff
+    ,hsi.hire_date
+from bi_pro.hr_staff_info hsi
+join tmpale.tmp_th_staff_0901 t on t.staff= hsi.staff_info_id;
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-26' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+#         hsa.actual_begin_date <= '${date}'
+#         and coalesce(hsa.actual_end_date, curdate()) >= '${date}'
+        hsa.employment_begin_date <= '2023-09-26'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-26'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and hsa.support_status between 2 and 3
+        and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451)
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.third_sorting_code sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-26', interval 7 hour) and td.created_at < date_add('2023-09-26', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+#         and a.staff_info_id = '624526'
+)
+select
+    t1.大区, t1.片区, t1.网点, t1.当日应派, t1.当日妥投, t1.未妥投大件数量, t1.自有快递员人数（出勤）, t1.支援快递员人数（出勤）, t1.自有仓管, t1.支援仓管, t1.分拣扫描率, t1.自有人效, t1.支援人效
+    ,t2.大区, t2.片区, t2.来源网点, t2.主账号, t2.子账号, t2.原岗位,t2.`van/bike`, t2.上班时间, t2.下班时间, t2.揽收量, t2.交接量, t2.妥投量, t2.派送时长, t2.交接三段码数量, t2.妥投三段码数量, t2.未妥投中打电话次数为0的数量, t2.未妥投中打电话次数为1的数量
+from
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 网点
+            ,a1.today_should_del 当日应派
+            ,a1.today_already_del 当日妥投
+            ,a1.no_del_big_count 未妥投大件数量
+            ,a2.courier_count 自有快递员人数（出勤）
+            ,a3.sup_courier_count 支援快递员人数（出勤）
+            ,a2.dco_count 自有仓管
+            ,a3.sup_dco_count 支援仓管
+            ,a4.sort_rate 分拣扫描率
+            ,a5.self_effect 自有人效
+            ,a5.other_effect 支援人效
+        from
+            ( -- 应派妥投
+                select
+                    ss.store_name
+                    ,ss.store_id
+                    ,count(distinct ds.pno) today_should_del
+                    ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-26', interval 7 hour) and pi.finished_at < date_add('2023-09-26', interval  17 hour), ds.pno, null)) today_already_del
+                    ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on ds.pno = pi.pno
+                join
+                    (
+                        select
+                            sup.store_id
+                            ,sup.store_name
+                        from sup
+                        group by 1,2
+                    ) ss on ss.store_id = ds.dst_store_id
+                where
+                    ds.p_date = '2023-09-26'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1,2
+            ) a1
+        left join
+            (
+                select
+                    hsi.sys_store_id
+                    ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+                    ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+                from bi_pro.hr_staff_info hsi
+                join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-26' and ( swa.started_at is not null or swa.end_at is not null)
+                left join sup sup1 on sup1.sub_staff_info_id = hsi.staff_info_id
+                group by 1
+            ) a2 on a2.sys_store_id = a1.store_id
+        left join
+            (
+                select
+                    s1.store_id
+                    ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+                    ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+                from sup s1
+                group by 1
+            ) a3 on a3.store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) ds_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-26', interval 7 hour) and pr.routed_at < date_add('2023-09-26', interval 17 hour)
+                group by 1
+            ) a4 on a4.dst_store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), ds.pno, null))/count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) self_effect
+                    ,count(distinct if(s1.sub_staff_info_id is not null and s1.job_title_id in (13,110,452,1497), ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null and s1.job_title_id in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) other_effect
+                from dwm.dwd_th_dc_should_be_delivery ds
+                join fle_staging.parcel_info pi on pi.pno = ds.pno
+                left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+                left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+                where
+                    pi.state = 5
+                    and pi.finished_at >= date_sub('2023-09-26', interval 7 hour)
+                    and pi.finished_at < date_add('2023-09-26', interval 17 hour)
+                    and pi.returned = 0
+                group by 1
+            ) a5 on a5.dst_store_id = a1.store_id
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+    ) t1
+left join
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 来源网点
+            ,dt2.store_name 支援网点
+            ,s1.staff_info_id 主账号
+            ,s1.sub_staff_info_id 子账号
+            ,hjt2.job_name 原岗位
+            ,hjt.job_name  'van/bike'
+            ,convert_tz(swa.started_at, '+00:00', '+07:00') 上班时间
+            ,convert_tz(swa.end_at, '+00:00', '+07:00') 下班时间
+            ,s3.pick_num 揽收量
+            ,s2.scan_count 交接量
+            ,s2.del_count 妥投量
+            ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+            ,code.scan_code_count 交接三段码数量
+            ,code.del_code_num 妥投三段码数量
+            ,pho.0_count 未妥投中打电话次数为0的数量
+            ,pho.1_count 未妥投中打电话次数为1的数量
+        from sup s1
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+        left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+        left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+        left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = s1.staff_info_id
+        left join bi_pro.hr_job_title hjt2 on hjt2.id = hsi2.job_title
+        left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-26' and swa.organization_id = s1.store_id
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.pno) scan_count
+                    ,count(if(t1.state = 5, t1.pno, null)) del_count
+                from total t1
+                group by 1
+            ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    s1.sub_staff_info_id
+                    ,count(distinct pi.pno) pick_num
+                from fle_staging.parcel_info pi
+                join sup s1 on s1.sub_staff_info_id = pi.ticket_pickup_staff_info_id
+                where
+                    pi.created_at >= date_sub('2023-09-26', interval 7 hour)
+                    and pi.created_at < date_add('2023-09-26', interval 17 hour)
+                group by 1
+            ) s3 on s3.sub_staff_info_id = s1.sub_staff_info_id
+        left join
+            ( -- 第一次妥投时间
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+        left join
+            (
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.sorting_code) scan_code_count
+                    ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+                from total t1
+                where
+                    t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+                group by 1
+            ) code on code.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    a.staff_info_id
+                    ,count(if(a.call_times = 0, a.pno, null)) 0_count
+                    ,count(if(a.call_times = 1, a.pno, null)) 1_count
+                from
+                    (
+                        select
+                            t.staff_info_id
+                            ,t.pno
+                            ,count(pr.pno) call_times
+                        from total t
+                        left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-26', interval 7 hour) and pr.routed_at < date_add('2023-09-26', interval 17 hour)
+                        where
+                            t.state != 5
+                        group by 1,2
+                    ) a
+                group by 1
+            ) pho on pho.staff_info_id = s1.sub_staff_info_id
+    ) t2 on t2.支援网点 = t1.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-26' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+#         hsa.actual_begin_date <= '${date}'
+#         and coalesce(hsa.actual_end_date, curdate()) >= '${date}'
+        hsa.employment_begin_date <= '2023-09-26'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-26'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and hsa.support_status between 2 and 3
+        and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451);
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-26' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+#         hsa.actual_begin_date <= '${date}'
+#         and coalesce(hsa.actual_end_date, curdate()) >= '${date}'
+        hsa.employment_begin_date <= '2023-09-26'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-26'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and hsa.support_status between 2 and 3
+#         and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451);
+;-- -. . -..- - / . -. - .-. -.--
+select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-26' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+#         hsa.actual_begin_date <= '${date}'
+#         and coalesce(hsa.actual_end_date, curdate()) >= '${date}'
+        hsa.employment_begin_date <= '2023-09-26'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-26'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and hsa.support_status between 2 and 3
+#         and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451);
+;-- -. . -..- - / . -. - .-. -.--
+with sup as
+(
+    select
+        hsa.staff_info_id
+        ,hsa.sub_staff_info_id
+        ,hsa.store_id
+        ,hsa.store_name
+        ,hsa.staff_store_id
+        ,hsa.job_title_id
+    from backyard_pro.hr_staff_apply_support_store hsa
+    left join backyard_pro.staff_work_attendance swa on hsa.sub_staff_info_id = swa.staff_info_id and swa.attendance_date = '2023-09-26' and swa.organization_id = hsa.store_id and ( swa.started_at is not null  or swa.end_at is not null )
+    where
+#         hsa.actual_begin_date <= '${date}'
+#         and coalesce(hsa.actual_end_date, curdate()) >= '${date}'
+        hsa.employment_begin_date <= '2023-09-26'
+        and coalesce(hsa.employment_end_date, curdate()) >= '2023-09-26'
+#         and hsa.store_name = 'PRG_SP-บางปรอก'
+        and hsa.status = 2
+        and hsa.support_status between 2 and 3
+#         and swa.id is not null
+        and hsa.job_title_id in (13,110,452,1497,37,451)
+)
+, total as
+(
+    select
+        a.*
+    from
+        (
+            select
+                a1.dst_store_id
+                ,a1.pno
+                ,a1.sorting_code
+                ,td.created_at td_time
+                ,td.staff_info_id
+                ,pi.state
+                ,pi.finished_at
+                ,pi.ticket_delivery_staff_info_id
+                ,row_number() over (partition by td.pno order by td.created_at desc ) rn
+            from
+                (
+                    select
+                        a.*
+                    from
+                        (
+                            select
+                                ds.pno
+                                ,ds.dst_store_id
+                                ,ps.third_sorting_code sorting_code
+                                ,row_number() over (partition by ps.pno order by ps.created_at desc ) rk
+                            from dwm.dwd_th_dc_should_be_delivery ds
+                            join dwm.drds_parcel_sorting_code_info ps on ds.pno =  ps.pno and ds.dst_store_id = ps.dst_store_id
+                        ) a
+                    where
+                        a.rk = 1
+                ) a1
+            join fle_staging.ticket_delivery td on td.pno = a1.pno and td.created_at >= date_sub('2023-09-26', interval 7 hour) and td.created_at < date_add('2023-09-26', interval 17 hour)
+            left join fle_staging.parcel_info pi on pi.pno = a1.pno
+        ) a
+    where
+        a.rn = 1
+#         and a.staff_info_id = '624526'
+)
+select
+    t1.大区, t1.片区, t1.网点, t1.当日应派, t1.当日妥投, t1.未妥投大件数量, t1.自有快递员人数（出勤）, t1.支援快递员人数（出勤）, t1.自有仓管, t1.支援仓管, t1.分拣扫描率, t1.自有人效, t1.支援人效
+    ,t2.大区, t2.片区, t2.来源网点, t2.主账号, t2.子账号, t2.原岗位,t2.`van/bike`, t2.上班时间, t2.下班时间, t2.揽收量, t2.交接量, t2.妥投量, t2.派送时长, t2.交接三段码数量, t2.妥投三段码数量, t2.未妥投中打电话次数为0的数量, t2.未妥投中打电话次数为1的数量
+from
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 网点
+            ,a1.today_should_del 当日应派
+            ,a1.today_already_del 当日妥投
+            ,a1.no_del_big_count 未妥投大件数量
+            ,a2.courier_count 自有快递员人数（出勤）
+            ,a3.sup_courier_count 支援快递员人数（出勤）
+            ,a2.dco_count 自有仓管
+            ,a3.sup_dco_count 支援仓管
+            ,a4.sort_rate 分拣扫描率
+            ,a5.self_effect 自有人效
+            ,a5.other_effect 支援人效
+        from
+            ( -- 应派妥投
+                select
+                    ss.store_name
+                    ,ss.store_id
+                    ,count(distinct ds.pno) today_should_del
+                    ,count(distinct if(pi.state = 5 and pi.finished_at >= date_sub('2023-09-26', interval 7 hour) and pi.finished_at < date_add('2023-09-26', interval  17 hour), ds.pno, null)) today_already_del
+                    ,count(distinct if(pi.state != 5 and ( pi.exhibition_weight > 5000 or pi.exhibition_length + pi.exhibition_width + pi.exhibition_height > 80 ), ds.pno, null)) no_del_big_count
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join fle_staging.parcel_info pi on ds.pno = pi.pno
+                join
+                    (
+                        select
+                            sup.store_id
+                            ,sup.store_name
+                        from sup
+                        group by 1,2
+                    ) ss on ss.store_id = ds.dst_store_id
+                where
+                    ds.p_date = '2023-09-26'
+                    and ds.should_delevry_type != '非当日应派'
+                group by 1,2
+            ) a1
+        left join
+            (
+                select
+                    hsi.sys_store_id
+                    ,count(distinct if(hsi.job_title in (13,110,452,1497) and sup1.staff_info_id is null, hsi.staff_info_id, null)) courier_count
+                    ,count(distinct if(hsi.job_title in (37,451) and sup1.staff_info_id is null, hsi.staff_info_id, null)) dco_count
+                from bi_pro.hr_staff_info hsi
+                join backyard_pro.staff_work_attendance swa on swa.staff_info_id = hsi.staff_info_id and swa.attendance_date = '2023-09-26' and ( swa.started_at is not null or swa.end_at is not null)
+                left join sup sup1 on sup1.sub_staff_info_id = hsi.staff_info_id
+                group by 1
+            ) a2 on a2.sys_store_id = a1.store_id
+        left join
+            (
+                select
+                    s1.store_id
+                    ,count(if(s1.job_title_id in (13,110,452,1497), s1.staff_info_id, null)) sup_courier_count
+                    ,count(if(s1.job_title_id in (37,451), s1.staff_info_id, null)) sup_dco_count
+                from sup s1
+                group by 1
+            ) a3 on a3.store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct ds.pno) ds_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null)) sort_count
+                    ,count(distinct if(pr.pno is not null , ds.pno, null))/count(distinct ds.pno) sort_rate
+                from dwm.dwd_th_dc_should_be_delivery ds
+                left join rot_pro.parcel_route pr on pr.pno = ds.pno and pr.route_action = 'SORTING_SCAN' and pr.routed_at >= date_sub('2023-09-26', interval 7 hour) and pr.routed_at < date_add('2023-09-26', interval 17 hour)
+                group by 1
+            ) a4 on a4.dst_store_id = a1.store_id
+        left join
+            (
+                select
+                    ds.dst_store_id
+                    ,count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), ds.pno, null))/count(distinct if(hsi.staff_info_id is not null and hsi.job_title in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) self_effect
+                    ,count(distinct if(s1.sub_staff_info_id is not null and s1.job_title_id in (13,110,452,1497), ds.pno, null))/count(distinct if(s1.sub_staff_info_id is not null and s1.job_title_id in (13,110,452,1497), pi.ticket_delivery_staff_info_id, null)) other_effect
+                from dwm.dwd_th_dc_should_be_delivery ds
+                join fle_staging.parcel_info pi on pi.pno = ds.pno
+                left join sup s1 on s1.store_id = ds.dst_store_id and pi.ticket_delivery_staff_info_id = s1.sub_staff_info_id
+                left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.formal = 1 and hsi.is_sub_staff = 0 and hsi.sys_store_id = ds.dst_store_id
+                where
+                    pi.state = 5
+                    and pi.finished_at >= date_sub('2023-09-26', interval 7 hour)
+                    and pi.finished_at < date_add('2023-09-26', interval 17 hour)
+                    and pi.returned = 0
+                group by 1
+            ) a5 on a5.dst_store_id = a1.store_id
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = a1.store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+    ) t1
+left join
+    (
+        select
+            dt.region_name 大区
+            ,dt.piece_name 片区
+            ,dt.store_name 来源网点
+            ,dt2.store_name 支援网点
+            ,s1.staff_info_id 主账号
+            ,s1.sub_staff_info_id 子账号
+            ,hjt2.job_name 原岗位
+            ,hjt.job_name  'van/bike'
+            ,convert_tz(swa.started_at, '+00:00', '+07:00') 上班时间
+            ,convert_tz(swa.end_at, '+00:00', '+07:00') 下班时间
+            ,s3.pick_num 揽收量
+            ,s2.scan_count 交接量
+            ,s2.del_count 妥投量
+            ,timestampdiff(minute , fir.finished_at, las.finished_at )/60 派送时长
+            ,code.scan_code_count 交接三段码数量
+            ,code.del_code_num 妥投三段码数量
+            ,pho.0_count 未妥投中打电话次数为0的数量
+            ,pho.1_count 未妥投中打电话次数为1的数量
+        from sup s1
+        left join dwm.dim_th_sys_store_rd dt on dt.store_id = s1.staff_store_id and dt.stat_date = date_sub(curdate(), interval 1 day)
+        left join dwm.dim_th_sys_store_rd dt2 on dt2.store_id = s1.store_id and dt2.stat_date = date_sub(curdate(), interval 1 day)
+        left join bi_pro.hr_job_title hjt on hjt.id = s1.job_title_id
+        left join bi_pro.hr_staff_info hsi2 on hsi2.staff_info_id = s1.staff_info_id
+        left join bi_pro.hr_job_title hjt2 on hjt2.id = hsi2.job_title
+        left join backyard_pro.staff_work_attendance swa on swa.staff_info_id = s1.sub_staff_info_id and swa.attendance_date = '2023-09-26' and swa.organization_id = s1.store_id
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.pno) scan_count
+                    ,count(if(t1.state = 5, t1.pno, null)) del_count
+                from total t1
+                group by 1
+            ) s2 on s2.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    s1.sub_staff_info_id
+                    ,count(distinct pi.pno) pick_num
+                from fle_staging.parcel_info pi
+                join sup s1 on s1.sub_staff_info_id = pi.ticket_pickup_staff_info_id
+                where
+                    pi.created_at >= date_sub('2023-09-26', interval 7 hour)
+                    and pi.created_at < date_add('2023-09-26', interval 17 hour)
+                group by 1
+            ) s3 on s3.sub_staff_info_id = s1.sub_staff_info_id
+        left join
+            ( -- 第一次妥投时间
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) fir on fir.staff_info_id = s1.sub_staff_info_id and fir.rk = 1
+        left join
+            (
+                select
+                    t1.*
+                    ,row_number() over (partition by t1.staff_info_id order by t1.finished_at desc ) rk
+                from total t1
+                where
+                    t1.state = 5
+            ) las on las.staff_info_id = s1.sub_staff_info_id and las.rk = 2
+        left join
+            (
+                select
+                    t1.staff_info_id
+                    ,count(distinct t1.sorting_code) scan_code_count
+                    ,count(distinct if(t1.state = 5, t1.sorting_code, null)) del_code_num
+                from total t1
+                where
+                    t1.sorting_code not in ('XX', 'YY', 'ZZ', '00', '88')
+                group by 1
+            ) code on code.staff_info_id = s1.sub_staff_info_id
+        left join
+            (
+                select
+                    a.staff_info_id
+                    ,count(if(a.call_times = 0, a.pno, null)) 0_count
+                    ,count(if(a.call_times = 1, a.pno, null)) 1_count
+                from
+                    (
+                        select
+                            t.staff_info_id
+                            ,t.pno
+                            ,count(pr.pno) call_times
+                        from total t
+                        left join rot_pro.parcel_route pr on pr.pno = t.pno and pr.route_action = 'PHONE' and pr.routed_at >= date_sub('2023-09-26', interval 7 hour) and pr.routed_at < date_add('2023-09-26', interval 17 hour)
+                        where
+                            t.state != 5
+                        group by 1,2
+                    ) a
+                group by 1
+            ) pho on pho.staff_info_id = s1.sub_staff_info_id
+    ) t2 on t2.支援网点 = t1.网点;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_at = t.time;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = t.time;
+;-- -. . -..- - / . -. - .-. -.--
+select * from tmpale.tmp_th_warn_staff_0927;
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = date(t.time);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id
+    ,mw.staff_info_id
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = date(t.time);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id
+    ,mw.staff_info_id
+    ,count(1) over (partition by mw.staff_info_id)
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = date(t.time);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id
+    ,mw.staff_info_id
+    ,count(1) over (partition by mw.staff_info_id,mw.date_ats)
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = date(t.time);
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id
+    ,mw.staff_info_id
+    ,count(1) over (partition by mw.staff_info_id,mw.date_ats)
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = date(t.time)
+where
+    type_code = 'warning_27';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id warning_id
+    ,mw.staff_info_id 'Employee ID'
+    ,hsi.name 'The employee who received the warning'
+    ,hjt.job_name 'Position'
+
+    ,dt.store_name 'Branch'
+
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = date(t.time)
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = hsi.sys_store_id
+where
+    type_code = 'warning_27';
+;-- -. . -..- - / . -. - .-. -.--
+select
+    mw.id warning_id
+    ,mw.staff_info_id 'Employee ID'
+    ,hsi.name 'The employee who received the warning'
+    ,hjt.job_name 'Position'
+
+    ,dt.store_name 'Branch'
+
+from backyard_pro.message_warning mw
+join tmpale.tmp_th_warn_staff_0927 t on mw.staff_info_id = t.staff and mw.date_ats = date(t.time)
+left join bi_pro.hr_staff_info hsi on hsi.staff_info_id = mw.staff_info_id
+left join bi_pro.hr_job_title hjt on hjt.id = hsi.job_title
+left join dwm.dim_th_sys_store_rd dt on dt.store_id = hsi.sys_store_id and dt.stat_date = '2023-09-26'
+where
+    type_code = 'warning_27';

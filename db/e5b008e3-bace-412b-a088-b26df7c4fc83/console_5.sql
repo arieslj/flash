@@ -28,28 +28,29 @@ from
         from nl_production.violation_return_visit vrv
         where
             vrv.visit_state = 4
-            and vrv.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
-            and vrv.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
+            and vrv.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 8 hour)
+            and vrv.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 16 hour) -- 昨天
             and vrv.visit_staff_id not in (10000,10001) -- 非ivr回访
             and vrv.type in (1,2,3,4,5,6)
+            and vrv.visit_result in (6,18,8,19,20,21,31,32,22,23,24,37,39,3)
         group by 1
 
         union all
 
         select
-            acca.staff_info_id
+            am.staff_info_id
             ,'投诉' type
-            ,count(distinct if(acca.complaints_type = 2, acca.merge_column, null)) 揽件虚假量
-            ,count(distinct if(acca.complaints_type = 1, acca.merge_column, null)) 妥投虚假量
-            ,count(distinct if(acca.complaints_type = 3, acca.merge_column, null)) 派件标记虚假量
-        from nl_production.abnormal_customer_complaint_authentic acca
+            ,count(distinct if(acc.complaints_type = 2, acc.id, null)) 揽件虚假量
+            ,count(distinct if(acc.complaints_type = 1, acc.id, null)) 妥投虚假量
+            ,count(distinct if(acc.complaints_type = 3, acc.id, null)) 派件标记虚假量
+        from ph_bi.abnormal_customer_complaint acc
+        left join ph_bi.abnormal_message am on am.id = acc.abnormal_message_id
         where
-            acca.callback_state = 2
-            and acca.qaqc_callback_result in (2,3)
-            and acca.qaqc_callback_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
-            and acca.qaqc_callback_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
-            and acca.type = 1
-            and acca.complaints_type in (1,2,3)
+            acc.state = 1
+            and acc.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 8 hour)
+            and acc.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 16 hour) -- 昨天
+            and acc.complaints_type in (1,2,3)
+            and acc.qaqc_callback_result in (3,4,5,6)
         group by 1
     ) a
 group by 1

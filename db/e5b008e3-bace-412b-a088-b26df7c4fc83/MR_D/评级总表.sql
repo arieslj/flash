@@ -1,23 +1,34 @@
 with t as
 (
-    select
+   select
         ds.dst_store_id store_id
         ,ss.name
         ,ds.pno
         ,convert_tz(pi.finished_at, '+00:00', '+08:00') finished_time
         ,pi.ticket_delivery_staff_info_id
+        ,case si.hire_type
+            when 1 then '正式员工'
+            when 2 then '日薪制特殊合同工'
+            when 3 then '日薪制特殊合同工'
+            when 4 then '时薪制特殊合同工'
+            when 5 then '实习生'
+            when 11 then '是普通外协'
+            when 12 then '是众包外协'
+        end 类型
         ,pi.state
         ,coalesce(hsi.store_id, hs.sys_store_id) hr_store_id
         ,coalesce(hsi.job_title, hs.job_title) job_title
         ,coalesce(hsi.formal, hs.formal) formal
         ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at) rk1
         ,row_number() over (partition by ds.dst_store_id, pi.ticket_delivery_staff_info_id order by pi.finished_at desc) rk2
+#     count(distinct si.id)
     from dwm.dwd_ph_dc_should_be_delivery ds
     join ph_staging.parcel_info pi on pi.pno = ds.pno
     left join ph_staging.sys_store ss on ss.id = ds.dst_store_id
     left join ph_bi.hr_staff_transfer hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id and hsi.stat_date = '${date}'
     left join ph_bi.hr_staff_info hs on hs.staff_info_id = pi.ticket_delivery_staff_info_id and if(hs.leave_date is null, 1 = 1, hs.leave_date >= '${date}')
-#     left join ph_bi.hr_staff_info hsi on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
+    left join ph_backyard.staff_info si on si.id = pi.ticket_delivery_staff_info_id
+#     left join ph_bi.hr_staff_info hsi2 on hsi.staff_info_id = pi.ticket_delivery_staff_info_id
     where
         pi.state = 5
 #         and pi.finished_at >= '2023-08-01 16:00:00'
@@ -26,8 +37,11 @@ with t as
         and pi.finished_at >= date_sub('${date}', interval 8 hour )
         and pi.finished_at < date_add('${date}', interval 16 hour)
         and ds.should_delevry_type != '非当日应派'
-#         and ds.dst_store_id = 'PH81180100'
+#         and si.hire_type = 12
+
+#         and ds.dst_store_id = 'PH18030101'
 )
+
 select
     dp.store_id 网点ID
     ,dp.store_name 网点

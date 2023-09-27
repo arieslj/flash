@@ -28,8 +28,8 @@ from
         from nl_production.violation_return_visit vrv
         where
             vrv.visit_state = 4
-            and vrv.updated_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
-            and vrv.updated_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
+            and vrv.updated_at >= date_sub(date_sub(curdate(), interval 2 day), interval 7 hour)
+            and vrv.updated_at < date_add(date_sub(curdate(), interval 2 day), interval 17 hour) -- 昨天
             and vrv.visit_staff_id not in (10000,10001) -- 非ivr回访
             and vrv.type in (1,2,3,4,5,6)
         group by 1
@@ -46,8 +46,8 @@ from
         where
             acca.callback_state = 2
             and acca.qaqc_callback_result in (2,3)
-            and acca.qaqc_callback_at >= date_sub(date_sub(curdate(), interval 1 day), interval 7 hour)
-            and acca.qaqc_callback_at < date_add(date_sub(curdate(), interval 1 day), interval 17 hour) -- 昨天
+            and acca.qaqc_callback_at >= date_sub(date_sub(curdate(), interval 2 day), interval 7 hour)
+            and acca.qaqc_callback_at < date_add(date_sub(curdate(), interval 2 day), interval 17 hour) -- 昨天
             and acca.type = 1
             and acca.complaints_type in (1,2,3)
         group by 1

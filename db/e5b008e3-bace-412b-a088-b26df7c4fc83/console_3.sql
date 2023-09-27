@@ -472,3 +472,9 @@ left join
             and vrv.created_at < date_add('${date}', interval 20 hour) -- 当日17-20
         group by 1,2
     ) tod on tod.type = t.type and tod.client_name = t.client_name
+
+
+;
+
+
+select * from tmpale.tmp_ph_client_visit_info
