@@ -1,0 +1,961 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="b0c0c4da-9d5a-481f-8767-8ffa7b9d2cdb" name="Changes" comment="Changes">
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/INFORMATION_SCHEMA.NBgcMw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/MYSQL.gshmBA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/data_test.B0hX6g.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/dw_dmd.Tz9esQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/dwm.OoYBAA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/nl_production.2tWZZA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_backyard.CA_F5Q.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_bi.7v9aBg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_coupon.TaAdYg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_drds.hNOb2w.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_fin.RA0FxQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_fleet.RxT4lw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_lazada.AAG2cA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_nbd.aSoFxQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_oa.eQFbBg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_staging.9FRkNw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/ph_wrs.MU4FxQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/test.kkQ2AA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/tmpale.I40mzA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac/storage_v2/_src_/schema/wms_production.2w0Lqg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/INFORMATION_SCHEMA.NBgcMw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/MYSQL.gshmBA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/agt_prod.6FtVcA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/ai.KAwAAA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/arch_ard_bi.vLG4Cg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/arch_fle_staging.8tl2kQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/backyard_pro.D16Lug.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/barcode.gOgd7A.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/bi_center.Ta-wrQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/bi_pro.tXIvrQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/bi_production.sZdgHw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/coupon_production.cvq_RA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/dw_dmd.Tz9esQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/dwm.OoYBAA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/dwm.OoYBAA.zip" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/erp_oms_prod.XeLKlg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/erp_wms_prod.VUnU1Q.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/fh-cms-pro.HuoYCQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/fle_staging.W3yQ_A.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/fle_training.uiiykw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/fle_web.dD_D0Q.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/fleet.Tv3PBQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/hbi.r5IBAA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/m2_pro.07TtvA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/merit_pro.87s8ZQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/nl_production.2tWZZA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/oa_production.RsF6_g.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/rev_pro.EZGLQQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/rot_pro.Rdh_Ug.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/rot_tra.O-d_Ug.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/sap_pro.0NxJbw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/school_pro.YmNL-g.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/sls_worker_pro.kTaxtA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/sls_worker_tra.h0WxtA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/spm.sL0BAA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/test.kkQ2AA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/tmpale.I40mzA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/trax_dw_dmd.mbOecg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/wms_production.2w0Lqg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe/storage_v2/_src_/schema/wrs_production.YC6aUg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/INFORMATION_SCHEMA.NBgcMw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/MYSQL.gshmBA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/arch_bi_production.iOslFA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/dwm.OoYBAA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my-amp.I0a_wA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_backyard.1Hn3Xw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_bi.unM4Bg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_coupon.GU5Eiw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_drds_pro.Pr4dtQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_fleet.-3ye4w.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_lazada.zK7cmQ.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_nbd.HTDWwA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_nl.MXU4Bg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_oa.RXU4Bg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_sap.z0LWwA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_spm.nUTWwA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_staging.qGATMw.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/my_wrs.5VPWwA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/prod_my_flp.P02qLA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/test.kkQ2AA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/tmpale.I40mzA.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/storage_v2/_src_/schema/wms_production.2w0Lqg.meta" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/.history/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/.history/db/8c88cdb5-595f-4083-ae24-080620cb1ebe.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/.history/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/.history/db/de3f992f-0c51-44d0-9d16-a00f12996dab.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/.history/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/.history/db/f72e8983-ca90-4b25-81bb-1033afd19f67.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/7月警告信汇总.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/HUB/许繁/hub在仓疑难件未发出.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/ph电话认证.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/ph登录行为.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/交接评级-f.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/出勤评级-快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/出勤评级-网点.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/分拣扫描评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/评级总表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/锁区评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/MR_D/问题快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/OPS/爆仓网点附近网点数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Joye/166605.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Joye/by举报.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Joye/离职&amp;警告信.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Joye/虚假妥投投诉数据监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Judy/1772d 自动邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Judy/QAQC 异常快速响应取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Judy/离线妥投网点交接后未留仓或者问题件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Judy/高价值包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucia/积压件&amp;丢失.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucia/遗漏任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucis/C来源工单创建量.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucis/QAQC 判责准确性分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucis/临时查询.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucis/加盟商罚款分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucis/派送失败Viber通知收件人.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Lucis/闪速有效路由优化.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Mei/QAQC审核理赔失败邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Mei/丢失回调测算数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Mei/丢失破损帆软报表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Mei/判责丢失后有有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Mei/判责丢失有有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Mei/测算妥投短信.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Miguel/支援交接明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Miguel/移动dc支援数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Wchuan/6.28前未终态.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Wchuan/PDC揽收退件目的地网点分布.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Wchuan/丢失破损未终态数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Wchuan/分拨离线数据测算.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/Wchuan/退件标记&amp;当日退件打单.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/yvonne/ivr 总量.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/yvonne/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/yvonne/viber 回访.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/yvonne/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/yvonne/修改非平台客户三次尝试派送邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/dco 交接人效.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/万能揽件&amp;离线妥投.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/仓管交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/俊舟未标记需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/俊舟需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/小 cka 三次尝试派送.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/快递员标记动作.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/拒收复核验证取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/疑似神仙卡.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/离线妥投数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/俊舟/菲律宾BDC取数-测试大件标准.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/张倩云/已妥投未回cod-超时效数据​ .sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/怡珂/已妥投理赔单号.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/怡珂/进理赔前未终态.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/怡珂/道歉时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/22-7标记.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/ivr时效测算.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/修改 985d 邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/修改IVR回访帆软.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/多次尝试派送失败回访取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/多次尝试派送标记改约时间妥投情况.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/快递员标记时间和仓管员提交时间分布对比.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/新丽/问题件是否进回访.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/柴柯/拒收复核上报数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/阿海/Lazada五次尝试派送数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/阿海/Lazada派送优先级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/阿海/shein多次派送.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/PH_Product/阿海/历史揽件任务id.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/Alieen/临时取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/Alieen/揽件任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/Alieen/退件包裹正向单号的数据明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/wubin/修改 1320邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/wubin/揽收拍照人员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/wubin/错发数据监控需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/lei_看判责后右有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/临时取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/临时需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/快递员揽收包裹明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/更新有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/有发无到相关数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/查包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/看正向包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/蕾/高价值包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/金墨渊.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_13.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_20.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_22.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_28.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_29.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_38.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_42.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_47.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/临时修改代码.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/临时需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/L来源跟进.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/RTS跑数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_10.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_12.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_13.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_14.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_15.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_16.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_17.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_18.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_19.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_20.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_21.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_22.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_23.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_24.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_30.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_31.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_32.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_33.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_34.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_35.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_36.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_37.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_5.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_8.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/console_9.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/hcm审核数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/hub看包裹价值.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/hub集包.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/pdc揽收SP退件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/ph_miniCS监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/ph_minics取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/phqaqc时效分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/ph疑难件处理.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/ph积压件模板.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/ph闪速待处理.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/丢失分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/个人信息.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/临时需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/交接评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/产品年中汇报数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/依纯-菲律宾问题件取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/因警告信开除员工数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/妥投后有有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/姜研——菲律宾分拣研究.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/安全模块数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/怡珂L来源需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/收件人拒收虚假排查.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/核查分拣扫描问题.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/王璇低效代码.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/畅远QAQC监控需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/疑似虚假上报错分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/疑似虚假错分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/疑难件监控代码.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/登录行为.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/积压包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/网点信息.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/菲律宾17点交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/菲律宾处理时效分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/虚假排查.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/虚假错分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/警告信.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/许非需求ph.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/集包监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/其他 2/高价值包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/其他/车线数据有.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/晖哥/虚假外协.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/晖哥/里程异常.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/网络QC/郎平/PRI 自动邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/网络QC/郎平/到件入仓率邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/网络QC/郎平/支援数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/网络QC/郎平/疑似丢失.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/B来源批量判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/EHS报警数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/FH——CS工单.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/L来源跟进.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Network/11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Network/test2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Network/泰国问题快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Network/测试新评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Network/迟到明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/PMD/闪速理赔.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/B来源上线后数据跟进.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/L 来源取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/L 来源计入 WRS场景细分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/L来源进入wrs的场景细分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/WRS 数据 AI 构成.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/b 来源积压应剔除数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/反推询问任务进丢失处罚.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/已签收未收到访问任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/已签收未收到询问任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/待剔除B来源任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/拍照路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/爆仓网点取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Celia/目的地网点滞留超过5判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Elle/Elle-诈骗cod.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Elle/··.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Elle/丢失破损短少理赔数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Elle/单量&amp;收入.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Elle/疑难件1821邮件修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Elle/疑难件日监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/Elle/诈骗 cod 需求 2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/为智/神仙卡问题件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/为智/自盘自派.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/倩云/网点打卡人数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/心如/修改 1821d 邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/上传凭证.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/丢失率控制.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/仓管交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/已妥投的理赔单号.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/强制拍照数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/理赔前未终态.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/积压件测试.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/道歉时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/非平台闪速认定处罚申诉通过.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/怡珂/非自揽自排网点交接扫描.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/柴可/拒收上报.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/柴可/虚假拒收.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/柴可/虚假拒收投诉.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/柴可/近一周全网拒收包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/永镇/K 来源未到 las.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/永镇/K来源批量判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/永镇/QAQC 监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/王璇/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/王璇/投诉虚假妥投.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/王璇/网点距离.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/董钊/TT停滞或丢失包裹取数分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/董钊/丢失解锁包裹流转取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/董钊/问题本未进 B.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/雪梅/泰国电话.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Product/鹏飞/近2月妥投包裹数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/QAQC/TeamA时效表修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/QAQC/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/QAQC/修改teama人效.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/QAQC/取任务id 和目的地到件入仓时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/SB评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/retail.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/临时需求/van 低效名单.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/他.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/低效测试2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/修改人效确定版.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/1199d 爆仓网点.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_10.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_12.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_13.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_14.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_15.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_16.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_17.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_18.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_19.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_20.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_21.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_22.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_23.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_24.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_25.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_26.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_27.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_28.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_29.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_30.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_31.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_32.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_5.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_8.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/console_9.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/出勤快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/员工使用外部app辅助数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/处罚数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/姜妍-分拣需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/实例.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/工单数据-佩芳.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/工单时效修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/支援数据表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/无头件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/晖哥/需稽查里程打卡视频.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/检查数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/水果件理赔.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/水果件理赔失效.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/法务/20231226.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/泰国17点交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/泰国快递员基础表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/泰国新增问题统计.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/泰国积压件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/理赔数据-陈纪熙.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/疑似违规回访优化.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/疑难件处理时效分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/破损.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/网点出勤评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/自动判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/虚假测试前天.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/警告信历史记录.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/钱红金-网点途径.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/陈纪熙-问题件数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/陈纪熙工单数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a10a2b6c-4553-4aa9-93a3-7e66eb53ec54/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/7月警告信汇总.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/HUB/许繁/hub在仓疑难件未发出.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/ph电话认证.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/ph登录行为.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/交接评级-f.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/出勤评级-快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/出勤评级-网点.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/分拣扫描评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/评级总表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/锁区评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/MR_D/问题快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/OPS/爆仓网点附近网点数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Joye/by举报.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Joye/离职&amp;警告信.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Joye/虚假妥投投诉数据监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Judy/1772d 自动邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Judy/QAQC 异常快速响应取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Judy/离线妥投网点交接后未留仓或者问题件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Judy/高价值包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucia/积压件&amp;丢失.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucia/遗漏任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucis/C来源工单创建量.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucis/QAQC 判责准确性分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucis/临时查询.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucis/加盟商罚款分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucis/派送失败Viber通知收件人.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Lucis/闪速有效路由优化.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Mei/QAQC审核理赔失败邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Mei/丢失回调测算数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Mei/丢失破损帆软报表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Mei/判责丢失后有有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Mei/判责丢失有有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Mei/测算妥投短信.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Miguel/支援交接明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Miguel/移动dc支援数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Wchuan/6.28前未终态.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Wchuan/PDC揽收退件目的地网点分布.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Wchuan/丢失破损未终态数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Wchuan/分拨离线数据测算.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/Wchuan/退件标记&amp;当日退件打单.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/yvonne/ivr 总量.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/yvonne/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/yvonne/viber 回访.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/yvonne/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/yvonne/修改非平台客户三次尝试派送邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/dco 交接人效.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/万能揽件&amp;离线妥投.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/仓管交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/俊舟未标记需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/俊舟需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/小 cka 三次尝试派送.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/快递员标记动作.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/疑似神仙卡.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/离线妥投数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/俊舟/菲律宾BDC取数-测试大件标准.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/张倩云/已妥投未回cod-超时效数据​ .sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/怡珂/已妥投理赔单号.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/怡珂/进理赔前未终态.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/怡珂/道歉时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/新丽/ivr时效测算.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/新丽/修改 985d 邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/新丽/修改IVR回访帆软.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/新丽/多次尝试派送失败回访取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/新丽/多次尝试派送标记改约时间妥投情况.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/新丽/快递员标记时间和仓管员提交时间分布对比.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/新丽/问题件是否进回访.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/柴柯/拒收复核上报数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/阿海/Lazada五次尝试派送数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/阿海/Lazada派送优先级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/阿海/shein多次派送.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/PH_Product/阿海/历史揽件任务id.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/Alieen/临时取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/Alieen/揽件任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/Alieen/退件包裹正向单号的数据明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/wubin/修改 1320邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/wubin/揽收拍照人员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/wubin/错发数据监控需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/lei_看判责后右有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/临时需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/快递员揽收包裹明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/更新有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/有发无到相关数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/查包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/看正向包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/蕾/高价值包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_13.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_20.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_22.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_28.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_29.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_38.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_42.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_47.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/临时修改代码.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/临时需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/L来源跟进.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/RTS跑数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_10.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_12.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_13.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_14.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_15.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_16.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_17.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_18.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_19.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_20.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_21.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_22.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_23.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_24.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_30.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_31.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_32.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_33.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_34.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_35.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_36.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_37.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_5.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_8.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/console_9.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/hcm审核数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/hub看包裹价值.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/hub集包.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/pdc揽收SP退件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/ph_miniCS监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/ph_minics取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/phqaqc时效分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/ph疑难件处理.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/ph积压件模板.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/ph闪速待处理.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/丢失分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/个人信息.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/临时需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/交接评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/产品年中汇报数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/依纯-菲律宾问题件取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/因警告信开除员工数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/妥投后有有效路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/姜研——菲律宾分拣研究.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/安全模块数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/怡珂L来源需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/收件人拒收虚假排查.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/核查分拣扫描问题.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/王璇低效代码.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/畅远QAQC监控需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/疑似虚假上报错分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/疑似虚假错分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/疑难件监控代码.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/登录行为.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/积压包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/网点信息.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/菲律宾17点交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/菲律宾处理时效分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/虚假排查.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/虚假错分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/警告信.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/许非需求ph.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/集包监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/其他 2/高价值包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/其他/车线数据有.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/晖哥/虚假外协.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/晖哥/里程异常.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/网络QC/郎平/PRI 自动邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/网络QC/郎平/到件入仓率邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/网络QC/郎平/支援数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/网络QC/郎平/疑似丢失.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/B来源批量判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/EHS报警数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/FH——CS工单.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/L来源跟进.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Network/11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Network/test2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Network/泰国问题快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Network/测试新评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Network/迟到明细.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/PMD/闪速理赔.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/B来源上线后数据跟进.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/L 来源取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/L 来源计入 WRS场景细分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/L来源进入wrs的场景细分.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/WRS 数据 AI 构成.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/b 来源积压应剔除数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/反推询问任务进丢失处罚.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/已签收未收到访问任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/待剔除B来源任务.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/拍照路由.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/爆仓网点取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Celia/目的地网点滞留超过5判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle/Elle-诈骗cod.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle/··.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle/丢失破损短少理赔数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle/单量&amp;收入.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle/疑难件1821邮件修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle/疑难件日监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle/诈骗 cod 需求 2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/为智/神仙卡问题件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/为智/自盘自派.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/倩云/网点打卡人数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/心如/修改 1821d 邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/上传凭证.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/丢失率控制.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/仓管交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/已妥投的理赔单号.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/强制拍照数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/理赔前未终态.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/道歉时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/非平台闪速认定处罚申诉通过.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/怡珂/非自揽自排网点交接扫描.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/柴可/拒收上报.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/柴可/虚假拒收.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/柴可/近一周全网拒收包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/永镇/K 来源未到 las.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/永镇/K来源批量判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/永镇/QAQC 监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/王璇/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/王璇/投诉虚假妥投.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/王璇/网点距离.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/董钊/TT停滞或丢失包裹取数分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/董钊/丢失解锁包裹流转取数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/董钊/问题本未进 B.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/雪梅/泰国电话.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/鹏飞/近2月妥投包裹数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/QAQC/TeamA时效表修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/QAQC/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/QAQC/修改teama人效.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/QAQC/取任务id 和目的地到件入仓时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/SB评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/retail.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/临时需求/van 低效名单.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/他.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/低效测试2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/修改人效确定版.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/1199d 爆仓网点.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_10.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_12.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_13.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_14.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_15.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_16.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_17.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_18.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_19.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_20.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_21.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_22.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_23.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_24.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_25.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_26.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_27.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_28.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_29.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_30.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_31.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_32.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_5.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_8.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/其他/console_9.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/出勤快递员.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/员工使用外部app辅助数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/处罚数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/姜妍-分拣需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/实例.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/工单数据-佩芳.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/工单时效修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/支援数据表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/无头件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/晖哥/需稽查里程打卡视频.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/检查数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/水果件理赔.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/水果件理赔失效.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/法务/20231226.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/泰国17点交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/泰国快递员基础表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/泰国新增问题统计.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/泰国积压件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/理赔数据-陈纪熙.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/疑似违规回访优化.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/疑难件处理时效分析.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/破损.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/网点出勤评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/自动判责.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/虚假测试前天.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/警告信历史记录.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/钱红金-网点途径.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/陈纪熙-问题件数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/陈纪熙工单数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/123.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/456.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/NWQC/chong wenxi/高价值商品自动邮件.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/Hannren/hannren分拣需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/chong/临时.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/chong/全网高价值包裹.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/chong/统计11&amp;12月COD-COG.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/倩云/派送地图打卡人数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/怡珂/已妥投的理赔单号.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/怡珂/道歉时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/柴可/拒收上传.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/王璇/WhatsApp 回访数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/10月份历史删除处罚.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/FBI闪速C来源优化.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/c 来源下放.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/ms1中转丢失.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/pmd处理疑难件修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/总部CS修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/扫空单稽查项目.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/有发无到数据监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/贤杏/疑难件监控修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/Product/阿辉/警告信测试数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/QAQC/三个商家数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/QAQC/平台包裹时效内丢失解锁回拍卖仓数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/BBB_SP分拣扫描.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_10.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_5.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_8.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/console_9.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/sb评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/tets.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/快递员基础信息表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/查作弊.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/看油费.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/车线需求-姜妍.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/马来17点交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/马来快递员基础表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/马来支援数据表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/其他/马来新增问题统计表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/晖哥/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/晖哥/作弊检查数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/ebbabfe4-86ec-48fc-8fe1-e10601f33b90/晖哥/里程异常.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/Hannren/hannren分拣需求.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/chong/统计11&amp;12月COD-COG.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/倩云/派送地图打卡人数.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/怡珂/已妥投的理赔单号.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/怡珂/道歉时间.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/柴可/拒收上传.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/王璇/WhatsApp 回访数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/10月份历史删除处罚.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/FBI闪速C来源优化.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/c 来源下放.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/ms1中转丢失.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/pmd处理疑难件修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/总部CS修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/有发无到数据监控.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/贤杏/疑难件监控修改.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/Product/阿辉/警告信测试数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/BBB_SP分拣扫描.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_1.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_10.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_11.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_2.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_3.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_4.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_5.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_6.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_7.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_8.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/console_9.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/sb评级.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/tets.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/快递员基础信息表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/查作弊.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/看油费.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/车线需求-姜妍.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/马来17点交接.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/马来快递员基础表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/马来支援数据表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/其他/马来新增问题统计表.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/晖哥/test.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/晖哥/作弊检查数据.sql" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/晖哥/里程异常.sql" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <excluded-from-favorite>
+      <branch-storage>
+        <map>
+          <entry type="REMOTE">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="origin/master" />
+                <branch-info repo="$PROJECT_DIR$" source="origin/main" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </excluded-from-favorite>
+    <favorite-branches>
+      <branch-storage>
+        <map>
+          <entry type="LOCAL">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="Flash" />
+              </list>
+            </value>
+          </entry>
+          <entry type="REMOTE">
+            <value>
+              <list>
+                <branch-info repo="$PROJECT_DIR$" source="origin/Flash" />
+              </list>
+            </value>
+          </entry>
+        </map>
+      </branch-storage>
+    </favorite-branches>
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="main" />
+      </map>
+    </option>
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
+  <component name="ProjectId" id="2WYdo86xYay8n0robFLI1kk2KKp" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_ADD_EXTERNAL_FILES": "true",
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "RunOnceActivity.OpenDatabaseViewOnStart": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "database.data.extractors.current.export.id": "Excel (xlsx)",
+    "database.data.extractors.current.id": "Tab-separated (TSV)_id",
+    "git-widget-placeholder": "main",
+    "grid.search.filter.rows": "true",
+    "last_opened_file_path": "/Users/mytoroto",
+    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings"
+  },
+  "keyToStringList": {
+    "ChangesTree.GroupingKeys": [
+      "directory"
+    ],
+    "DatabaseDriversLRU": [
+      "java.sql.Driver",
+      "hive",
+      "mysql"
+    ],
+    "com.intellij.ide.scratch.LRUPopupBuilder$1/更改 SQL 方言": [
+      "MySQL"
+    ]
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/consoles" />
+      <recent name="$PROJECT_DIR$" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/f72e8983-ca90-4b25-81bb-1033afd19f67/晖哥" />
+      <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/Product/Elle" />
+      <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/de3f992f-0c51-44d0-9d16-a00f12996dab/QAQC" />
+      <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/a6860bfb-fec1-41d7-b85f-2d3aa809e24a/QAQC/Alieen" />
+    </key>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="Changes" />
+    <option name="LAST_COMMIT_MESSAGE" value="Changes" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
