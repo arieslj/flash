@@ -6,11 +6,9 @@
   <component name="ChangeListManager">
     <list default="true" id="b0c0c4da-9d5a-481f-8767-8ffa7b9d2cdb" name="Changes" comment="Changes">
       <change beforePath="$PROJECT_DIR$/.idea/dataSources.local.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.local.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/dataSources.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/7ad83264-fb7c-476d-9ab2-baf6fa779cac.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/8c88cdb5-595f-4083-ae24-080620cb1ebe.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dataSources/ebbabfe4-86ec-48fc-8fe1-e10601f33b90.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -58,23 +56,20 @@
         <entry key="$PROJECT_DIR$" value="main" />
       </map>
     </option>
-    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../auto_email" />
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="ROOT_SYNC" value="DONT_SYNC" />
-  </component>
-  <component name="LLMProjectSettings">
-    <option name="turned_on" value="false" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProblemsViewState">
-    <option name="selectedTabId" value="CurrentFile" />
+    <option name="selectedTabId" value="ProjectErrors" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="2WYdo86xYay8n0robFLI1kk2KKp" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+  <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="2" id="Add" />
   </component>
   <component name="ProjectViewState">
@@ -92,10 +87,10 @@
     "com.codeium.enabled": "true",
     "database.data.extractors.current.export.id": "Excel (xlsx)",
     "database.data.extractors.current.id": "Tab-separated (TSV)_id",
-    "git-widget-placeholder": "master",
+    "git-widget-placeholder": "main",
     "grid.search.filter.rows": "true",
     "last_opened_file_path": "/Users/mytoroto",
-    "settings.editor.selected.configurable": "vcs.Git"
+    "settings.editor.selected.configurable": "reference.settingsdialog.IDE.editor.colors.常规"
   },
   "keyToStringList": {
     "ChangesTree.GroupingKeys": [
@@ -120,14 +115,23 @@
       <recent name="$PROJECT_DIR$" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
       <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/其他/归档" />
       <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/EHS" />
       <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/QAQC/其他" />
       <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/7ad83264-fb7c-476d-9ab2-baf6fa779cac/QAQC/金墨渊" />
-      <recent name="$APPLICATION_CONFIG_DIR$/consoles/db/8c88cdb5-595f-4083-ae24-080620cb1ebe/Other" />
     </key>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <created>1744961086205</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1744961086205</updated>
+    </task>
+    <servers />
+  </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">
       <map>

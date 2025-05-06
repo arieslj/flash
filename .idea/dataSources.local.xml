@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="dataSourceStorageLocal" created-in="DB-243.24978.79">
+  <component name="dataSourceStorageLocal" created-in="DB-251.25410.75">
     <data-source name="泰国" uuid="8c88cdb5-595f-4083-ae24-080620cb1ebe">
       <database-info product="MySQL" version="5.1.35-analyticdb" jdbc-version="4.0" driver-name="MySQL Connector Java" driver-version="mysql-connector-java-5.1.47 ( Revision: fe1903b1ecb4a96a917f7ed3190d80c049b1de29 )" dbms="MYSQL" exact-version="5.1.35">
         <extra-name-characters>#@</extra-name-characters>
