@@ -690,3 +690,8 @@ from my_bi.parcel_lose_task plt
 left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = plt.client_id
 where
     plt.remark regexp 'Feishu'
+;
+
+select
+    *
+from my_staging.parcel_change_detail pcd
