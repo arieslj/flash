@@ -1,0 +1,36 @@
+<scheme name="_@user_Xcode-Dark" version="142" parent_scheme="Darcula">
+  <metaInfo>
+    <property name="created">2023-03-08T11:10:43</property>
+    <property name="ide">DataGrip</property>
+    <property name="ideVersion">2022.3.3.0.0</property>
+    <property name="modified">2023-08-18T00:05:37</property>
+    <property name="originalScheme">Xcode-Dark</property>
+    <property name="partialSave">true</property>
+  </metaInfo>
+  <colors>
+    <option name="FILESTATUS_ADDED" value="c3e887" />
+    <option name="FILESTATUS_DELETED" value="f77669" />
+    <option name="FILESTATUS_HIJACKED" value="ffcb6b" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_DELETED_FROM_FILE_SYSTEM" value="59626f" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_IGNORED" value="9da5b4" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_MERGED_WITH_BOTH_CONFLICTS" value="ff6347" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_MERGED_WITH_CONFLICTS" value="ff6347" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_MERGED_WITH_PROPERTY_CONFLICTS" value="ff6347" />
+    <option name="FILESTATUS_MERGED" value="61aeef" />
+    <option name="FILESTATUS_MODIFIED" value="80cbc4" />
+    <option name="FILESTATUS_NOT_CHANGED_IMMEDIATE" value="80cbc4" />
+    <option name="FILESTATUS_NOT_CHANGED_RECURSIVE" value="80cbc4" />
+    <option name="FILESTATUS_OBSOLETE" value="ffcb6b" />
+    <option name="FILESTATUS_SUPPRESSED" value="546e7a" />
+    <option name="FILESTATUS_SWITCHED" value="f77669" />
+    <option name="FILESTATUS_UNKNOWN" value="f77669" />
+    <option name="FILESTATUS_addedOutside" value="56b6c2" />
+    <option name="FILESTATUS_changelistConflict" value="ff6347" />
+    <option name="FILESTATUS_modifiedOutside" value="61aeef" />
+  </colors>
+  <attributes>
+    <option name="CONSOLE_RANGE_TO_EXECUTE">
+      <value />
+    </option>
+  </attributes>
+</scheme>

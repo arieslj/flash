@@ -1,27 +1,60 @@
 <scheme name="_@user_Atom One Dark (Material)" version="142" parent_scheme="Darcula">
   <option name="FONT_SCALE" value="1.0" />
   <metaInfo>
+    <property name="created">2023-03-08T10:51:53</property>
     <property name="ide">DataGrip</property>
-    <property name="ideVersion">2025.1.1.0.0</property>
+    <property name="ideVersion">2022.3.3.0.0</property>
+    <property name="modified">2023-10-10T16:31:54</property>
     <property name="originalScheme">Atom One Dark (Material)</property>
     <property name="partialSave">true</property>
-    <property name="pluginId">com.mallowigi.idea</property>
   </metaInfo>
-  <option name="LINE_SPACING" value="1.5" />
+  <option name="LINE_SPACING" value="1.6" />
   <font>
-    <option name="EDITOR_FONT_NAME" value="Maple Mono NF CN" />
+    <option name="EDITOR_FONT_NAME" value="Maple Mono" />
     <option name="EDITOR_FONT_SIZE" value="14" />
   </font>
   <font>
     <option name="EDITOR_FONT_NAME" value="JetBrains Mono" />
-    <option name="EDITOR_FONT_SIZE" value="12" />
-  </font>
-  <console-font>
-    <option name="EDITOR_FONT_NAME" value="Maple Mono NF CN" />
     <option name="EDITOR_FONT_SIZE" value="14" />
-  </console-font>
-  <console-font>
-    <option name="EDITOR_FONT_NAME" value="JetBrains Mono" />
-    <option name="EDITOR_FONT_SIZE" value="12" />
-  </console-font>
+  </font>
+  <option name="EDITOR_LIGATURES" value="true" />
+  <colors>
+    <option name="CARET_COLOR" value="" />
+    <option name="FILESTATUS_ADDED" value="98c379" />
+    <option name="FILESTATUS_MODIFIED" value="e5c17c" />
+    <option name="INDENT_GUIDE" value="" />
+    <option name="MODIFIED_TAB_ICON" value="" />
+    <option name="RIGHT_MARGIN_COLOR" value="" />
+    <option name="SELECTED_INDENT_GUIDE" value="" />
+    <option name="SELECTED_TEARLINE_COLOR" value="" />
+    <option name="ScrollBar.hoverThumbColor" value="" />
+    <option name="ScrollBar.thumbColor" value="" />
+    <option name="TEARLINE_COLOR" value="" />
+    <option name="VISUAL_INDENT_GUIDE" value="" />
+  </colors>
+  <attributes>
+    <option name="BOOKMARKS_ATTRIBUTES">
+      <value>
+        <option name="FONT_TYPE" value="1" />
+      </value>
+    </option>
+    <option name="SQL_OUTER_QUERY_COLUMN">
+      <value>
+        <option name="EFFECT_TYPE" value="1" />
+      </value>
+    </option>
+    <option name="TAB_SELECTED">
+      <value />
+    </option>
+    <option name="TERMINAL_COMMAND_TO_RUN_USING_IDE">
+      <value>
+        <option name="BACKGROUND" value="282c34" />
+      </value>
+    </option>
+    <option name="XML_CUSTOM_TAG_NAME">
+      <value>
+        <option name="FOREGROUND" value="e06c75" />
+      </value>
+    </option>
+  </attributes>
 </scheme>

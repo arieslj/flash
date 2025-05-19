@@ -142,13 +142,6 @@ where
     and plt.parcel_created_at < '2025-01-01'
 group by 1,2,3
 order by 3,1,2
-;
-select
-    case plt.source
-        when 1 then 'A-问题件-丢失'
-        when 2 then 'B-记录本-丢失'
-        when 3 then 'C-包裹状态未更新'
-
 
 ;
 
@@ -183,4 +176,15 @@ where
 ;
 
 
-
+select
+    date_format(awb.revise_at,'%Y-%m') '任务年月'
+    ,count(awb.id) '任务数'
+    ,count(if(awb.type = 2  and date(awb.updated_at) <= date(date_add(awb.revise_at,interval 1 day)),awb.id,null)) '时效内任务量'
+    ,count(if(awb.type = 2  and date(awb.updated_at) <= date(date_add(awb.revise_at,interval 1 day)),awb.id,null))/count(awb.id) '时效内处理率'
+from my_nl.abnormal_weight_balance awb
+where
+    awb.revise_at >= '${sdate}' and awb.revise_at < date_add('${edate}',interval 1 day)
+    and awb.type <> 4
+    and json_extract(awb.extra_info, '$.reweight_by') not like '%ai%'
+#and pno ='MT010224TWPA5Z'
+group by 1

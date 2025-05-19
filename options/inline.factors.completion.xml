@@ -1,10 +1,64 @@
 <application>
   <component name="TimeBetweenTyping">
     <dailyDataMap>
-      <entry key="2025-05-06">
+      <entry key="2025-05-07">
         <DailyData>
-          <option name="count" value="2" />
-          <option name="totalTime" value="14227" />
+          <option name="count" value="934" />
+          <option name="totalTime" value="768268" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-08">
+        <DailyData>
+          <option name="count" value="30" />
+          <option name="totalTime" value="54542" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-09">
+        <DailyData>
+          <option name="count" value="183" />
+          <option name="totalTime" value="155143" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-10">
+        <DailyData>
+          <option name="count" value="38" />
+          <option name="totalTime" value="36805" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-13">
+        <DailyData>
+          <option name="count" value="763" />
+          <option name="totalTime" value="656725" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-14">
+        <DailyData>
+          <option name="count" value="97" />
+          <option name="totalTime" value="194136" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-15">
+        <DailyData>
+          <option name="count" value="1273" />
+          <option name="totalTime" value="873769" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-16">
+        <DailyData>
+          <option name="count" value="934" />
+          <option name="totalTime" value="666074" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-17">
+        <DailyData>
+          <option name="count" value="124" />
+          <option name="totalTime" value="71341" />
+        </DailyData>
+      </entry>
+      <entry key="2025-05-19">
+        <DailyData>
+          <option name="count" value="2016" />
+          <option name="totalTime" value="1412216" />
         </DailyData>
       </entry>
     </dailyDataMap>

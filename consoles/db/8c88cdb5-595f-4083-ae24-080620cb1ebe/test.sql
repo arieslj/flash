@@ -4380,11 +4380,20 @@ select
     ,concat('https://fle-asset-internal.oss-ap-southeast-1.aliyuncs.com/',swa.end_path) 下班
 from backyard_pro.staff_work_attendance swa
 where
-    swa.attendance_date = '2025-04-24'
-    and swa.staff_info_id = 671332
+    swa.attendance_date = '2025-05-03'
+    and swa.staff_info_id = 681288
 
 ;
+select
+    ss.name
+    ,hsi.staff_info_id
+    ,hsi.mobile
+from bi_pro.hr_staff_info hsi
+left join fle_staging.sys_store ss on ss.id = hsi.sys_store_id
+where
+    hsi.state = 1
 
+    ;
 
 select
     plt.pno
@@ -4394,9 +4403,16 @@ select
 from bi_pro.parcel_lose_task plt
 left join bi_pro.parcel_lose_responsible plr on plr.lose_task_id = plt.id
 where
-    plt.pno = 'TH0116696RY32A0'
+    plt.pno = 'FLACB02018665737'
     and plt.penalties > 0
+;
 
+
+select
+    *
+from bi_pro.parcel_lose_responsible plr
+where
+    plr.lose_task_id = 91817581
 
 ;
 
@@ -4426,3 +4442,266 @@ from (
 )t
 where t.rk1 = 1 and t.rk2 = 1
 group by 1,2
+
+
+;
+
+
+select
+    pss.pno
+    ,convert_tz(pi.created_at, '+00:00', '+07:00') 揽收时间
+    ,pss.store_name 网点名称
+    ,case pss.store_category
+         when 1 then 'SP'
+         when 2 then 'DC'
+         when 4 then 'SHOP'
+         when 5 then 'SHOP'
+         when 6 then 'FH'
+         when 7 then 'SHOP'
+         when 8 then 'Hub'
+         when 9 then 'Onsite'
+         when 10 then 'BDC'
+         when 11 then 'fulfillment'
+         when 12 then 'B-HUB'
+         when 13 then 'CDC'
+         when 14 then 'PDC'
+    end 网点类型
+    ,pss.valid_store_order 包裹到达网点排序
+    ,convert_tz(pss.van_arrived_at, '+00:00', '+07:00') 车辆到达网点时间
+    ,convert_tz(pss.first_valid_routed_at, '+00:00', '+07:00') as 包裹到达网点时间
+    ,convert_tz(pss.van_left_at, '+00:00', '+07:00') as 车辆离开网点时间
+from dw_dmd.parcel_store_stage_new pss
+join fle_staging.parcel_info pi on pi.pno = pss.pno
+where
+    pss.valid_store_order is not null
+    and pi.created_at > date_sub(date_sub(curdate(), interval 7 day ), interval 7 hour)
+
+;
+
+
+
+select pi.pno
+     ,pi.client_id
+     ,pi.src_name
+     ,ddd.cn_element
+     ,pr1.store_id
+     ,ss.name
+from fle_staging.parcel_info pi
+join rot_pro.parcel_route pr on pi.pno = pr.pno and pr.store_id = 'TH21011305' and pr.route_action in ('STAFF_INFO_UPDATE_WEIGHT','RECEIVE_WAREHOUSE_SCAN','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','PRINTING','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','THIRD_EXPRESS_ROUTE','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','SORTING_SCAN','CANCEL_SHIPMENT_WAREHOUSE','INVENTORY','REFUND_CONFIRM','DISTRIBUTION_INVENTORY','DELIVERY_TRANSFER','DELIVERY_PICKUP_STORE_SCAN','ACCEPT_PARCEL','DIFFICULTY_HANDOVER')
+left join (
+    select pr.pno,pr.route_action,pr.store_id,pr.routed_at
+         ,row_number() over (partition by pr.pno order by pr.routed_at desc) rk
+    from rot_pro.parcel_route pr
+    where pr.route_action in ('STAFF_INFO_UPDATE_WEIGHT','RECEIVE_WAREHOUSE_SCAN','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','DELIVERY_TICKET_CREATION_SCAN','ARRIVAL_WAREHOUSE_SCAN','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DELIVERY_CONFIRM','DIFFICULTY_HANDOVER','DELIVERY_MARKER','REPLACE_PNO','PRINTING','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED','THIRD_EXPRESS_ROUTE','PICKUP_RETURN_RECEIPT','FLASH_HOME_SCAN','SORTING_SCAN','CANCEL_SHIPMENT_WAREHOUSE','INVENTORY','REFUND_CONFIRM','DISTRIBUTION_INVENTORY','DELIVERY_TRANSFER','DELIVERY_PICKUP_STORE_SCAN','ACCEPT_PARCEL','DIFFICULTY_HANDOVER')
+)pr1 on pr1.pno = pi.pno and pr1.rk = 1
+         left join dwm.dwd_dim_dict ddd on ddd.element = pr1.route_action and ddd.db = 'rot_pro' and ddd.tablename = 'parcel_route' and ddd.fieldname = 'route_action'
+         left join fle_staging.sys_store ss on ss.id = pr1.store_id
+where pi.article_category = 11
+  and pi.created_at >= '2025-05-04 17:00:00'
+
+
+;
+
+
+select
+    a.pno
+    ,json_extract(a.neg_result,'$.money') claim_value
+from
+    (
+        select
+            pct.pno
+             ,pcn.neg_result
+             ,row_number() over (partition by pct.pno order by pct.created_at desc) rk
+        from bi_pro.parcel_claim_task pct
+         join tmpale.tmp_th_pno_lj_0509 t on t.pno = pct.pno
+         left join bi_pro.parcel_claim_negotiation pcn on pcn.task_id = pct.id
+        where
+            pct.state = 6
+    ) a
+where
+    a.rk = 1
+
+;
+select * from tmpale.tmp_th_pno_lj_0509
+
+;
+
+
+ /*
+  =====================================================================+
+  表名称：2312d_th_wrs_reweight_audit
+  功能描述：WRS称重不准确审核自动邮件
+
+  需求来源：
+  编写人员: 吕杰
+  设计日期：2024-11-06
+  修改日期:
+  修改人员:
+  修改原因:
+  -----------------------------------------------------------------------
+  ---存在问题：
+  -----------------------------------------------------------------------
+  +=====================================================================
+  */
+
+select
+    rr.pno 运单号
+    ,case
+        when bc.`client_id` is not null then bc.client_name
+        when kp.id is not null and bc.client_id is null then '普通ka'
+        when kp.`id` is null then '小c'
+    end as  客户类型
+    ,case
+        when rr.reweight_type in (3,4,5,6) then '量方读数审核'
+        when rr.reweight_type in (1) then '称重读数审核'
+        when rr.reweight_type in (2) then '单号一致性审核'
+    end 复称审核类型
+    ,convert_tz(rr.created_at, '+00:00', '+07:00') 进入wrs时间
+    ,if(rr.status = 2, convert_tz(rr.input_end, '+00:00', '+07:00'), null) 审核时间
+    ,case rr.status
+        when 0 then '待分配'
+        when 1 then '已分配'
+        when 2 then '审核完毕'
+    end 审核状态
+    ,case rr.reweight_result
+        when 0 then '待判责'
+        when 1 then '准确'
+        when 2 then '不规范'
+        when 3 then '虚假'
+        when 4 then '待判-不规范'
+        when 5 then '待判-虚假'
+    end 审核结果
+    ,rr.input_by 审核人
+    ,case
+        when timestampdiff(hour, rr.created_at, rr.input_end) >= 24 then '超时'
+        when timestampdiff(hour, rr.created_at, rr.input_end) < 24 then '时效内'
+        else null
+    end 是否超时
+from wrs_production.reweight_record rr
+left join fle_staging.parcel_info pi on pi.pno = rr.pno and pi.created_at > date_sub(curdate(), interval 2 month)
+left join fle_staging.ka_profile kp on kp.id = pi.client_id
+left join dwm.tmp_ex_big_clients_id_detail bc on bc.client_id = pi.client_id
+where
+    rr.created_at > date_sub(curdate(), interval 31 hour)
+    and rr.created_at < date_sub(curdate(), interval 7 hour)
+
+
+;
+
+select
+    rr.input_id 审核员工编号
+    ,rr.input_by 审核员工姓名
+    ,count(if(rr.reweight_result = 1, rr.id, null)) 准确数量
+    ,count(if(rr.reweight_result = 2, rr.id, null)) 不规范数量
+    ,count(if(rr.reweight_result = 3, rr.id, null)) 虚假数量
+    ,count(if(rr.reweight_result in (1,2,3), rr.id, null)) 合计
+    ,count(if(timestampdiff(hour, rr.created_at, rr.input_end) < 24, rr.id, null)) 时效内数量
+    ,count(if(timestampdiff(hour, rr.created_at, rr.input_end) >= 24, rr.id, null)) 超时数量
+    ,count(if(timestampdiff(hour, rr.created_at, rr.input_end) < 24, rr.id, null)) / count(rr.id) 时效内占比
+from wrs_production.reweight_record rr
+where
+    rr.created_at > date_sub(curdate(), interval 31 hour)
+    and rr.created_at < date_sub(curdate(), interval 7 hour)
+    and rr.input_id not in ('1000000')
+    and rr.status = 2
+group by 1,2
+
+
+;
+
+
+select max(created_at)  from wrs_production.reweight_record rr
+
+
+;
+
+select
+    date (convert_tz(pr.routed_at, '+00:00', '+07:00')) 日期
+    ,count(pr.id) cnt
+from rot_pro.parcel_route pr
+group by 1
+order by 1
+
+
+;
+
+
+
+
+
+select
+    pr.distance
+    ,pr.'距离'
+    ,pr.store_id
+    ,pr.name
+    ,pr.route_action
+    ,pr.routed_at
+    ,pr.pno
+    ,pr2.route_action
+from
+    (
+        select
+            case
+                when round(st_distance_sphere(point(json_extract(pr.extra_value, '$.lng'),json_extract(pr.extra_value, '$.lat')), point(ss.lng,ss.lat)),0)<=200 then '网点操作'
+                when round(st_distance_sphere(point(json_extract(pr.extra_value, '$.lng'),json_extract(pr.extra_value, '$.lat')), point(ss.lng,ss.lat)),0) is null then '网点操作'
+            else '仓外操作'
+            end as distance
+            ,round(st_distance_sphere(point(json_extract(pr.extra_value, '$.lng'),json_extract(pr.extra_value, '$.lat')), point(ss.lng,ss.lat)),0) '距离'
+            ,store_id
+            ,ss.name name
+            ,pr.route_action
+            ,convert_tz(pr.routed_at,'+00:00','+07:00') routed_at
+            ,pr.pno
+            ,pr.id
+        from rot_pro.parcel_route pr
+        left join fle_staging.sys_store ss on ss.id = pr.store_id
+        where
+            ss.lng is not null
+            and ss.lat is not null
+        #     and convert_tz(pr.created_at,'+00:00','+07:00')>='2025-04-09'
+        #     and convert_tz(pr.created_at,'+00:00','+07:00')<'2025-04-10'
+            and pr.routed_at >= '2025-05-14 17:00:00'
+            and pr.routed_at < '2025-05-15 17:00:00'
+            and pr.route_action in ('DELIVERY_TICKET_CREATION_SCAN','DELIVERY_MARKER','RECEIVE_WAREHOUSE_SCAN','STORE_KEEPER_UPDATE_WEIGHT','STORE_SORTER_UPDATE_WEIGHT','ARRIVAL_WAREHOUSE_SCAN','SHIPMENT_WAREHOUSE_SCAN','DETAIN_WAREHOUSE','DIFFICULTY_HANDOVER','REPLACE_PNO','PRINTING','SEAL','UNSEAL','PARCEL_HEADLESS_PRINTED')
+            and pr.store_id in ('TH02060149','TH01480142','TH03040255','TH71140100','TH02040114','TH02030145','TH15060836','TH01100108','TH04030108','TH04020410')
+        --    and pr.pno = 'THT55021UYDRB0Z'
+  ) pr
+left join
+    (
+        select
+            pr.pno
+            ,'RECEIVE_WAREHOUSE_SCAN' route_action
+        from rot_pro.parcel_route pr
+        where
+            pr.routed_at >= '2025-05-01 17:00:00'
+            and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+            and json_extract(pr.extra_value, '$.onsite') = true
+            and pr.store_id in ('TH02060149','TH01480142','TH03040255','TH71140100','TH02040114','TH02030145','TH15060836','TH01100108','TH04030108','TH04020410')
+
+        union
+
+        select
+            pr.pno
+            ,'SHIPMENT_WAREHOUSE_SCAN' route_action
+        from rot_pro.parcel_route pr
+        where
+            pr.routed_at >= '2025-05-01 17:00:00'
+            and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+            and json_extract(pr.extra_value, '$.onsite') = true
+            and pr.store_id in ('TH02060149','TH01480142','TH03040255','TH71140100','TH02040114','TH02030145','TH15060836','TH01100108','TH04030108','TH04020410')
+
+        union
+
+        select
+            pr.pno
+            ,'RECEIVED' route_action
+        from rot_pro.parcel_route pr
+        where
+            pr.routed_at >= '2025-05-01 17:00:00'
+            and pr.route_action = 'SHIPMENT_WAREHOUSE_SCAN'
+            and json_extract(pr.extra_value, '$.onsite') = true
+            and pr.store_id in ('TH02060149','TH01480142','TH03040255','TH71140100','TH02040114','TH02030145','TH15060836','TH01100108','TH04030108','TH04020410')
+    ) pr2 on pr.pno = pr2.pno and pr.route_action = pr2.route_action
+where
+     pr2.pno is null
+    and  pr.distance='仓外操作'

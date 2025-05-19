@@ -1,0 +1,24 @@
+<application>
+  <component name="CodeInsightSettings">
+    <option name="selectAutopopupSuggestionsByChars" value="true" />
+    <option name="SELECT_AUTOPOPUP_SUGGESTIONS_BY_CHARS" value="true" />
+    <option name="REFORMAT_ON_PASTE" value="1" />
+  </component>
+  <component name="DaemonCodeAnalyzerSettings">
+    <option name="AUTOREPARSE_DELAY" value="0" />
+  </component>
+  <component name="EditorSettings">
+    <option name="languageBreadcrumbsMap">
+      <map>
+        <entry key="MySQL" value="true" />
+      </map>
+    </option>
+    <option name="USE_SOFT_WRAPS" value="MAIN_EDITOR" />
+    <option name="SOFT_WRAP_FILE_MASKS" value="*.md; *.txt; *.rst; *.adoc" />
+    <option name="IS_RIGHT_MARGIN_SHOWN" value="false" />
+  </component>
+  <component name="SqlCodeCompletionSettings" AUTO_ALIAS_TABLE="true" ADDITIONAL_CHARS_TO_ACCEPT_COMPLETION="&lt;&gt;=+-">
+    <option name="additionalCharsToAcceptCompletion" value="&lt;&gt;=+-" />
+    <option name="autoAliasTable" value="true" />
+  </component>
+</application>

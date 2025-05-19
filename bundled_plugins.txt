@@ -44,6 +44,8 @@ com.jetbrains.station|null
 
 intellij.charts|null
 
+intellij.git.commit.modal|Version Controls
+
 intellij.grid.loader.json|null
 
 intellij.grid.loader.xls|null

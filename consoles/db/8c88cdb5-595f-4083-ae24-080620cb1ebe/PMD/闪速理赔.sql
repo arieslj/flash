@@ -143,3 +143,57 @@ select
     ,t1.area 区域
     ,date(t1.updated_at) p_date
 from t t1
+
+
+;
+
+
+select
+    pct.pno 'Tracking Number'
+    ,pct.client_id
+    ,pct.created_at 'Task generation time'
+    ,case pct.self_claim
+        when 1 then 'yes'
+        when 0 then 'no'
+    end 'Self Claim'
+    ,case pct.client_data
+        when 1 then 'filled'
+        when 0 then 'Unfilled'
+    end 'Claim Information'
+    ,case pct.check_data
+        when 2 then 'fail'
+        when 0 then 'To be reviewed'
+        when 1 then 'reviewed'
+    end 'Review information'
+    ,case pct.vip_enable
+        when 1 then 'Kam Customer'
+        when 0 then 'Common Customer'
+    end 'Customer Type'
+    ,pct.parcel_created_at 'Receive time'
+    ,concat(kp.name, ' ', kp.major_mobile, ' ', kp.email) 'Customer Information'
+    ,case pct.source
+        WHEN 1 THEN 'A - Problematic Item - Lost'
+        WHEN 2 THEN 'B - Processing Record - Lost'
+        WHEN 3 THEN 'C - Status not updated'
+        WHEN 4 THEN 'D - Problematic Item - Damaged/Short'
+        WHEN 5 THEN 'E - Processing Record - Claim - Lost'
+        WHEN 6 THEN 'F - Processing Record - Claim  -Damaged/Short'
+        WHEN 7 THEN 'G - Processing Record - Claim - Others'
+        WHEN 8 THEN 'H-Lost parcel claims without waybill numbe'
+        WHEN 9 THEN 'J-problem processing-Packaging damage insurance'
+        WHEN 10 THEN 'J-问题记录本-外包装破损险'
+        when 11 then 'K - Breached Parcel'
+        when 12 then 'L-highly suspected lost parcel'
+    end 'Source of problem'
+    ,pct.updated_at 'Last processing time'
+    ,pct.operator_id 'Handler'
+    ,pct.area 'Region'
+    ,case pct.state
+        when 3 then 'Financial verification'
+        when 4 then 'Financial payment'
+    end Status
+from bi_pro.parcel_claim_task pct
+left join fle_staging.ka_profile kp on kp.id = pct.client_id
+where
+    pct.state in (3,4)
+   -- and pct.pno = 'TH471543DFCX9G'

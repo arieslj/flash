@@ -217,3 +217,20 @@ where
     and pi.state < 9
     and pi.returned = 0
 group by 1
+
+
+;
+
+
+select
+    date (convert_tz(pi.created_at, '+00:00', '+08:00')) 揽收日期
+    ,pi.ticket_pickup_staff_info_id 快递员
+    ,count(pi.pno) 揽收量
+from ph_staging.parcel_info pi
+where
+    pi.created_at > '2025-04-27 17:00:00'
+    and pi.created_at < '2025-04-29 17:00:00'
+    and pi.returned = 0
+    and pi.state < 9
+    and pi.ticket_pickup_staff_info_id in ('228938','171867','216431','157799','122497','211723','121299','145120','166975','154050','152826','137727','120877','131532','208188','153881','217938','240903','253700','167320','174303','191675','152837','203810','167032','175269','161471','175273','199936','161456','212593','256856','256866','175638','212604','175288')
+group by 1,2

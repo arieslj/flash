@@ -1,0 +1,9 @@
+<application>
+  <component name="com.codeverse.userSettings.MarsCodeDeviceSettings">
+    <option name="settingsConfigs">
+      <map>
+        <entry key="feec57b002ad72e4bb45bbc31af0781aae4e2c88dfabf8d4d706a24733df599b" value="{&quot;shouldUseWebView&quot;:true}" />
+      </map>
+    </option>
+  </component>
+</application>

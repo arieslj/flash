@@ -1,0 +1,13 @@
+<application>
+  <component name="CommonFeedbackSurveyService"><![CDATA[{
+  "feedbackSurveyToNumberNotificationShows": {
+    "data_grip_ux_survey_config_may_2025": 1
+  },
+  "feedbackSurveyToNumberRespondActionInvoked": {
+    "data_grip_ux_survey_config_may_2025": 1
+  },
+  "answeredFeedbackSurveys": [
+    "data_grip_ux_survey_config_may_2025"
+  ]
+}]]></component>
+</application>

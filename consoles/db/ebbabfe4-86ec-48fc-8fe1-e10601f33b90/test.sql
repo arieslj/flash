@@ -694,4 +694,4 @@ where
 
 select
     *
-from my_staging.parcel_change_detail pcd
+from my_staging.parcel_change_detail pcd sdds

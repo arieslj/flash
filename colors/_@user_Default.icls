@@ -1,0 +1,38 @@
+<scheme name="_@user_Default" version="142" parent_scheme="Default">
+  <metaInfo>
+    <property name="created">2023-08-10T21:17:09</property>
+    <property name="ide">DataGrip</property>
+    <property name="ideVersion">2023.2.0.0</property>
+    <property name="modified">2023-09-05T10:20:02</property>
+    <property name="originalScheme">Default</property>
+  </metaInfo>
+  <colors>
+    <option name="CONSOLE_BACKGROUND_KEY" value="" />
+    <option name="DOCUMENTATION_COLOR" value="" />
+    <option name="FILESTATUS_ADDED" value="C3E887" />
+    <option name="FILESTATUS_DELETED" value="F77669" />
+    <option name="FILESTATUS_HIJACKED" value="FFCB6B" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_DELETED_FROM_FILE_SYSTEM" value="59626F" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_IGNORED" value="9DA5B4" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_MERGED_WITH_BOTH_CONFLICTS" value="FF6347" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_MERGED_WITH_CONFLICTS" value="FF6347" />
+    <option name="FILESTATUS_IDEA_FILESTATUS_MERGED_WITH_PROPERTY_CONFLICTS" value="FF6347" />
+    <option name="FILESTATUS_MERGED" value="61AEEF" />
+    <option name="FILESTATUS_MODIFIED" value="80CBC4" />
+    <option name="FILESTATUS_NOT_CHANGED_IMMEDIATE" value="80CBC4" />
+    <option name="FILESTATUS_NOT_CHANGED_RECURSIVE" value="80CBC4" />
+    <option name="FILESTATUS_OBSOLETE" value="FFCB6B" />
+    <option name="FILESTATUS_SUPPRESSED" value="546E7A" />
+    <option name="FILESTATUS_SWITCHED" value="F77669" />
+    <option name="FILESTATUS_UNKNOWN" value="F77669" />
+    <option name="FILESTATUS_addedOutside" value="56B6C2" />
+    <option name="FILESTATUS_changelistConflict" value="FF6347" />
+    <option name="FILESTATUS_modifiedOutside" value="61AEEF" />
+    <option name="SELECTION_FOREGROUND" value="" />
+  </colors>
+  <attributes>
+    <option name="CONSOLE_RANGE_TO_EXECUTE">
+      <value />
+    </option>
+  </attributes>
+</scheme>

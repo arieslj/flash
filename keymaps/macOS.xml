@@ -1,0 +1,9 @@
+<keymap version="1" name="macOS 副本" parent="Mac OS X 10.5+">
+  <action id="Jdbc.OpenConsole.New">
+    <keyboard-shortcut first-keystroke="shift meta 0" />
+  </action>
+  <action id="com.codeium.intellij.editor_menu.ExplainSelection">
+    <keyboard-shortcut first-keystroke="shift meta l" />
+    <keyboard-shortcut first-keystroke="shift meta space" />
+  </action>
+</keymap>
